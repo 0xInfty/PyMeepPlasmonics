@@ -9,7 +9,7 @@
 import os as os
 import meep as mp
 
-path = "/home/vall/Documents/Thesis/Python/MeepTutorial/BentWaveguide"
+path = "/home/vall/Documents/Thesis/Python/MeepTutorial/BentWaveguideResults"
 prefix = "BentWaveguide"
 
 cell = mp.Vector3(16,16,0)
