@@ -45,7 +45,7 @@ sim.run(mp.at_beginning(mp.output_epsilon),
         until=200)
 
 filename = os.path.join(path, prefix + "-ez.h5")
-f = h5.File(filename,"r")
+#f = h5.File(filename,"r")
 
 #list(f.keys()) # group ~ dictionary
 #f["ez"].shape # datasheet ~ Numpy array
@@ -59,7 +59,7 @@ f = h5.File(filename,"r")
 #f["larala"].attrs["comments"] = "No hay cambios"
 #myattr = dict(f["larala"].attrs)
 
-f.close()
+#f.close()
 
 #%% SECOND SIMULATION --> SLICE
 
@@ -84,5 +84,5 @@ plt.show()
 
 #%% THIRD SIMULATION --> PNGs
 
-sim.run(mp.at_every(0.6 , mp.output_png(mp.Ez, "-Zc dkbluered")), until=200) 
+#sim.run(mp.at_every(0.6 , mp.output_png(mp.Ez, "-Zc dkbluered")), until=200) 
 # This took longer and made many files that filled the same total space :'(
