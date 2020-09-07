@@ -7,6 +7,9 @@ import meep as mp
 import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import rcParams, ticker, animation
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 #%% SIMULATION SETUP
 
@@ -44,8 +47,10 @@ sim.run(mp.at_beginning(mp.output_epsilon),
         mp.to_appended("ez", mp.at_every(0.6, mp.output_efield_z)),
         until=200)
 
+#%%
+
 filename = os.path.join(path, prefix + "-ez.h5")
-#f = h5.File(filename,"r")
+f = h5.File(filename,"r")
 
 #list(f.keys()) # group ~ dictionary
 #f["ez"].shape # datasheet ~ Numpy array
@@ -59,7 +64,67 @@ filename = os.path.join(path, prefix + "-ez.h5")
 #f["larala"].attrs["comments"] = "No hay cambios"
 #myattr = dict(f["larala"].attrs)
 
-#f.close()
+# Single plot configuration
+ez100 = f['ez'][:,:,100]
+    
+x = np.linspace(-8, 8, 160)
+y = np.linspace(-8, 8, 160)
+x, y = np.meshgrid(x, y)
+
+# Make single 3D surface plot
+fig = plt.figure(tight_layout=True)  
+ax = fig.gca(projection='3d')
+ax.plot_surface(x, y, ez100, cmap='bwr')
+fig.show()
+
+# Make single 2D color map plot - right spatial scale, doesn't show Z value of cursor
+fig = plt.figure(tight_layout=True)
+ax = plt.subplot()
+im = ax.pcolormesh(x, y, ez100.T, cmap='bwr', shading='gouraud')
+ax.set_aspect('equal')
+
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(im, cax=cax)
+
+# Make single 2D color map plot - no spatial scale, shows Z value of cursor
+fig = plt.figure(tight_layout=True)
+ax = plt.subplot()
+im = ax.imshow(ez100.T, cmap='bwr', interpolation='spline36', origin='lower')
+
+# Add references' colorbar - not the original scale; it's already normalized
+#plt.colorbar(im, use_gridspec=True)
+#plt.show()
+
+# Try 3D animation
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+s = ax.plot_surface(x, y, f['ez'][:,:,0].T, cmap='bwr')
+lim = max(abs(np.min(f['ez'])), abs(np.max(f['ez'])))
+ax.set_zlim(-lim, lim)
+plt.show()
+    
+call_Z_series = lambda i : f['ez'][:,:,i]
+label_function = lambda i : '{:.0f}'.format(i)
+
+def update(i):
+    
+    ax.clear()
+    
+    s = ax.plot_surface(x, y, call_Z_series(i), rstride=1, cstride=1, 
+                        cmap='bwr', linewidth=0, antialiased=False)
+    ax.set_zlim(-lim, lim)
+    
+    ax.text(0, -2, 0.40, label_function(i), transform=ax.transAxes)
+    
+    plt.show()
+    
+    return
+
+anim = animation.FuncAnimation(fig, update, frames=30, 
+                               interval=210)
+
+f.close()
 
 #%% SECOND SIMULATION --> SLICE
 
