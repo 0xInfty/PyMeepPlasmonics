@@ -2,14 +2,15 @@
 
 # From the Meep tutorial: plotting permittivity and fields of a bent waveguide
 
-#%% SIMULATION
-
-#from __future__ import division
-
 import os as os
 import meep as mp
+import h5py as h5
+import numpy as np
+import matplotlib.pyplot as plt
 
-path = "/home/vall/Documents/Thesis/Python/MeepTutorial/BentWaveguideResults"
+#%% SIMULATION SETUP
+
+path = "/home/vall/Documents/Thesis/ThesisPython/MeepTutorial/BentWaveguideResults"
 prefix = "BentWaveguide"
 
 cell = mp.Vector3(16,16,0)
@@ -37,14 +38,11 @@ sim = mp.Simulation(cell_size=cell,
                     filename_prefix=prefix)
 os.chdir(path)
 
+#%% FIRST SIMULATION --> HDF FILE
+
 sim.run(mp.at_beginning(mp.output_epsilon),
         mp.to_appended("ez", mp.at_every(0.6, mp.output_efield_z)),
         until=200)
-
-#%% ANALYSIS
-
-import h5py as h5
-import numpy as np
 
 filename = os.path.join(path, prefix + "-ez.h5")
 f = h5.File(filename,"r")
@@ -62,3 +60,29 @@ f = h5.File(filename,"r")
 #myattr = dict(f["larala"].attrs)
 
 f.close()
+
+#%% SECOND SIMULATION --> SLICE
+
+slice_results = []
+def get_slice(sim):
+    slice_results.append(sim.get_array(
+        center=mp.Vector3(0,-3.5), 
+        size=mp.Vector3(16,0), 
+        component=mp.Ez))
+
+sim.run(mp.at_beginning(mp.output_epsilon),
+        mp.at_every(0.6, get_slice),
+        until=200)
+# This doesn't create an HDF file because it stores at list vals
+
+plt.figure()
+plt.imshow(slice_results, 
+           interpolation='spline36', 
+           cmap='RdBu')
+#plt.axis('off')
+plt.show()
+
+#%% THIRD SIMULATION --> PNGs
+
+sim.run(mp.at_every(0.6 , mp.output_png(mp.Ez, "-Zc dkbluered")), until=200) 
+# This took longer and made many files that filled the same total space :'(
