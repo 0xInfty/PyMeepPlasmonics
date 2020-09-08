@@ -48,10 +48,10 @@ sim.run(mp.at_beginning(mp.output_epsilon),
         mp.to_appended("ez", mp.at_every(0.6, mp.output_efield_z)),
         until=200)
 
-#%%
+#%% TOYING AROUND WITH HDF FILE :P
 
-filename = os.path.join(path, prefix + "-ez.h5")
-f = h5.File(filename,"r")
+#filename = os.path.join(path, prefix + "-ez.h5")
+#f = h5.File(filename,"r")
 
 #list(f.keys()) # group ~ dictionary
 #f["ez"].shape # datasheet ~ Numpy array
@@ -65,7 +65,13 @@ f = h5.File(filename,"r")
 #f["larala"].attrs["comments"] = "No hay cambios"
 #myattr = dict(f["larala"].attrs)
 
+#f.close()
+
+#%% BASIC PLOTS
+
 # Single plot configuration
+filename = os.path.join(path, prefix + "-ez.h5")
+f = h5.File(filename,"r")
 ez100 = f['ez'][:,:,100]
 f.close()
     
@@ -98,36 +104,46 @@ im = ax.imshow(ez100.T, cmap='bwr', interpolation='spline36', origin='lower')
 #plt.colorbar(im, use_gridspec=True)
 #plt.show()
 
+f.close
 
-#%%
+#%% 3D ANIMATION - this might take longer, but it's interactive
+
+# Single plot configuration
+filename = os.path.join(path, prefix + "-ez.h5")
+f = h5.File(filename,"r")
+ez100 = f['ez'][:,:,100]
+    
+x = np.linspace(-8, 8, 160)
+y = np.linspace(-8, 8, 160)
+x, y = np.meshgrid(x, y)
+
+# What should be parameters
+nframes = 111
+nframes_step = 3
+call_Z_series = lambda i : f['ez'][:,:,nframes_step*i]
+label_function = lambda i : '{:.0f}'.format(nframes_step*i)
+gif_filename="ez"
 
 # Try 3D animation
 fig = plt.figure()
 ax = fig.gca(projection='3d')
-ax.plot_surface(x, y, f['ez'][:,:,0].T, cmap='bwr')
-lim = max(abs(np.min(f['ez'])), abs(np.max(f['ez'])))
-ax.set_zlim(-lim, lim)
+ax.plot_surface(x, y, f['ez'][:,:,0].T, cmap='bwr',
+                vmin=np.min(f['ez']), vmax=np.max(f['ez']))
+lims = (np.min(f['ez']), np.max(f['ez']))
+ax.set_zlim(*lims)
 plt.show()
-    
-call_Z_series = lambda i : f['ez'][:,:,i]
-label_function = lambda i : '{:.0f}'.format(i)
 
 def update(i):
-    
     ax.clear()
-    
-    ax.plot_surface(x, y, call_Z_series(i), rstride=1, cstride=1, 
-                        cmap='bwr', linewidth=0, antialiased=False)
-    ax.set_zlim(-lim, lim)
-    
+    ax.plot_surface(x, y, call_Z_series(i), cmap='bwr',
+                    vmin=np.min(f['ez']), vmax=np.max(f['ez']))
+    ax.set_zlim(*lims)
     ax.text(0, -2, 0.40, label_function(i), transform=ax.transAxes)
-    
     plt.show()
-    
     return
 
-anim = animation.FuncAnimation(fig, update, frames=30, 
-                               interval=210)
+anim = animation.FuncAnimation(fig, update, frames=nframes, 
+                               interval=210, cache_frame_data=False)
 
 #%%
 
@@ -143,15 +159,15 @@ x, y = np.meshgrid(x, y)
 # What should be parameters
 nframes = 111
 nframes_step = 3
-call_Z_series = lambda i : f['ez'][:,:,i]
-label_function = lambda i : '{:.0f}'.format(i)
+call_Z_series = lambda i : f['ez'][:,:,i] # This is different from above
+label_function = lambda i : '{:.0f}'.format(i) # This is also different
 gif_filename="ez"
 
 # Try different 3D animation
 fig = plt.figure()
 ax = fig.gca(projection='3d')
-s = ax.plot_surface(x, y, f['ez'][:,:,0].T, cmap='bwr',
-                    vmin=np.min(f['ez']), vmax=np.max(f['ez']))
+ax.plot_surface(x, y, f['ez'][:,:,0].T, cmap='bwr',
+                vmin=np.min(f['ez']), vmax=np.max(f['ez']))
 lims = (np.min(f['ez']), np.max(f['ez']))
 ax.set_zlim(*lims)
 plt.show()
@@ -163,13 +179,13 @@ def make_pic(i):
     ax.set_zlim(*lims)
     ax.text(0, -2, 0.40, label_function(i), transform=ax.transAxes)
     plt.show()
-    return ax
+    return ax # Here lies another difference with 'update'
     
 def make_gif(gif_filename):
     #plt.figure()
     pics = []
     for i in range(0, nframes*nframes_step, nframes_step):
-        ax = make_pic(i) 
+        ax = make_pic(i)
         plt.savefig('temp_pic.png') 
         pics.append(mim.imread('temp_pic.png')) 
         print(str(i)+'/'+str(nframes_step*nframes))
