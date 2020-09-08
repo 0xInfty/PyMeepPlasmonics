@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import rcParams, ticker, animation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import imageio as mim
 
 #%% SIMULATION SETUP
 
@@ -66,6 +67,7 @@ f = h5.File(filename,"r")
 
 # Single plot configuration
 ez100 = f['ez'][:,:,100]
+f.close()
     
 x = np.linspace(-8, 8, 160)
 y = np.linspace(-8, 8, 160)
@@ -96,10 +98,13 @@ im = ax.imshow(ez100.T, cmap='bwr', interpolation='spline36', origin='lower')
 #plt.colorbar(im, use_gridspec=True)
 #plt.show()
 
+
+#%%
+
 # Try 3D animation
 fig = plt.figure()
 ax = fig.gca(projection='3d')
-s = ax.plot_surface(x, y, f['ez'][:,:,0].T, cmap='bwr')
+ax.plot_surface(x, y, f['ez'][:,:,0].T, cmap='bwr')
 lim = max(abs(np.min(f['ez'])), abs(np.max(f['ez'])))
 ax.set_zlim(-lim, lim)
 plt.show()
@@ -111,7 +116,7 @@ def update(i):
     
     ax.clear()
     
-    s = ax.plot_surface(x, y, call_Z_series(i), rstride=1, cstride=1, 
+    ax.plot_surface(x, y, call_Z_series(i), rstride=1, cstride=1, 
                         cmap='bwr', linewidth=0, antialiased=False)
     ax.set_zlim(-lim, lim)
     
@@ -124,7 +129,53 @@ def update(i):
 anim = animation.FuncAnimation(fig, update, frames=30, 
                                interval=210)
 
-f.close()
+#%%
+
+# Single plot configuration
+filename = os.path.join(path, prefix + "-ez.h5")
+f = h5.File(filename,"r")
+ez100 = f['ez'][:,:,100]
+    
+x = np.linspace(-8, 8, 160)
+y = np.linspace(-8, 8, 160)
+x, y = np.meshgrid(x, y)
+
+# What should be parameters
+nframes = 111
+nframes_step = 3
+call_Z_series = lambda i : f['ez'][:,:,i]
+label_function = lambda i : '{:.0f}'.format(i)
+gif_filename="ez"
+
+# Try different 3D animation
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+s = ax.plot_surface(x, y, f['ez'][:,:,0].T, cmap='bwr',
+                    vmin=np.min(f['ez']), vmax=np.max(f['ez']))
+lims = (np.min(f['ez']), np.max(f['ez']))
+ax.set_zlim(*lims)
+plt.show()
+
+def make_pic(i):
+    ax.clear()
+    ax.plot_surface(x, y, call_Z_series(i), cmap='bwr',
+                    vmin=lims[0], vmax=lims[-1])
+    ax.set_zlim(*lims)
+    ax.text(0, -2, 0.40, label_function(i), transform=ax.transAxes)
+    plt.show()
+    return ax
+    
+def make_gif(gif_filename):
+    #plt.figure()
+    pics = []
+    for i in range(0, nframes*nframes_step, nframes_step):
+        ax = make_pic(i) 
+        plt.savefig('temp_pic.png') 
+        pics.append(mim.imread('temp_pic.png')) 
+        print(str(i)+'/'+str(nframes_step*nframes))
+    mim.mimsave(gif_filename+'.gif', pics, fps=5)
+    os.remove('temp_pic.png')
+    print('Saved gif')
 
 #%% SECOND SIMULATION --> SLICE
 
