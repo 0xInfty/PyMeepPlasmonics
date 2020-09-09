@@ -7,9 +7,8 @@ import meep as mp
 import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import rcParams, ticker, animation
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib import animation
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
 import imageio as mim
 
 #%% SIMULATION SETUP
@@ -91,9 +90,9 @@ ax = plt.subplot()
 im = ax.pcolormesh(x, y, ez100.T, cmap='bwr', shading='gouraud')
 ax.set_aspect('equal')
 
-divider = make_axes_locatable(ax)
-cax = divider.append_axes("right", size="5%", pad=0.05)
-plt.colorbar(im, cax=cax)
+#divider = make_axes_locatable(ax)
+#cax = divider.append_axes("right", size="5%", pad=0.05)
+#plt.colorbar(im, cax=cax)
 
 # Make single 2D color map plot - no spatial scale, shows Z value of cursor
 fig = plt.figure(tight_layout=True)
