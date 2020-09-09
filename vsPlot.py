@@ -57,9 +57,9 @@ def add_style(figure_id=None, new_figure=False, **kwargs):
     """
     
     if figure_id is not None:
-        fig = plt.figure(figure_id, tight_layout=True)
+        fig = plt.figure(figure_id)
     elif new_figure:
-        fig = plt.figure(tight_layout=True)
+        fig = plt.figure()
     else:
         fig = plt.gcf()
 
@@ -74,6 +74,7 @@ def add_style(figure_id=None, new_figure=False, **kwargs):
             linewidth=3,
             markersize=6,
             dimensions=[1.15,1.05,1,1],
+            tight_layout=True,
             grid=False,
             xaxisformat=None,
             yaxisformat=None)
@@ -103,5 +104,7 @@ def add_style(figure_id=None, new_figure=False, **kwargs):
         
     for a in ax:
         a.grid(kwargs['grid'])
+        
+    fig.tight_layout = kwargs['tight_layout']
     
     plt.show()
