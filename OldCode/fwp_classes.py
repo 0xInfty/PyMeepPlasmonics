@@ -117,25 +117,6 @@ class InstancesDict:
         
         else:
             return [self.__dict__[k] for k in key]
-
-#    def __getattr__(self, name):
-#        
-#        if name in self.__methods:
-#            values = {}
-#            for k in self.__dic.__dict__:
-#                v = eval("self.__dict__['{}'].{}".format(k, name))
-#                values.update({k : v})
-#        
-#        return values
-#
-#    def __setattr__(self, name, value):
-#        
-#        if name in self.__methods:
-#            for k in self.__dic.keys():
-#                eval("self.__dict__['{}'].{} = {}".format(
-#                        k, 
-#                        name,
-#                        value))
                 
     def update(self, dic):
         
