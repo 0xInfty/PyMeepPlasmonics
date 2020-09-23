@@ -41,6 +41,20 @@ sim = mp.Simulation(cell_size=cell,
                     filename_prefix=prefix)
 os.chdir(path)
 
+#%% CHECK LAYOUT
+
+sim.init_sim() # Initialize the structures as if you were to run
+eps_array = sim.get_epsilon()
+x, y, *more = sim.get_array_metadata() # (x,y,z,w) = sim.get_array_metadata()
+# Returns coordinates and interpolation weights of the fields :)
+del more
+
+plt.figure()
+ax = plt.subplot(111)
+plt.pcolormesh(x,y,np.transpose(eps_array),shading='gouraud')
+ax.set_aspect('equal')
+plt.show()
+
 #%% FIRST SIMULATION --> HDF FILE
 
 sim.run(mp.at_beginning(mp.output_epsilon),
@@ -74,11 +88,8 @@ f = h5.File(filename,"r")
 ez100 = f['ez'][:,:,100]
 f.close()
     
-x = np.linspace(-8, 8, 160)
-y = np.linspace(-8, 8, 160)
-x, y = np.meshgrid(x, y)
-
 # Make single 3D surface plot
+x, y = np.meshgrid(x, y)
 fig = plt.figure(tight_layout=True)  
 ax = fig.gca(projection='3d')
 ax.plot_surface(x, y, ez100, cmap='bwr')
