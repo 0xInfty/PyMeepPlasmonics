@@ -114,8 +114,6 @@ im = ax.imshow(ez100.T, cmap='bwr', interpolation='spline36', origin='lower')
 #plt.colorbar(im, use_gridspec=True)
 #plt.show()
 
-f.close
-
 #%% 3D ANIMATION - this might take longer, but it's interactive
 
 # Single plot configuration
@@ -155,7 +153,7 @@ def update(i):
 anim = animation.FuncAnimation(fig, update, frames=nframes, 
                                interval=210, cache_frame_data=False)
 
-#%%
+#%% 3D ANIMATION - might be faster, although not interactive
 
 # Single plot configuration
 filename = os.path.join(path, prefix + "-ez.h5")

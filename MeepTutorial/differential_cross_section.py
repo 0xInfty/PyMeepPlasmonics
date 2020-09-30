@@ -144,9 +144,9 @@ sim.run(until_after_sources=100)
 # (3) Calculate Poynting flux of far fields in outward direction: Real[E∗ × H]
 
 # Then two computations based on those three steps:
-# (A) Differential cross section = total scattered power / incident intensity
+# (A) Differential cross section = scattered power per solid angle
 # ==> σdiff in outward direction = R².F / incident intensity
-# (B) Scattering cross section = scattered power per solid angle
+# (B) Scattering cross section = total scattered power / incident intensity
 # ==> σscatt = integral of σdif over all spherical angles
 
 angles = np.pi/npts*np.arange(npts)

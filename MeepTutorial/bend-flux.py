@@ -314,8 +314,3 @@ plt.plot(wavelength_2, scattered_loss_2,'k--')
 plt.xlabel("Wavelength (μm)")
 plt.legend()
 plt.show()
-    
-# We should also check whether our data is converged. 
-# We can do this by increasing the resolution and cell size 
-# and seeing by how much the numbers change. In this case.
-# Try doubling the cell size!

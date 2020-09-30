@@ -13,7 +13,7 @@ cell = mp.Vector3(16, 8, 0) # length 16 μm, width 8 μm, depth 0 μm
 geometry = [mp.Block(mp.Vector3(mp.inf,1,mp.inf),
                      center=mp.Vector3(), # centered at 0,0,0
                      material=mp.Medium(epsilon=12))]
-# Waveguide --> Block (parallelepiped infty length, 1 μm width, infty height
+# Waveguide --> Block (parallelepiped infty length, 1 μm width, infty height)
 # Medium --> Dielectric relative constant ε=12
 # Default --> Any place where there are no objects there is air (=1)
 
