@@ -5,8 +5,8 @@
 import numpy as np
 import meep as mp
 import matplotlib.pyplot as plt
-#import vsClasses as vcl
-import vsPlot as vpl
+#import v_class as vcl
+import v_plot as vpl
 
 #%% GEOMETRY LAYOUT: STRAIGHT WAVEGUIDE
 
