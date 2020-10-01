@@ -116,15 +116,6 @@ im = ax.imshow(ez100.T, cmap='bwr', interpolation='spline36', origin='lower')
 
 #%% 3D ANIMATION - this might take longer, but it's interactive
 
-# Single plot configuration
-filename = os.path.join(path, prefix + "-ez.h5")
-f = h5.File(filename,"r")
-ez100 = f['ez'][:,:,100]
-    
-x = np.linspace(-8, 8, 160)
-y = np.linspace(-8, 8, 160)
-x, y = np.meshgrid(x, y)
-
 # What should be parameters
 nframes = 111
 nframes_step = 3
@@ -154,15 +145,6 @@ anim = animation.FuncAnimation(fig, update, frames=nframes,
                                interval=210, cache_frame_data=False)
 
 #%% 3D ANIMATION - might be faster, although not interactive
-
-# Single plot configuration
-filename = os.path.join(path, prefix + "-ez.h5")
-f = h5.File(filename,"r")
-ez100 = f['ez'][:,:,100]
-    
-x = np.linspace(-8, 8, 160)
-y = np.linspace(-8, 8, 160)
-x, y = np.meshgrid(x, y)
 
 # What should be parameters
 nframes = 111
