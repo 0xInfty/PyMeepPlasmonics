@@ -7,30 +7,33 @@
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
-import PyMieScatt as ps
+# import PyMieScatt as ps
 from v_materials import import_medium
 from v_units import MeepUnitsManager
+from pint import UnitRegistry
+
+ureg = UnitRegistry()
+uman = MeepUnitsManager()
 
 #%%
 
 ### MEAN PARAMETERS
 
-# Units: 1 nm as length unit
-from_um_factor = 1e-3 # Conversion of 1 μm to my length unit (=1nm/1μm)
-resolution = 25 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+# Units
+a = 10 * ureg("nm")  # This will be my Meep length unit
+from_um_factor = float((a/ureg("um")).to("dimensionless")) # Conversion factor
+resolution = 4 # Number of pixels per length unit
+# Should be >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Dielectric sphere
-r = 60  # Radius of sphere: 60 nm
+r = 60 * ureg("nm") # Radius of sphere: 60 nm
 medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
-wlen_range = np.array([200,800]) # nm range
+wlen_range = np.array([200,800]) * ureg("nm") # nm range
 nfreq = 100 # Number of frequencies to discretize range
 
 ### OTHER PARAMETERS
-
-# Units
-uman = MeepUnitsManager(from_um_factor=from_um_factor)
 
 # Frequency and wavelength
 freq_range = 1/wlen_range # Hz range in Meep units
@@ -112,7 +115,7 @@ sim.reset_meep()
 
 #%% SECOND RUN: GEOMETRY SETUP
 
-geometry = [mp.Sphere(material=mp.Medium(index=n_sphere),
+geometry = [mp.Sphere(material=medium,
                       center=mp.Vector3(),
                       radius=r)]
 # Lossless dielectric sphere 
@@ -183,19 +186,19 @@ scatt_eff_meep = -1 * scatt_cross_section / (np.pi*r**2)
 # Scattering efficiency =
 # = scattering cross section / cross sectional area of the sphere
 
-scatt_eff_theory = [ps.MieQ(n_sphere, 
-                            1000/f,
-                            2*r*1000,
-                            asDict=True)['Qsca'] 
-                    for f in freqs]
-# The simulation results are validated by comparing with 
-# analytic theory of PyMieScatt module
+# scatt_eff_theory = [ps.MieQ(n_sphere, 
+#                             1000/f,
+#                             2*r*1000,
+#                             asDict=True)['Qsca'] 
+#                     for f in freqs]
+# # The simulation results are validated by comparing with 
+# # analytic theory of PyMieScatt module
 
 plt.figure(dpi=150)
 plt.loglog(2*np.pi*r*np.asarray(freqs),
            scatt_eff_meep,'bo-',label='Meep')
-plt.loglog(2*np.pi*r*np.asarray(freqs),
-           scatt_eff_theory,'ro-',label='Theory')
+# plt.loglog(2*np.pi*r*np.asarray(freqs),
+#            scatt_eff_theory,'ro-',label='Theory')
 plt.grid(True,which="both",ls="-")
 plt.xlabel('Circumference/Wavelength [2πr/λ]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
