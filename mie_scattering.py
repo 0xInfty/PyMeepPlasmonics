@@ -8,54 +8,55 @@ import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
 import PyMieScatt as ps
-from v_materials import importMedium
+from v_materials import import_medium
+from v_units import MeepUnitsManager
 
 #%%
 
-# My length unit will be 1 nm
-um_scale = 1e-3 # Conversion of 1 μm to my length unit
+### MEAN PARAMETERS
+
+# Units: 1 nm as length unit
+from_um_factor = 1e-3 # Conversion of 1 μm to my length unit (=1nm/1μm)
+resolution = 25 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Dielectric sphere
-r = 1  # Radius of sphere: 1 nm
-Au = importMedium("Au", um_scale=1e-3) # Medium of sphere: gold (Au)
+r = 60  # Radius of sphere: 60 nm
+medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 
-wavelength_range = np.array([200, 800]) # nm
-frequency_range = 1/
+# Frequency and wavelength
+wlen_range = np.array([200,800]) # nm range
+nfreq = 100 # Number of frequencies to discretize range
 
-r = 60  # radius of sphere: 60 nm 
-n_sphere = 2.0 # refrac
+### OTHER PARAMETERS
 
-wvl_min = 2*np.pi*r/10
-wvl_max = 2*np.pi*r/2
-# From 10% to 50% of the circumference
+# Units
+uman = MeepUnitsManager(from_um_factor=from_um_factor)
 
-frq_min = 1/wvl_max
-frq_max = 1/wvl_min
-frq_cen = 0.5*(frq_min+frq_max)
-dfrq = frq_max-frq_min
-nfrq = 100
+# Frequency and wavelength
+freq_range = 1/wlen_range # Hz range in Meep units
+freq_center = np.mean(freq_range)
+freq_width = max(freq_range) - min(freq_range)
 
-resolution = 25
-# >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
-
-dpml = 0.5*wvl_max
-dair = 0.5*wvl_max
+# Space configuration
+pml_width = 0.5 * max(wlen_range)
+air_width = 0.5 * min(wlen_range)
 
 #%% FIRST RUN: GEOMETRY SETUP
 
-pml_layers = [mp.PML(thickness=dpml)]
+pml_layers = [mp.PML(thickness=pml_width)]
 
 symmetries = [mp.Mirror(mp.Y),
               mp.Mirror(mp.Z, phase=-1)]
 # Cause of symmetry, two mirror planes reduce cell size to 1/4
 
-s = 2*(dpml+dair+r)
-cell_size = mp.Vector3(s, s, s)
+cell_width = 2 * (pml_width + air_width + r)
+cell_size = mp.Vector3(cell_width, cell_width, cell_width)
 
-
-sources = [mp.Source(mp.GaussianSource(frq_cen,fwidth=dfrq,is_integrated=True),
-                     center=mp.Vector3(-0.5*s+dpml),
-                     size=mp.Vector3(0, s, s), # s = cell size
+sources = [mp.Source(mp.GaussianSource(freq_center,
+                                       fwidth=freq_width,
+                                       is_integrated=True),
+                     center=mp.Vector3(-0.5*cell_width + pml_width),
+                     size=mp.Vector3(0, cell_width, cell_width),
                      component=mp.Ez)]
 # Ez-polarized planewave pulse 
 # (its size parameter fills the entire cell in 2d)
@@ -73,22 +74,22 @@ sim = mp.Simulation(resolution=resolution,
 
 # Scattered power --> Computed by surrounding it with closed DFT flux box 
 # (its size and orientation are irrelevant because of Poynting's theorem) 
-box_x1 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
                       mp.FluxRegion(center=mp.Vector3(x=-r),
                                     size=mp.Vector3(0,2*r,2*r)))
-box_x2 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
                       mp.FluxRegion(center=mp.Vector3(x=+r),
                                     size=mp.Vector3(0,2*r,2*r)))
-box_y1 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_y1 = sim.add_flux(freq_center, freq_width, nfreq,
                       mp.FluxRegion(center=mp.Vector3(y=-r),
                                     size=mp.Vector3(2*r,0,2*r)))
-box_y2 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_y2 = sim.add_flux(freq_center, freq_width, nfreq,
                       mp.FluxRegion(center=mp.Vector3(y=+r),
                                     size=mp.Vector3(2*r,0,2*r)))
-box_z1 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_z1 = sim.add_flux(freq_center, freq_width, nfreq,
                       mp.FluxRegion(center=mp.Vector3(z=-r),
                                     size=mp.Vector3(2*r,2*r,0)))
-box_z2 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
                       mp.FluxRegion(center=mp.Vector3(z=+r),
                                     size=mp.Vector3(2*r,2*r,0)))
 # Funny you can encase the sphere (r radius) so closely (2r-sided box)
@@ -125,22 +126,22 @@ sim = mp.Simulation(resolution=resolution,
                     symmetries=symmetries,
                     geometry=geometry)
 
-box_x1 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
                       mp.FluxRegion(center=mp.Vector3(x=-r),
                                     size=mp.Vector3(0,2*r,2*r)))
-box_x2 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
                       mp.FluxRegion(center=mp.Vector3(x=+r),
                                     size=mp.Vector3(0,2*r,2*r)))
-box_y1 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_y1 = sim.add_flux(freq_center, freq_width, nfreq, 
                       mp.FluxRegion(center=mp.Vector3(y=-r),
                                     size=mp.Vector3(2*r,0,2*r)))
-box_y2 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_y2 = sim.add_flux(freq_center, freq_width, nfreq, 
                       mp.FluxRegion(center=mp.Vector3(y=+r),
                                     size=mp.Vector3(2*r,0,2*r)))
-box_z1 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_z1 = sim.add_flux(freq_center, freq_width, nfreq, 
                       mp.FluxRegion(center=mp.Vector3(z=-r),
                                     size=mp.Vector3(2*r,2*r,0)))
-box_z2 = sim.add_flux(frq_cen, dfrq, nfrq, 
+box_z2 = sim.add_flux(freq_center, freq_width, nfreq, 
                       mp.FluxRegion(center=mp.Vector3(z=+r),
                                     size=mp.Vector3(2*r,2*r,0)))
 
