@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-The 'vsPlot' module contains tools for plotting.
+The 'v_plot' module contains tools for plotting.
 
 The only tool contained right now is...
 add_style : function
