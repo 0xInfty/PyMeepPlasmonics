@@ -7,6 +7,7 @@
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
+from time import time
 import PyMieScatt as ps
 
 #%%
@@ -82,9 +83,21 @@ box_z2 = sim.add_flux(frq_cen, dfrq, nfrq,
                                     size=mp.Vector3(2*r,2*r,0)))
 # Funny you can encase the sphere (r radius) so closely (2r-sided box)
 
+temp = time()
+sim.init_sim()
+enlapsed = time() - temp
+
+"""
+8x8x8 with resolution 25
+(25 cells inside diameter)
+==> Build 3.43 s
+"""
+
 #%% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
 
+temp = time()
 sim.run(until_after_sources=10)
+enlapsed = [enlapsed, time()-temp]
 
 freqs = mp.get_flux_freqs(box_x1)
 box_x1_data = sim.get_flux_data(box_x1)
