@@ -19,9 +19,12 @@ import v_save as vs
 
 freq_center = 1
 freq_width = 0.1
+source_cutoff = 3.5
+# 3.5-4 seems to work and reduces computation time compared to default 5.
 
-print("Should have dpml aprox {:.2f}".format(.5 / (freq_center-freq_width/2)))
-pml_width = .6
+pml_width = round(.38 / (freq_center-freq_width/2) , 2) 
+# For 1, 0.1 source parameters, 0.4 to be sure but 0.39 doesn't look bad.
+# So: 35% or 40% of larger wavelength apparently works OK.
 
 cell_width = 12
 resolution = 10
@@ -37,6 +40,27 @@ line_center = [0,0,0]
 
 plane_size = [0, cell_width, cell_width]
 line_size = [cell_width, 0, 0]
+
+series = "Cutoff{}".format(source_cutoff)
+folder = "CutoffResults"
+home = r"/home/vall/Documents/Thesis/ThesisPython/GaussianResults"
+
+#%% LAYOUT CONFIGURATION
+
+cell_size = mp.Vector3(cell_width, cell_width, cell_width)
+
+boundary_layers = [mp.PML(thickness=pml_width)]
+
+source_center = -0.5*cell_width + pml_width
+sources = [mp.Source(mp.GaussianSource(freq_center,
+                                       fwidth=freq_width,
+                                       is_integrated=True,
+                                       cutoff=source_cutoff),
+                     center=mp.Vector3(source_center),
+                     size=mp.Vector3(0, cell_width, cell_width),
+                     component=mp.Ez)]
+
+symmetries = [mp.Mirror(mp.Y), mp.Mirror(mp.Z, phase=-1)]
 
 results_plane = []
 results_line = []
@@ -54,37 +78,20 @@ def get_slice_line(sim):
         component=mp.Ez))
 
 to_do_while_running = [mp.at_beginning(get_slice_line),
-                       # mp.at_beginning(get_slice_plane),
-                       mp.at_every(period_plane, get_slice_line)] #,
-                       # mp.at_every(period_line, get_slice_plane)]
+                       mp.at_beginning(get_slice_plane),
+                       mp.at_every(period_line, get_slice_line),
+                       mp.at_every(period_plane, get_slice_plane)]
 
-series = "First"
-home = r"/home/vall/Documents/Thesis/ThesisPython/GaussianSource"
-path = os.path.join(home, "{}Results".format(series))
+path = os.path.join(home, folder, "{}Results".format(series))
 prefix = "{}Results".format(series)
-
-#%% LAYOUT
-
-cell_size = mp.Vector3(cell_width, cell_width, cell_width)
-
-boundary_layers = [mp.PML(thickness=pml_width)]
-
-source_center = -0.5*cell_width + pml_width
-sources = [mp.Source(mp.GaussianSource(freq_center,
-                                       fwidth=freq_width,
-                                       is_integrated=True),
-                     center=mp.Vector3(source_center),
-                     size=mp.Vector3(0, cell_width, cell_width),
-                     component=mp.Ez)]
-
-if not os.path.isdir(path):
-    vs.new_dir(path)
-os.chdir(path)
+if not os.path.isdir(path): vs.new_dir(path)
+file = lambda f : os.path.join(path, f)
 
 sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
                     boundary_layers=boundary_layers,
-                    sources=sources)
+                    sources=sources,
+                    symmetries=symmetries)
 
 #%% INITIALIZE
 
@@ -105,6 +112,7 @@ results_plane = np.asarray(results_plane)
 footer=dict(
     freq_center=freq_center,
     freq_width=freq_width,
+    source_cutoff=source_cutoff,
     pml_width=pml_width,
     cell_width=cell_width,
     resolution=resolution,
@@ -120,7 +128,7 @@ footer=dict(
     home=home
     )
 
-vs.savetxt(os.path.join(path, "Lines.txt"), results_line, footer=footer)
+vs.savetxt(file("Lines.txt"), results_line, footer=footer, overwrite=True)
 del footer
 
 #%% SHOW ALL LINES IN COLOR MAP
@@ -131,9 +139,9 @@ plt.xlabel("Distancia en x (int)")
 plt.ylabel("Tiempo (int)")
 plt.show()
 
-plt.savefig("AxisXColorMap.png")
+plt.savefig(file("AxisXColorMap.png"))
 
-#%% SHOW ALL LINES
+#%% SHOW ONE LINE
 
 i = 10
 label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_line)
@@ -146,7 +154,7 @@ plt.xlabel("Distancia en x (u.a.)")
 plt.ylabel("Campo eléctrico Ez (u.a.)")
 ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
 
-plt.savefig("AxisXLineIndex{}.png".format(i))
+plt.savefig(file("AxisXLineIndex{}.png".format(i)))
 
 #%% SHOW ALL LINES
 
@@ -157,7 +165,7 @@ for i in range(len(results_line)):
 # plt.legend(["Tiempo: {} u.a.".format(i) for i in range(results_line.shape[0])],
 #            ncol=2)
 
-plt.savefig("AxisXLines.png")
+plt.savefig(file("AxisXLines.png"))
 
 #%% MAKE LINES GIF
 
@@ -194,7 +202,7 @@ def make_gif_line(gif_filename):
     os.remove('temp_pic.png')
     print('Saved gif')
 
-make_gif_line("AxisX")
+make_gif_line(file("AxisX"))
 
 #%% SHOW SOURCE
 
@@ -208,9 +216,15 @@ plt.plot(source_field)
 plt.xlabel("Tiempo (u.a.)")
 plt.ylabel("Campo eléctrico Ez (u.a.)")
 
-plt.savefig("Source.png")
+plt.savefig(file("Source.png"))
 
 #%% MAKE FOURIER FOR SOURCE
+
+
+index_to_space = lambda i : i/resolution - cell_width/2
+space_to_index = lambda x : round(resolution * (x + cell_width/2))
+
+source_field = np.asarray(results_line[:, space_to_index(source_center)])
 
 fourier = np.abs(np.fft.rfft(source_field))
 fourier_freq = np.fft.rfftfreq(len(source_field), d=period_line)
@@ -224,7 +238,16 @@ plt.plot(fourier_freq, source_profile*max(fourier)/max(source_profile), 'r',
 plt.xlabel("Frequency (u.a.)")
 plt.ylabel("Transformada del campo eléctrico Ez (u.a.)")
 
-plt.savefig("SourceFFT.png")
+plt.savefig(file("SourceFFT.png"))
+
+plt.xlim(freq_center-2*freq_width, freq_center+2*freq_width)
+plt.show()
+plt.savefig(file("SourceFFTZoom.png"))
+
+plt.ylim(-.02*max(fourier), .2*max(fourier))
+plt.show()
+
+plt.savefig(file("SourceFFTBase.png"))
 
 #%% SHOW ONE PLANE
 
@@ -237,7 +260,7 @@ ax.text(-.1, -.105, label_function(i), transform=ax.transAxes)
 plt.xlabel("Distancia en y (u.a.)")
 plt.ylabel("Distancia en z (u.a.)")
 
-plt.savefig("PlaneX=0Index{}".format(i))
+plt.savefig(file("PlaneX=0Index{}".format(i)))
 
 #%% MAKE PLANE GIF
 
@@ -273,7 +296,7 @@ def make_gif_plane(gif_filename):
     os.remove('temp_pic.png')
     print('Saved gif')
 
-make_gif_plane("PlaneX=0")
+make_gif_plane(file("PlaneX=0"))
 
 #%%
 
