@@ -7,10 +7,11 @@
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
+# from mayavi import mlab
 from time import time
 import PyMieScatt as ps
 from v_materials import import_medium
-from v_units import MeepUnitsManager
+# from v_units import MeepUnitsManager
 
 #%%
 
@@ -18,20 +19,23 @@ from v_units import MeepUnitsManager
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 3 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Dielectric sphere
 r = 6  # Radius of sphere: 60 nm
 medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
-wlen_range = np.array([20,80]) # 200-800 nm range from lowest to highest
+wlen_range = np.array([40,80]) # 200-800 nm range from lowest to highest
 nfreq = 100 # Number of frequencies to discretize range
+
+# Computation time
+enlapsed = []
 
 ### OTHER PARAMETERS
 
 # Units
-uman = MeepUnitsManager(from_um_factor=from_um_factor)
+# uman = MeepUnitsManager(from_um_factor=from_um_factor)
 
 # Frequency and wavelength
 freq_range = 1/wlen_range # Hz range in Meep units from highest to lowest
@@ -40,13 +44,13 @@ freq_width = max(freq_range) - min(freq_range)
 
 # Space configuration
 pml_width = 0.5 * max(wlen_range)
-air_width = 2 * r # 0.5 * max(wlen_range)
+air_width = r/2 # 0.5 * max(wlen_range)
 
-#%% FIRST RUN: GEOMETRY SETUP
+#%% GENERAL GEOMETRY SETUP
 
 pml_layers = [mp.PML(thickness=pml_width)]
 
-symmetries = [mp.Mirror(mp.Y),
+symmetries = [mp.Mirror(mp.Y), 
               mp.Mirror(mp.Z, phase=-1)]
 # Cause of symmetry, two mirror planes reduce cell size to 1/4
 
@@ -63,6 +67,33 @@ sources = [mp.Source(mp.GaussianSource(freq_center,
 # (its size parameter fills the entire cell in 2d)
 # >> The planewave source extends into the PML 
 # ==> is_integrated=True must be specified
+
+geometry = [mp.Sphere(material=medium,
+                      center=mp.Vector3(),
+                      radius=r)]
+# Lossless dielectric sphere 
+# Wavelength-independent refractive index of 2.0
+
+# Check structure
+# sim = mp.Simulation(resolution=resolution,
+#                     cell_size=cell_size,
+#                     geometry=geometry,
+#                     k_point=mp.Vector3(),
+#                     symmetries=symmetries)
+
+# enlapsed = []
+# temp = time()
+# sim.init_sim()
+# enlapsed.append( time() - temp )
+
+# epsilon = sim.get_epsilon(freq_center)
+# sim.reset_meep()
+
+# s = mlab.contour3d(np.abs(epsilon), colormap="YlGnBu")
+# mlab.show()
+
+
+#%% FIRST RUN: SET UP
 
 sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
@@ -99,7 +130,7 @@ box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
 
 temp = time()
 sim.init_sim()
-enlapsed = time() - temp
+enlapsed.append( time() - temp )
 
 """
 112x112x112 with resolution 4
@@ -114,15 +145,24 @@ enlapsed = time() - temp
 (24 cells inside diameter)
 ==> 5.63 s
 
+98 x 98 x 98 with resolution 3
+(36 cells inside diameter)
+==> 9.57 s
+
 172x172x172 with resolution 2
 (24 cells inside diameter)
 ==> 17.47 s
 """
 
 temp = time()
-sim.run(until_after_sources=1.1*cell_width) 
+sim.run(until_after_sources=mp.stop_when_fields_decayed(
+    np.mean(wlen_range), # dT = mean period of source
+    mp.Ez, # Component of field to check
+    mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
+    1e-3)) # Factor to decay
+#1.1*cell_width) 
 # Enough time for the pulse to pass through all the cell
-enlapsed = [enlapsed, time()-temp]
+enlapsed.append( time() - temp )
 # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
 # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
@@ -148,13 +188,7 @@ box_x1_flux0 = mp.get_fluxes(box_x1)
 
 sim.reset_meep()
 
-#%% SECOND RUN: GEOMETRY SETUP
-
-geometry = [mp.Sphere(material=medium,
-                      center=mp.Vector3(),
-                      radius=r)]
-# Lossless dielectric sphere 
-# Wavelength-independent refractive index of 2.0
+#%% SECOND RUN: SETUP
 
 sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
@@ -205,6 +239,8 @@ sim.load_minus_flux_data(box_y2, box_y2_data)
 sim.load_minus_flux_data(box_z1, box_z1_data)
 sim.load_minus_flux_data(box_z2, box_z2_data)
 enlapsed.append( time() - temp )
+del box_x1_data, box_x2_data, box_y1_data, box_y2_data
+del box_z1_data, box_z2_data
 
 """
 112x112x112 with resolution 2
@@ -219,7 +255,12 @@ enlapsed.append( time() - temp )
 #%% SECOND RUN: SIMULATION :D
 
 temp = time()
-sim.run(until_after_sources=10*1.1*cell_width) 
+sim.run(until_after_sources=mp.stop_when_fields_decayed(
+    np.mean(wlen_range), # dT = mean period of source
+    mp.Ez, # Component of field to check
+    mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
+    1e-3)) # Factor to decay
+# 10*1.1*cell_width) 
 enlapsed.append( time() - temp )
 # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
 
@@ -251,19 +292,19 @@ scatt_eff_meep = -1 * scatt_cross_section / (np.pi*r**2)
 # = scattering cross section / cross sectional area of the sphere
 
 freqs = np.array(freqs)
-freqs_trim = freqs[freqs<0.0403274589668105]
-
 scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
                             10/f,
                             2*r*10,
                             asDict=True)['Qsca'] 
-                    for f in freqs_trim]
+                    for f in freqs]
 # The simulation results are validated by comparing with 
 # analytic theory of PyMieScatt module
 
+# normalized_scatt_eff_meep = (scatt_eff_meep-np.mean(scatt_eff_meep))*(max(scatt_eff_theory)-min(scatt_eff_theory))
+
 plt.figure(dpi=150)
 plt.plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
-plt.plot(10/freqs_trim, scatt_eff_theory,'bo-',label='Theory')
+plt.plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
 # plt.loglog(2*np.pi*r*np.asarray(freqs),
 #            scatt_eff_meep,'ro-',label='Meep')
 # plt.loglog(2*np.pi*r*np.asarray(freqs),
