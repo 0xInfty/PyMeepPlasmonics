@@ -37,8 +37,8 @@ line_center = [0,0,0]
 plane_size = [0, cell_width, cell_width]
 line_size = [cell_width, 0, 0]
 
-series = "DataManagement"
-folder = ""
+series = "1st"
+folder = "DataManagement"
 home = r"/home/vall/Documents/Thesis/ThesisPython"
 
 parameters = dict(
