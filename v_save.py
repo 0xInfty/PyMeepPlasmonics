@@ -24,6 +24,7 @@ saveanimation : function
 
 import matplotlib.pyplot as plt
 import numpy as np
+import h5py as h5
 import os
 from re import findall
 
@@ -419,6 +420,78 @@ def savefile_helper(folder,
         return os.path.join(save_dir, filename_template.format(*args, **kwargs))
 
     return filename_maker
+
+#%%
+
+def save_slice_generator(sim, get_slice, filename, dataname):
+    """
+    Generates a Meep stepfunction to save slices or outputs to HDF5.
+
+    Parameters
+    ----------
+    sim : mp.Simulation
+        Meep simulation instance. Must be initialized so that ground set of 
+        data can be saved.
+    get_slice : function
+        Function 'get_slice(sim, state)' that takes 'sim' Meep simulation 
+        instance as required argument and may take a second argument 'state', 
+        which is a string with value 'step' or 'finish'. Must return the 
+        desired array to be saved for each time step that the stepfunction 
+        is called on.
+    filename : str
+        Filename of the HDF5 file to be created. Must include full path and .h5 
+        extension. Beware! If already in existance, old file is replaced.
+    dataname : TYPE
+        HDF5 dataset name.
+
+    Returns
+    -------
+    file : h5.File
+        HDF5 file instance of module h5py, initialized as 'w'. Will be closed 
+        once the simulation is finished. Meanwhile, it must exist as a global 
+        variable.
+    save_slice_stepfun : function
+        Stepfunction that will execute function 'get_slice' on each step and 
+        save the results, appending them to the 'dataname' dataset inside the 
+        'filename' HDF5 file.
+        
+    See also
+    --------
+    mp.Simulation
+    h5.File
+
+    """
+    
+    data = get_slice(sim) # Data zero
+    shape = data.shape
+    dueshape  = (1,*shape)
+    
+    file = h5.File(filename, 'w', libver='latest')    
+    file.create_dataset(dataname, chunks=dueshape, 
+                        maxshape=tuple(None for d in dueshape), 
+                        data=data.reshape(dueshape))
+    file.swmr_mode = True
+    
+    def save_slice_stepfun(sim, state):
+        
+        if state=="step":
+            data_now = get_slice(sim)
+            
+            dim_before = file[dataname].shape[0]
+            shape_now = ( dim_before+1, *shape )
+            file[dataname].resize( shape_now )
+            
+            file[dataname][dim_before,] = data_now.reshape(dueshape)
+            
+            file[dataname].flush()
+            # Notify the reader process that new data has been written
+            
+        elif state=="finish":
+            file.close()
+        
+        return
+        
+    return file, save_slice_stepfun
 
 #%%
 
