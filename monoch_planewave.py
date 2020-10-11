@@ -17,20 +17,22 @@ import v_save as vs
 
 #%% PARAMETERS
 
+cell_width = 12
+resolution = 10
+
 wlen = 1
-is_integrated = False # Default: False
+is_integrated = True # Reccomended true if planewave. Default: False
+source_width = 0 # Temporal width of smoothing. Default: 0 ==> No smoothing
+source_slowness = 3 # Parameter of how slow is the smoothing.
+source_size = [0, cell_width, cell_width]
 
 pml_width = round(.38 * wlen, 2) 
 # For 1, 0.1 source parameters, 0.4 to be sure but 0.39 doesn't look bad.
 # So: 35% or 40% of larger wavelength apparently works OK.
 
-cell_width = 12
-resolution = 10
-
 period_line = 1/10
 period_plane = 1
 
-time_is_after_source = False
 run_time = 20
 
 plane_center = [0,0,0]
@@ -39,13 +41,16 @@ line_center = [0,0,0]
 plane_size = [0, cell_width, cell_width]
 line_size = [cell_width, 0, 0]
 
-series = "1st"
-folder = "ContSourceResults"
+series = "RunTime{}IsIntegrated{}".format(run_time, is_integrated())
+folder = "ContSourceResults/LineCurrent"
 home = r"/home/vall/Documents/Thesis/ThesisPython"
 
 parameters = dict(
     wlen=wlen,
     is_integrated=is_integrated,
+    source_width=source_width,
+    source_slowness=source_slowness,
+    source_size=source_size,
     pml_width=pml_width,
     cell_width=cell_width,
     resolution=resolution,
@@ -55,10 +60,11 @@ parameters = dict(
     line_center=line_center,
     plane_size=plane_size,
     line_size=line_size,
-    time_is_after_source=time_is_after_source,
     run_time=run_time,
     series=series,
-    home=home)
+    folder=folder,
+    home=home
+    )
 
 #%% LAYOUT CONFIGURATION
 
@@ -70,7 +76,7 @@ source_center = -0.5*cell_width + pml_width
 sources = [mp.Source(mp.ContinuousSource(wavelength=wlen, 
                                          is_integrated=is_integrated),
                      center=mp.Vector3(source_center),
-                     size=mp.Vector3(0, cell_width, cell_width),
+                     size=mp.Vector3(*source_size),
                      component=mp.Ez)]
 
 symmetries = [mp.Mirror(mp.Y), mp.Mirror(mp.Z, phase=-1)]
@@ -117,10 +123,7 @@ to_do_while_running = [mp.at_every(period_line, save_line),
 #%% RUN!
 
 temp = time()
-if time_is_after_source:
-    sim.run(*to_do_while_running, until_after_source=run_time)
-else:
-    sim.run(*to_do_while_running, until=run_time)
+sim.run(*to_do_while_running, until=run_time)
 del f, g
 enlapsed.append(time() - temp)
 
@@ -180,6 +183,8 @@ def make_gif_line(gif_filename):
     print('Saved gif')
 
 make_gif_line(file("AxisX"))
+plt.close(fig)
+del fig, ax, lims, nframes_step, nframes, call_series, label_function
 
 #%% SHOW SOURCE
 
@@ -207,7 +212,6 @@ fourier_freq = np.fft.rfftfreq(len(source_field), d=period_line)
 
 plt.figure()
 plt.plot(fourier_freq, fourier, 'k', linewidth=3)
-# plt.plot(fourier_freq, np.exp(-(2*np.pi**2)*(fourier_freq-freq_center)**2/(2*((freq_width)**2)))*max(fourier))
 plt.xlabel("Frequency (u.a.)")
 plt.ylabel("Transformada del campo eléctrico Ez (u.a.)")
 
@@ -229,6 +233,8 @@ plt.xlabel("Distancia en y (u.a.)")
 plt.ylabel("Distancia en z (u.a.)")
 
 plt.savefig(file("PlaneX=0Index{}".format(i)))
+
+del i, label_function
 
 #%% MAKE PLANE GIF
 
@@ -265,7 +271,12 @@ def make_gif_plane(gif_filename):
     print('Saved gif')
 
 make_gif_plane(file("PlaneX=0"))
+plt.close(fig)
+del fig, ax, lims, nframes_step, nframes, call_series, label_function
 
 #%%
+
+f.close()
+g.close()
 
 sim.reset_meep()
