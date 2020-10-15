@@ -22,7 +22,7 @@ resolution = 10
 
 wlen = 1
 is_integrated = True # Reccomended true if planewave. Default: False
-source_width = 0 # Temporal width of smoothing. Default: 0 ==> No smoothing
+source_width = 5 # Temporal width of smoothing. Default: 0 ==> No smoothing
 source_slowness = 3 # Parameter of how slow is the smoothing.
 source_size = [0, cell_width, cell_width]
 
@@ -41,8 +41,8 @@ line_center = [0,0,0]
 plane_size = [0, cell_width, cell_width]
 line_size = [cell_width, 0, 0]
 
-series = "RunTime{}IsIntegrated{}".format(run_time, is_integrated())
-folder = "ContSourceResults/LineCurrent"
+series = "RunTime{}TWidth{}".format(run_time, source_width)
+folder = "PlanewaveResults"
 home = r"/home/vall/Documents/Thesis/ThesisPython"
 
 parameters = dict(
@@ -194,7 +194,7 @@ space_to_index = lambda x : round(resolution * (x + cell_width/2))
 source_field = np.asarray(results_line[:, space_to_index(source_center)])
 
 plt.figure()
-plt.plot(source_field)
+plt.plot(np.linspace(0,run_time,len(source_field)),source_field)
 plt.xlabel("Tiempo (u.a.)")
 plt.ylabel("Campo eléctrico Ez (u.a.)")
 
@@ -227,6 +227,7 @@ i = 10
 label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_plane)
 
 plt.figure(dpi=150)
+ax = plt.subplot()
 plt.imshow(results_plane[i,:,:], interpolation='spline36', cmap='RdBu')
 ax.text(-.1, -.105, label_function(i), transform=ax.transAxes)
 plt.xlabel("Distancia en y (u.a.)")
