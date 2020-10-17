@@ -344,7 +344,7 @@ scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]),
 
 #%% PLOT ALL TOGETHER
 
-plt.figure(dpi=150)
+plt.figure()
 plt.plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
 plt.plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
 plt.xlabel('Wavelength [nm]')
@@ -356,7 +356,7 @@ plt.savefig(file("Comparison.png"))
 
 #%% PLOT SEPARATE
 
-plt.figure(dpi=150)
+plt.figure()
 plt.plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
@@ -365,7 +365,7 @@ plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
 plt.tight_layout()
 plt.savefig(file("Meep.png"))
 
-plt.figure(dpi=150)
+plt.figure()
 plt.plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
