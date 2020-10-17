@@ -7,10 +7,12 @@
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 # from mayavi import mlab
 from time import time
 import PyMieScatt as ps
 from v_materials import import_medium
+import v_save as vs
 # from v_units import MeepUnitsManager
 
 #%% PARAMETERS
@@ -45,6 +47,11 @@ freq_width = max(freq_range) - min(freq_range)
 # Space configuration
 pml_width = 0.38 * max(wlen_range)
 air_width = r/2 # 0.5 * max(wlen_range)
+
+# Saving directories
+series = "2020101701"
+folder = "MieResults"
+home = "/home/vall/Documents/Thesis/ThesisPython/"
 
 #%% GENERAL GEOMETRY SETUP
 
@@ -99,6 +106,9 @@ geometry = [mp.Sphere(material=medium,
 # s = mlab.contour3d(np.abs(epsilon), colormap="YlGnBu")
 # mlab.show()
 
+path = os.path.join(home, folder, "{}Results".format(series))
+if not os.path.isdir(path): vs.new_dir(path)
+file = lambda f : os.path.join(path, f)
 
 #%% FIRST RUN: SET UP
 
@@ -165,7 +175,7 @@ enlapsed.append( time() - temp )
 ==> 7.06 s
 
 67,375 x 67,375 x 67,375 with resolution 8
-(50 cells inside diameter)
+(100 cells inside diameter)
 ==> 56.14 s
 """
 
@@ -191,6 +201,10 @@ enlapsed.append( time() - temp )
 116x116x116 with resolution 2
 (24 cells inside diameter)
 ==> 208 s to complete 1st run
+
+67 x 67 x 67 with resolution 4
+(48 cells inside diameter)
+==> 2000 s = 33 min to complete 1st run
 """
 
 freqs = mp.get_flux_freqs(box_x1)
@@ -201,7 +215,7 @@ box_y2_data = sim.get_flux_data(box_y2)
 box_z1_data = sim.get_flux_data(box_z1)
 box_z2_data = sim.get_flux_data(box_z2)
 
-box_x1_flux0 = mp.get_fluxes(box_x1)
+box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
 
 sim.reset_meep()
 
@@ -248,6 +262,10 @@ enlapsed.append( time() - temp )
 116x116x116 with resolution 2
 (24 cells inside diameter)
 ==> 9.71 s to build with sphere
+
+67 x 67 x 67 with resolution 4
+(48 cells inside diameter)
+==> 14.47 s to build with sphere
 """
 
 temp = time()
@@ -269,6 +287,10 @@ del box_z1_data, box_z2_data
 116x116x116 with resolution 2
 (24 cells inside diameter)
 ==> 0.021 s to add flux
+
+67 x 67 x 67 with resolution 4
+(48 cells inside diameter)
+==> 0.043 s to add flux
 """
 
 #%% SECOND RUN: SIMULATION :D
@@ -281,22 +303,23 @@ sim.run(until_after_sources=10*1.2*cell_width)
     # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
     # 1e-3)) # Factor to decay
 enlapsed.append( time() - temp )
+del temp
 # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
 
-box_x1_flux = mp.get_fluxes(box_x1)
-box_x2_flux = mp.get_fluxes(box_x2)
-box_y1_flux = mp.get_fluxes(box_y1)
-box_y2_flux = mp.get_fluxes(box_y2)
-box_z1_flux = mp.get_fluxes(box_z1)
-box_z2_flux = mp.get_fluxes(box_z2)
+box_x1_flux = np.asarray(mp.get_fluxes(box_x1))
+box_x2_flux = np.asarray(mp.get_fluxes(box_x2))
+box_y1_flux = np.asarray(mp.get_fluxes(box_y1))
+box_y2_flux = np.asarray(mp.get_fluxes(box_y2))
+box_z1_flux = np.asarray(mp.get_fluxes(box_z1))
+box_z2_flux = np.asarray(mp.get_fluxes(box_z2))
 
 #%% ANALYSIS
 
-scatt_flux = np.asarray(box_x1_flux) - np.asarray(box_x2_flux)
-scatt_flux = scatt_flux + np.asarray(box_y1_flux) - np.asarray(box_y2_flux)
-scatt_flux = scatt_flux + np.asarray(box_z1_flux) - np.asarray(box_z2_flux)
+scatt_flux = box_x1_flux - box_x2_flux
+scatt_flux = scatt_flux + box_y1_flux - box_y2_flux
+scatt_flux = scatt_flux + box_z1_flux - box_z2_flux
 
-intensity = np.asarray(box_x1_flux0)/(2*r)**2
+intensity = box_x1_flux0/(2*r)**2
 # Flux of one of the six monitor planes / Área
 # (the closest one, facing the planewave source) 
 # This is why the six sides of the flux box are separated
@@ -319,18 +342,94 @@ scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]),
 # The simulation results are validated by comparing with 
 # analytic theory of PyMieScatt module
 
-# normalized_scatt_eff_meep = (scatt_eff_meep-np.mean(scatt_eff_meep))*(max(scatt_eff_theory)-min(scatt_eff_theory))
+#%% PLOT ALL TOGETHER
 
 plt.figure(dpi=150)
 plt.plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
 plt.plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
-# plt.loglog(2*np.pi*r*np.asarray(freqs),
-#            scatt_eff_meep,'ro-',label='Meep')
-# plt.loglog(2*np.pi*r*np.asarray(freqs),
-#            scatt_eff_theory,'ro-',label='Theory')
-# plt.grid(True,which="both",ls="-")
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
 plt.legend()
-plt.title('Mie Scattering of a Lossless Dielectric Sphere')
+plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
 plt.tight_layout()
+plt.savefig(file("Comparison.png"))
+
+#%% PLOT SEPARATE
+
+plt.figure(dpi=150)
+plt.plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
+plt.legend()
+plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
+plt.tight_layout()
+plt.savefig(file("Meep.png"))
+
+plt.figure(dpi=150)
+plt.plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
+plt.legend()
+plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
+plt.tight_layout()
+plt.savefig(file("Theory.png"))
+
+#%% PLOT ONE ABOVE THE OTHER
+
+fig, axes = plt.subplots(nrows=2, sharex=True)
+fig.subplots_adjust(hspace=0)
+
+axes[0].plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
+axes[0].yaxis.tick_right()
+axes[0].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
+axes[0].legend()
+
+axes[1].plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
+axes[1].set_xlabel('Wavelength [nm]')
+axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
+axes[1].legend()
+
+plt.savefig(file("Comparison.png"))
+
+
+#%% SAVE DATA
+
+data = np.array([10/freqs, scatt_eff_meep, scatt_eff_theory]).T
+
+header = ["Longitud de onda [nm]", 
+          "Sección eficaz efectiva (Meep) [u.a.]", 
+          "Sección eficaz efectiva (Theory) [u.a.]"]
+
+data_base = np.array([10/freqs, box_x1_flux0, box_x1_flux, box_x2_flux, 
+                      box_y1_flux, box_y2_flux, box_z1_flux, box_z2_flux,
+                      intensity, scatt_flux, scatt_cross_section]).T
+
+header_base = ["Longitud de onda [nm]", 
+               "Flujo X10 [u.a.]",
+               "Flujo X1 [u.a]",
+               "Flujo X2 [u.a]",
+               "Flujo Y1 [u.a]",
+               "Flujo Y2 [u.a]",
+               "Flujo Z1 [u.a]",
+               "Flujo Z2 [u.a]",
+               "Intensidad incidente [u.a.]", 
+               "Flujo scattereado [u.a.]",
+               "Sección eficaz de scattering [u.a.]"]
+
+params = dict(
+    from_um_factor=from_um_factor,
+    resolution=resolution,
+    r=r,
+    wlen_range=wlen_range,
+    nfreq=nfreq,
+    pml_width=pml_width,
+    air_width=air_width,
+    source_center=source_center,
+    enlapsed=enlapsed,
+    series=series,
+    folder=folder,
+    home=home
+    )
+
+vs.savetxt(file("Results.txt"), data, header=header, footer=params)
+vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
