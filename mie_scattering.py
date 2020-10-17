@@ -13,20 +13,20 @@ import PyMieScatt as ps
 from v_materials import import_medium
 # from v_units import MeepUnitsManager
 
-#%%
+#%% PARAMETERS
 
 ### MEAN PARAMETERS
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 3 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 4 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Dielectric sphere
 r = 6  # Radius of sphere: 60 nm
 medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
-wlen_range = np.array([40,80]) # 200-800 nm range from lowest to highest
+wlen_range = np.array([50,65]) # 500-650 nm range from lowest to highest
 nfreq = 100 # Number of frequencies to discretize range
 
 # Computation time
@@ -43,11 +43,14 @@ freq_center = np.mean(freq_range)
 freq_width = max(freq_range) - min(freq_range)
 
 # Space configuration
-pml_width = 0.5 * max(wlen_range)
+pml_width = 0.38 * max(wlen_range)
 air_width = r/2 # 0.5 * max(wlen_range)
 
 #%% GENERAL GEOMETRY SETUP
 
+air_width = air_width - air_width%(1/resolution)
+
+pml_width = pml_width - pml_width%(1/resolution)
 pml_layers = [mp.PML(thickness=pml_width)]
 
 symmetries = [mp.Mirror(mp.Y), 
@@ -55,11 +58,15 @@ symmetries = [mp.Mirror(mp.Y),
 # Cause of symmetry, two mirror planes reduce cell size to 1/4
 
 cell_width = 2 * (pml_width + air_width + r)
+cell_width = cell_width - cell_width%(1/resolution)
 cell_size = mp.Vector3(cell_width, cell_width, cell_width)
 
+source_center = -0.5*cell_width + pml_width
+print("Resto Source Center: {}".format(source_center%(1/resolution)))
 sources = [mp.Source(mp.GaussianSource(freq_center,
                                        fwidth=freq_width,
-                                       is_integrated=True),
+                                       is_integrated=True,
+                                       cutoff=3.2),
                      center=mp.Vector3(-0.5*cell_width + pml_width),
                      size=mp.Vector3(0, cell_width, cell_width),
                      component=mp.Ez)]
@@ -126,7 +133,7 @@ box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
                                     size=mp.Vector3(2*r,2*r,0)))
 # Funny you can encase the sphere (r radius) so closely (2r-sided box)
 
-#%% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
+#%% FIRST RUN: INITIALIZE
 
 temp = time()
 sim.init_sim()
@@ -152,16 +159,26 @@ enlapsed.append( time() - temp )
 172x172x172 with resolution 2
 (24 cells inside diameter)
 ==> 17.47 s
+
+67 x 67 x 67 with resolution 4
+(48 cells inside diameter)
+==> 7.06 s
+
+67,375 x 67,375 x 67,375 with resolution 8
+(50 cells inside diameter)
+==> 56.14 s
 """
 
+#%% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
+
 temp = time()
-sim.run(until_after_sources=mp.stop_when_fields_decayed(
-    np.mean(wlen_range), # dT = mean period of source
-    mp.Ez, # Component of field to check
-    mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
-    1e-3)) # Factor to decay
-#1.1*cell_width) 
+sim.run(until_after_sources=1.2*cell_width)  #1.1
 # Enough time for the pulse to pass through all the cell
+    #     mp.stop_when_fields_decayed(
+    # np.mean(wlen_range), # dT = mean period of source
+    # mp.Ez, # Component of field to check
+    # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
+    # 1e-3)) # Factor to decay
 enlapsed.append( time() - temp )
 # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
 # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
@@ -217,6 +234,8 @@ box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
                       mp.FluxRegion(center=mp.Vector3(z=+r),
                                     size=mp.Vector3(2*r,2*r,0)))
 
+#%% SECOND RUN: INITIALIZE
+
 temp = time()
 sim.init_sim()
 enlapsed.append( time() - temp )
@@ -255,12 +274,12 @@ del box_z1_data, box_z2_data
 #%% SECOND RUN: SIMULATION :D
 
 temp = time()
-sim.run(until_after_sources=mp.stop_when_fields_decayed(
-    np.mean(wlen_range), # dT = mean period of source
-    mp.Ez, # Component of field to check
-    mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
-    1e-3)) # Factor to decay
-# 10*1.1*cell_width) 
+sim.run(until_after_sources=10*1.2*cell_width) 
+    #     mp.stop_when_fields_decayed(
+    # np.mean(wlen_range), # dT = mean period of source
+    # mp.Ez, # Component of field to check
+    # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
+    # 1e-3)) # Factor to decay
 enlapsed.append( time() - temp )
 # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
 
