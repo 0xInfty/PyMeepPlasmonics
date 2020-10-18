@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# From Meep Tutorial: Mie Scattering of a Lossless Dielectric Sphere
+# Adapted from Meep Tutorial: Mie Scattering of a Lossless Dielectric Sphere
 
-# Scattering efficiency of an homogeneous sphere given an incident planewave.
+# Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
 
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-# from mayavi import mlab
 from time import time
 import PyMieScatt as ps
 from v_materials import import_medium
@@ -23,7 +22,7 @@ import v_save as vs
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
 resolution = 4 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
-# Dielectric sphere
+# Au sphere
 r = 6  # Radius of sphere: 60 nm
 medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 
@@ -33,6 +32,11 @@ nfreq = 100 # Number of frequencies to discretize range
 
 # Computation time
 enlapsed = []
+
+# Saving directories
+series = "2020101701"
+folder = "MieResults"
+home = "/home/vall/Documents/Thesis/ThesisPython/"
 
 ### OTHER PARAMETERS
 
@@ -47,11 +51,6 @@ freq_width = max(freq_range) - min(freq_range)
 # Space configuration
 pml_width = 0.38 * max(wlen_range)
 air_width = r/2 # 0.5 * max(wlen_range)
-
-# Saving directories
-series = "2020101701"
-folder = "MieResults"
-home = "/home/vall/Documents/Thesis/ThesisPython/"
 
 #%% GENERAL GEOMETRY SETUP
 
@@ -74,7 +73,7 @@ sources = [mp.Source(mp.GaussianSource(freq_center,
                                        fwidth=freq_width,
                                        is_integrated=True,
                                        cutoff=3.2),
-                     center=mp.Vector3(-0.5*cell_width + pml_width),
+                     center=mp.Vector3(source_center),
                      size=mp.Vector3(0, cell_width, cell_width),
                      component=mp.Ez)]
 # Ez-polarized planewave pulse 
@@ -85,26 +84,7 @@ sources = [mp.Source(mp.GaussianSource(freq_center,
 geometry = [mp.Sphere(material=medium,
                       center=mp.Vector3(),
                       radius=r)]
-# Lossless dielectric sphere 
-# Wavelength-independent refractive index of 2.0
-
-# Check structure
-# sim = mp.Simulation(resolution=resolution,
-#                     cell_size=cell_size,
-#                     geometry=geometry,
-#                     k_point=mp.Vector3(),
-#                     symmetries=symmetries)
-
-# enlapsed = []
-# temp = time()
-# sim.init_sim()
-# enlapsed.append( time() - temp )
-
-# epsilon = sim.get_epsilon(freq_center)
-# sim.reset_meep()
-
-# s = mlab.contour3d(np.abs(epsilon), colormap="YlGnBu")
-# mlab.show()
+# Au sphere with frequency-dependant characteristics imported from Meep.
 
 path = os.path.join(home, folder, "{}Results".format(series))
 if not os.path.isdir(path): vs.new_dir(path)
