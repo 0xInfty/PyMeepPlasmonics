@@ -29,7 +29,7 @@ r = 6  # Radius of sphere: 60 nm
 medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
-wlen = 75 # 570 nm
+wlen = 57 # 570 nm
 
 # Space configuration
 pml_width_z = 0.6 * wlen
@@ -46,7 +46,7 @@ after_cell_run_time = 10*wlen
 enlapsed = []
 
 # Saving directories
-series = "2020101704"
+series = "2020101901"
 folder = "AuSphereFieldResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
@@ -58,7 +58,9 @@ air_width_z = air_width_z - air_width_z%(1/resolution)
 pml_width_z = pml_width_z - pml_width_z%(1/resolution)
 pml_width_xy = pml_width_xy - pml_width_xy%(1/resolution)
 pml_layers = [mp.PML(thickness=pml_width_xy,
-                     direction=[mp.X, mp.Y]),
+                     direction=mp.X),
+              mp.PML(thickness=pml_width_xy,
+                     direction=mp.Y),
               mp.PML(thickness=pml_width_z,
                      direction=mp.Z)]
 
@@ -73,7 +75,6 @@ cell_width_xy = cell_width_xy - cell_width_xy%(1/resolution)
 cell_size = mp.Vector3(cell_width_xy, cell_width_xy, cell_width_z)
 
 source_center = -0.5*cell_width_xy + pml_width_xy
-print("Resto Source Center: {}".format(source_center%(1/resolution)))
 sources = [mp.Source(mp.ContinuousSource(wavelength=wlen, 
                                          is_integrated=True),
                      center=mp.Vector3(source_center),
@@ -106,7 +107,6 @@ def get_plane(sim):
         center=mp.Vector3(), 
         size=mp.Vector3(0, cell_width_xy, cell_width_z), 
         component=mp.Ez)
-
 
 #%% INITIALIZE
 
@@ -144,6 +144,8 @@ params = dict(
     r=r,
     pml_width_xy=pml_width_xy,
     pml_width_z=pml_width_z,
+    air_width_xy=air_width_xy,
+    air_width_z=air_width_z,
     cell_width_xy=cell_width_xy,
     cell_width_z=cell_width_z,
     source_center=source_center,
@@ -246,22 +248,6 @@ plt.xlabel("Frequency (u.a.)")
 plt.ylabel("Transformada del campo eléctrico Ez (u.a.)")
 
 plt.savefig(file("SourceFFT.png"))
-
-#%% SHOW ONE PLANE
-
-i = 10
-label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_plane)
-
-plt.figure(dpi=150)
-ax = plt.subplot()
-plt.imshow(results_plane[i,:,:], interpolation='spline36', cmap='RdBu')
-ax.text(-.1, -.105, label_function(i), transform=ax.transAxes)
-plt.xlabel("Distancia en y (u.a.)")
-plt.ylabel("Distancia en z (u.a.)")
-
-plt.savefig(file("PlaneX=0Index{}".format(i)))
-
-del i, label_function
 
 #%% MAKE PLANE GIF
 
