@@ -179,12 +179,31 @@ ax = plt.subplot()
 lims = (np.min(results_line), np.max(results_line))
 shape = call_series(0).shape[0]
 
+def draw_pml_box():
+    plt.hlines(space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(cell_width/2 - pml_width),
+               linestyle=":", color='k')
+    plt.hlines(space_to_index(cell_width/2 - pml_width), 
+               space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(cell_width/2 - pml_width),
+               linestyle=":", color='k')
+    plt.vlines(space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(cell_width/2 - pml_width),
+               linestyle=":", color='k')
+    plt.vlines(space_to_index(cell_width/2 - pml_width), 
+               space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(cell_width/2 - pml_width),
+               linestyle=":", color='k')
+
 def make_pic_line(i):
     ax.clear()
     plt.plot(np.linspace(-cell_width/2, cell_width/2, shape), 
              call_series(i))
     ax.set_ylim(*lims)
     ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
+    draw_pml_box()
     plt.xlabel("Distancia en x (u.a.)")
     plt.ylabel("Campo eléctrico Ez (u.a.)")
     plt.show()
@@ -250,11 +269,22 @@ fig = plt.figure()
 ax = plt.subplot()
 lims = (np.min(results_plane), np.max(results_plane))
 
+def draw_pml_box():
+    plt.vlines(-cell_width/2 + pml_width, 
+               -cell_width/2 + pml_width, 
+               cell_width/2 - pml_width,
+               linestyle=":", color='k')
+    plt.vlines(cell_width/2 - pml_width, 
+               -cell_width/2 + pml_width, 
+               cell_width/2 - pml_width,
+               linestyle=":", color='k')
+
 def make_pic_plane(i):
     ax.clear()
     plt.imshow(call_series(i), interpolation='spline36', cmap='RdBu', 
                vmin=lims[0], vmax=lims[1])
     ax.text(-.1, -.105, label_function(i), transform=ax.transAxes)
+    draw_pml_box()
     plt.show()
     plt.xlabel("Distancia en y (u.a.)")
     plt.ylabel("Distancia en z (u.a.)")
