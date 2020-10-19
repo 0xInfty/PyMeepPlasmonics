@@ -32,7 +32,7 @@ medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 wlen = 57 # 570 nm
 
 # Space configuration
-pml_width_z = 0.6 * wlen
+pml_width_z = wlen
 pml_width_xy = 0.38 * wlen
 air_width_z = 3*r
 air_width_xy = r
@@ -46,7 +46,7 @@ after_cell_run_time = 10*wlen
 enlapsed = []
 
 # Saving directories
-series = "2020101901"
+series = "2020101902"
 folder = "AuSphereFieldResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
@@ -255,18 +255,37 @@ plt.savefig(file("SourceFFT.png"))
 nframes_step = 1
 nframes = int(results_plane.shape[0]/nframes_step)
 call_series = lambda i : results_plane[i].T
-label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_plane)
+label_function = lambda i : 'Tiempo: {:.0f} u.a.'.format(i*period_plane)
 
 # Animation base
 fig = plt.figure()
 ax = plt.subplot()
 lims = (np.min(results_plane), np.max(results_plane))
 
+def draw_pml_box():
+    plt.hlines(space_to_index_z(-cell_width_z/2 + pml_width_z), 
+               space_to_index_xy(-cell_width_xy/2 + pml_width_xy), 
+               space_to_index_xy(cell_width_xy/2 - pml_width_xy),
+               linestyle=":", color='k')
+    plt.hlines(space_to_index_z(cell_width_z/2 - pml_width_z), 
+               space_to_index_xy(-cell_width_xy/2 + pml_width_xy), 
+               space_to_index_xy(cell_width_xy/2 - pml_width_xy),
+               linestyle=":", color='k')
+    plt.vlines(space_to_index_xy(-cell_width_xy/2 + pml_width_xy), 
+               space_to_index_z(-cell_width_z/2 + pml_width_z), 
+               space_to_index_z(cell_width_z/2 - pml_width_z),
+               linestyle=":", color='k')
+    plt.vlines(space_to_index_xy(cell_width_xy/2 - pml_width_xy), 
+               space_to_index_z(-cell_width_z/2 + pml_width_z), 
+               space_to_index_z(cell_width_z/2 - pml_width_z),
+               linestyle=":", color='k')
+
 def make_pic_plane(i):
     ax.clear()
     plt.imshow(call_series(i), interpolation='spline36', cmap='RdBu', 
                vmin=lims[0], vmax=lims[1])
-    ax.text(-.1, -.105, label_function(i), transform=ax.transAxes)
+    ax.text(-.8, -.105, label_function(i), transform=ax.transAxes)
+    draw_pml_box()
     plt.show()
     plt.xlabel("Distancia en y (u.a.)")
     plt.ylabel("Distancia en z (u.a.)")
@@ -292,7 +311,7 @@ plt.close(fig)
 index_to_space_z = lambda i : i/resolution - cell_width_z/2
 space_to_index_z = lambda z : round(resolution * (z + cell_width_z/2))
 
-z_profile = np.asarray(results_plane[:, space_to_index_z(0), :])
+z_profile = np.asarray(results_plane[:, space_to_index_xy(0), :])
 
 #%% MAKE LINES GIF
 
