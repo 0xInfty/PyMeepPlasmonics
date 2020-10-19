@@ -32,8 +32,10 @@ medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 wlen = 75 # 570 nm
 
 # Space configuration
-pml_width = 0.5 * wlen
-air_width = 2*r
+pml_width_z = 0.6 * wlen
+pml_width_xy = 0.38 * wlen
+air_width_z = 3*r
+air_width_xy = r
 
 # Field Measurements
 period_line = 1
@@ -52,23 +54,29 @@ home = "/home/vall/Documents/Thesis/ThesisPython/"
 
 air_width = air_width - air_width%(1/resolution)
 
-pml_width = pml_width - pml_width%(1/resolution)
-pml_layers = [mp.PML(thickness=pml_width)]
+pml_width_z = pml_width_z - pml_width_z%(1/resolution)
+pml_width_xy = pml_width_xy - pml_width_xy%(1/resolution)
+pml_layers = [mp.PML(thickness=pml_width_xy,
+                     direction=[mp.X, mp.Y]),
+              mp.PML(thickness=pml_width_z,
+                     direction=mp.Z)]
 
 symmetries = [mp.Mirror(mp.Y), 
               mp.Mirror(mp.Z, phase=-1)]
 # Cause of symmetry, two mirror planes reduce cell size to 1/4
 
-cell_width = 2 * (pml_width + air_width + r)
-cell_width = cell_width - cell_width%(1/resolution)
-cell_size = mp.Vector3(cell_width, cell_width, cell_width)
+cell_width_z = 2 * (pml_width_z + air_width_z + r)
+cell_width_xy = 2 * (pml_width_xy + air_width_xy + r)
+cell_width_z = cell_width_z - cell_width_z%(1/resolution)
+cell_width_xy = cell_width_xy - cell_width_xy%(1/resolution)
+cell_size = mp.Vector3(cell_width_xy, cell_width_xy, cell_width_z)
 
-source_center = -0.5*cell_width + pml_width
+source_center = -0.5*cell_width_xy + pml_width_xy
 print("Resto Source Center: {}".format(source_center%(1/resolution)))
 sources = [mp.Source(mp.ContinuousSource(wavelength=wlen, 
                                          is_integrated=True),
                      center=mp.Vector3(source_center),
-                     size=mp.Vector3(0, cell_width, cell_width),
+                     size=mp.Vector3(0, cell_width_xy, cell_width_z),
                      component=mp.Ez)]
 # Ez-polarized monochromatic planewave 
 # (its size parameter fills the entire cell in 2d)
@@ -89,13 +97,13 @@ file = lambda f : os.path.join(path, f)
 def get_line(sim):
     return sim.get_array(
         center=mp.Vector3(), 
-        size=mp.Vector3(cell_width), 
+        size=mp.Vector3(cell_width_xy), 
         component=mp.Ez)
 
 def get_plane(sim):
     return sim.get_array(
         center=mp.Vector3(), 
-        size=mp.Vector3(0, cell_width, cell_width), 
+        size=mp.Vector3(0, cell_width_xy, cell_width_z), 
         component=mp.Ez)
 
 
@@ -123,7 +131,7 @@ to_do_while_running = [mp.at_every(period_line, save_line),
 #%% RUN!
 
 temp = time()
-sim.run(*to_do_while_running, until=cell_width+after_cell_run_time)
+sim.run(*to_do_while_running, until=cell_width_xy+after_cell_run_time)
 del f, g
 enlapsed.append(time() - temp)
 
@@ -133,8 +141,10 @@ params = dict(
     from_um_factor=from_um_factor,
     resolution=resolution,
     r=r,
-    pml_width=pml_width,
-    cell_width=cell_width,
+    pml_width_xy=pml_width_xy,
+    pml_width_z=pml_width_z,
+    cell_width_xy=cell_width_xy,
+    cell_width_z=cell_width_z,
     source_center=source_center,
     wlen=wlen,
     period_line=period_line,
@@ -180,7 +190,7 @@ shape = call_series(0).shape[0]
 
 def make_pic_line(i):
     ax.clear()
-    plt.plot(np.linspace(-cell_width/2, cell_width/2, shape), 
+    plt.plot(np.linspace(-cell_width_xy/2, cell_width_xy/2, shape), 
              call_series(i))
     ax.set_ylim(*lims)
     ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
@@ -206,13 +216,13 @@ plt.close(fig)
 
 #%% SHOW SOURCE
 
-index_to_space = lambda i : i/resolution - cell_width/2
-space_to_index = lambda x : round(resolution * (x + cell_width/2))
+index_to_space_xy = lambda i : i/resolution - cell_width_xy/2
+space_to_index_xy = lambda x : round(resolution * (x + cell_width_xy/2))
 
-source_field = np.asarray(results_line[:, space_to_index(source_center)])
+source_field = np.asarray(results_line[:, space_to_index_xy(source_center)])
 
 plt.figure()
-plt.plot(np.linspace(0, after_cell_run_time+cell_width, len(source_field)),
+plt.plot(np.linspace(0, after_cell_run_time+cell_width_xy, len(source_field)),
          source_field)
 plt.xlabel("Tiempo (u.a.)")
 plt.ylabel("Campo eléctrico Ez (u.a.)")
@@ -221,10 +231,10 @@ plt.savefig(file("Source.png"))
 
 #%% MAKE FOURIER FOR SOURCE
 
-index_to_space = lambda i : i/resolution - cell_width/2
-space_to_index = lambda x : round(resolution * (x + cell_width/2))
+index_to_space_xy = lambda i : i/resolution - cell_width_xy/2
+space_to_index_xy = lambda x : round(resolution * (x + cell_width_xy/2))
 
-source_field = np.asarray(results_line[:, space_to_index(source_center)])
+source_field = np.asarray(results_line[:, space_to_index_xy(source_center)])
 
 fourier = np.abs(np.fft.rfft(source_field))
 fourier_freq = np.fft.rfftfreq(len(source_field), d=period_line)
@@ -292,10 +302,10 @@ plt.close(fig)
 
 #%% GET Z LINE ACROSS SPHERE
 
-index_to_space = lambda i : i/resolution - cell_width/2
-space_to_index = lambda x : round(resolution * (x + cell_width/2))
+index_to_space_z = lambda i : i/resolution - cell_width_z/2
+space_to_index_z = lambda z : round(resolution * (z + cell_width_z/2))
 
-z_profile = np.asarray(results_plane[:, space_to_index(0), :])
+z_profile = np.asarray(results_plane[:, space_to_index_z(0), :])
 
 #%% MAKE LINES GIF
 
@@ -313,7 +323,7 @@ shape = call_series(0).shape[0]
 
 def make_pic_line(i):
     ax.clear()
-    plt.plot(np.linspace(-cell_width/2, cell_width/2, shape), 
+    plt.plot(np.linspace(-cell_width_z/2, cell_width_z/2, shape), 
              call_series(i))
     ax.set_ylim(*lims)
     ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
