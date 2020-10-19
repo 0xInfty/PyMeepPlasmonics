@@ -44,7 +44,7 @@ after_cell_run_time = 10*wlen
 enlapsed = []
 
 # Saving directories
-series = "2020101704"
+series = "2020101801"
 folder = "AuSphereFieldResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
@@ -134,6 +134,7 @@ params = dict(
     resolution=resolution,
     r=r,
     pml_width=pml_width,
+    air_width=air_width,
     cell_width=cell_width,
     source_center=source_center,
     wlen=wlen,
@@ -235,22 +236,6 @@ plt.xlabel("Frequency (u.a.)")
 plt.ylabel("Transformada del campo eléctrico Ez (u.a.)")
 
 plt.savefig(file("SourceFFT.png"))
-
-#%% SHOW ONE PLANE
-
-i = 10
-label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_plane)
-
-plt.figure(dpi=150)
-ax = plt.subplot()
-plt.imshow(results_plane[i,:,:], interpolation='spline36', cmap='RdBu')
-ax.text(-.1, -.105, label_function(i), transform=ax.transAxes)
-plt.xlabel("Distancia en y (u.a.)")
-plt.ylabel("Distancia en z (u.a.)")
-
-plt.savefig(file("PlaneX=0Index{}".format(i)))
-
-del i, label_function
 
 #%% MAKE PLANE GIF
 
