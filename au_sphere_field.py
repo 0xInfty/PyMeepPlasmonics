@@ -52,7 +52,8 @@ home = "/home/vall/Documents/Thesis/ThesisPython/"
 
 #%% GENERAL GEOMETRY SETUP
 
-air_width = air_width - air_width%(1/resolution)
+air_width_xy = air_width_xy - air_width_xy%(1/resolution)
+air_width_z = air_width_z - air_width_z%(1/resolution)
 
 pml_width_z = pml_width_z - pml_width_z%(1/resolution)
 pml_width_xy = pml_width_xy - pml_width_xy%(1/resolution)
