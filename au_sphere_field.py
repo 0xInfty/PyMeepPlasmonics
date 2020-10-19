@@ -324,17 +324,31 @@ label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_plane)
 # Animation base
 fig = plt.figure()
 ax = plt.subplot()
-lims = (np.min(z_profile), np.max(z_profile))
+lims_y = (np.min(z_profile), np.max(z_profile))
+lims_x = (-cell_width_z/2, cell_width_z/2)
 shape = call_series(0).shape[0]
+
+def draw_pml_box():
+    plt.vlines(-cell_width_z/2 + pml_width_z, 
+               -cell_width_xy/2 + pml_width_xy, 
+               cell_width_xy/2 - pml_width_xy,
+               linestyle=":", color='k')
+    plt.vlines(cell_width_z/2 - pml_width_z, 
+               -cell_width_xy/2 + pml_width_xy, 
+               cell_width_xy/2 - pml_width_xy,
+               linestyle=":", color='k')
 
 def make_pic_line(i):
     ax.clear()
     plt.plot(np.linspace(-cell_width_z/2, cell_width_z/2, shape), 
              call_series(i))
-    ax.set_ylim(*lims)
     ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
+    plt.hlines(0, -cell_width_z/2, cell_width_z/2, color='k', linewidth=0.5)
+    draw_pml_box()
     plt.xlabel("Distancia en z (u.a.)")
     plt.ylabel("Campo eléctrico Ez (u.a.)")
+    ax.set_xlim(*lims_x)
+    ax.set_ylim(*lims_y)
     plt.show()
     return ax
 
