@@ -12,6 +12,7 @@ import imageio as mim
 import h5py as h5
 import meep as mp
 import numpy as np
+from mayavi import mlab
 import matplotlib.pyplot as plt
 import os
 from time import time
@@ -29,11 +30,12 @@ r = 6  # Radius of sphere: 60 nm
 medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
-wlen = 75 # 570 nm
+wlen = 35 # 570 nm
 
 # Space configuration
 pml_width = 0.5 * wlen
 air_width = 2*r
+displacement = 2
 
 # Field Measurements
 period_line = 1
@@ -55,8 +57,8 @@ air_width = air_width - air_width%(1/resolution)
 pml_width = pml_width - pml_width%(1/resolution)
 pml_layers = [mp.PML(thickness=pml_width)]
 
-symmetries = [mp.Mirror(mp.Y), 
-              mp.Mirror(mp.Z, phase=-1)]
+symmetries = [mp.Mirror(mp.Y)]
+              # mp.Mirror(mp.Z, phase=-1)]
 # Cause of symmetry, two mirror planes reduce cell size to 1/4
 
 cell_width = 2 * (pml_width + air_width + r)
@@ -75,7 +77,13 @@ sources = [mp.Source(mp.ContinuousSource(wavelength=wlen,
 # >> The planewave source extends into the PML 
 # ==> is_integrated=True must be specified
 
-geometry = [mp.Sphere(material=medium,
+geometry = [mp.Block(material=mp.Medium(index=1.33),
+                     center=mp.Vector3(0,0,cell_width/2-(cell_width/2+r-displacement)/2+displacement),
+                     size=mp.Vector3(cell_width, cell_width, cell_width/2+r-displacement)),
+            mp.Block(material=mp.Medium(index=1.54),
+                     center=mp.Vector3(0,0,-cell_width/2+(cell_width/2-r+displacement)/2+displacement),
+                     size=mp.Vector3(cell_width, cell_width, cell_width/2-r+displacement)),
+            mp.Sphere(material=mp.Medium(index=1.8),#=medium,
                       center=mp.Vector3(),
                       radius=r)]
 # Au sphere with frequency-dependant characteristics imported from Meep.
@@ -111,6 +119,11 @@ sim = mp.Simulation(resolution=resolution,
 temp = time()
 sim.init_sim()
 enlapsed.append(time()-temp)
+
+eps_data = sim.get_epsilon()
+
+s = mlab.contour3d(eps_data, colormap="YlGnBu")
+mlab.show()
 
 #%% DEFINE SAVE STEP FUNCTIONS
 
