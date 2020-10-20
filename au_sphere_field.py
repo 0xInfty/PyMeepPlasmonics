@@ -275,12 +275,23 @@ ax = plt.subplot()
 lims = (np.min(z_profile), np.max(z_profile))
 shape = call_series(0).shape[0]
 
+def draw_pml_box():
+    plt.vlines(-cell_width/2 + pml_width, 
+               -cell_width/2 + pml_width, 
+               cell_width/2 - pml_width,
+               linestyle=":", color='k')
+    plt.vlines(cell_width/2 - pml_width, 
+               -cell_width/2 + pml_width, 
+               cell_width/2 - pml_width,
+               linestyle=":", color='k')
+
 def make_pic_line(i):
     ax.clear()
     plt.plot(np.linspace(-cell_width/2, cell_width/2, shape), 
              call_series(i))
     ax.set_ylim(*lims)
     ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
+    draw_pml_box()
     plt.xlabel("Distancia en z (u.a.)")
     plt.ylabel("Campo eléctrico Ez (u.a.)")
     plt.show()
