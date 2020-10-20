@@ -165,65 +165,6 @@ results_line = f["Ez"]
 g = h5.File(file("Planes.h5"), "r")
 results_plane = g["Ez"]
 
-#%% MAKE LINES GIF
-
-# What should be parameters
-nframes_step = 1
-nframes = int(results_line.shape[0]/nframes_step)
-call_series = lambda i : results_line[i]
-label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_line)
-
-# Animation base
-fig = plt.figure()
-ax = plt.subplot()
-lims = (np.min(results_line), np.max(results_line))
-shape = call_series(0).shape[0]
-
-def draw_pml_box():
-    plt.hlines(space_to_index(-cell_width/2 + pml_width), 
-               space_to_index(-cell_width/2 + pml_width), 
-               space_to_index(cell_width/2 - pml_width),
-               linestyle=":", color='k')
-    plt.hlines(space_to_index(cell_width/2 - pml_width), 
-               space_to_index(-cell_width/2 + pml_width), 
-               space_to_index(cell_width/2 - pml_width),
-               linestyle=":", color='k')
-    plt.vlines(space_to_index(-cell_width/2 + pml_width), 
-               space_to_index(-cell_width/2 + pml_width), 
-               space_to_index(cell_width/2 - pml_width),
-               linestyle=":", color='k')
-    plt.vlines(space_to_index(cell_width/2 - pml_width), 
-               space_to_index(-cell_width/2 + pml_width), 
-               space_to_index(cell_width/2 - pml_width),
-               linestyle=":", color='k')
-
-def make_pic_line(i):
-    ax.clear()
-    plt.plot(np.linspace(-cell_width/2, cell_width/2, shape), 
-             call_series(i))
-    ax.set_ylim(*lims)
-    ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
-    draw_pml_box()
-    plt.xlabel("Distancia en x (u.a.)")
-    plt.ylabel("Campo eléctrico Ez (u.a.)")
-    plt.show()
-    return ax
-
-def make_gif_line(gif_filename):
-    pics = []
-    for i in range(nframes):
-        ax = make_pic_line(i*nframes_step)
-        plt.savefig('temp_pic.png') 
-        pics.append(mim.imread('temp_pic.png')) 
-        print(str(i+1)+'/'+str(nframes))
-    mim.mimsave(gif_filename+'.gif', pics, fps=5)
-    os.remove('temp_pic.png')
-    print('Saved gif')
-
-make_gif_line(file("AxisX"))
-plt.close(fig)
-# del fig, ax, lims, nframes_step, nframes, call_series, label_function
-
 #%% SHOW SOURCE
 
 index_to_space = lambda i : i/resolution - cell_width/2
@@ -270,13 +211,21 @@ ax = plt.subplot()
 lims = (np.min(results_plane), np.max(results_plane))
 
 def draw_pml_box():
-    plt.vlines(-cell_width/2 + pml_width, 
-               -cell_width/2 + pml_width, 
-               cell_width/2 - pml_width,
+    plt.hlines(space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(cell_width/2 - pml_width),
                linestyle=":", color='k')
-    plt.vlines(cell_width/2 - pml_width, 
-               -cell_width/2 + pml_width, 
-               cell_width/2 - pml_width,
+    plt.hlines(space_to_index(cell_width/2 - pml_width), 
+               space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(cell_width/2 - pml_width),
+               linestyle=":", color='k')
+    plt.vlines(space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(cell_width/2 - pml_width),
+               linestyle=":", color='k')
+    plt.vlines(space_to_index(cell_width/2 - pml_width), 
+               space_to_index(-cell_width/2 + pml_width), 
+               space_to_index(cell_width/2 - pml_width),
                linestyle=":", color='k')
 
 def make_pic_plane(i):
@@ -351,6 +300,58 @@ def make_gif_line(gif_filename):
 make_gif_line(file("AxisZ"))
 plt.close(fig)
 # del fig, ax, lims, nframes_step, nframes, call_series, label_function
+
+#%% MAKE LINES GIF
+
+# What should be parameters
+nframes_step = 1
+nframes = int(results_line.shape[0]/nframes_step)
+call_series = lambda i : results_line[i]
+label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_line)
+
+# Animation base
+fig = plt.figure()
+ax = plt.subplot()
+lims = (np.min(results_line), np.max(results_line))
+shape = call_series(0).shape[0]
+
+def draw_pml_box():
+    plt.vlines(-cell_width/2 + pml_width, 
+               -cell_width/2 + pml_width, 
+               cell_width/2 - pml_width,
+               linestyle=":", color='k')
+    plt.vlines(cell_width/2 - pml_width, 
+               -cell_width/2 + pml_width, 
+               cell_width/2 - pml_width,
+               linestyle=":", color='k')
+
+def make_pic_line(i):
+    ax.clear()
+    plt.plot(np.linspace(-cell_width/2, cell_width/2, shape), 
+             call_series(i))
+    ax.set_ylim(*lims)
+    ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
+    draw_pml_box()
+    plt.xlabel("Distancia en x (u.a.)")
+    plt.ylabel("Campo eléctrico Ez (u.a.)")
+    plt.show()
+    return ax
+
+def make_gif_line(gif_filename):
+    pics = []
+    for i in range(nframes):
+        ax = make_pic_line(i*nframes_step)
+        plt.savefig('temp_pic.png') 
+        pics.append(mim.imread('temp_pic.png')) 
+        print(str(i+1)+'/'+str(nframes))
+    mim.mimsave(gif_filename+'.gif', pics, fps=5)
+    os.remove('temp_pic.png')
+    print('Saved gif')
+
+make_gif_line(file("AxisX"))
+plt.close(fig)
+# del fig, ax, lims, nframes_step, nframes, call_series, label_function
+
 
 #%%
 
