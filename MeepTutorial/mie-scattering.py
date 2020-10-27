@@ -8,7 +8,6 @@ import h5py as h5
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import os
 from time import time
 import PyMieScatt as ps
@@ -30,12 +29,14 @@ n_sphere = 2.0 # refrac
 wlen_range = np.array([2*np.pi*r/10, 2*np.pi*r/2])
 # From 10% to 50% of the circumference
 nfreq = 100
+cutoff = 5
 
 # Computation time
 enlapsed = []
+until_after_sources = 10
 
 # Saving directories
-series = "2020102602"
+series = "2020102712"
 folder = "MieResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/MeepTutorial/"
 
@@ -47,8 +48,8 @@ freq_center = np.mean(freq_range)
 freq_width = max(freq_range) - min(freq_range)
 
 # Space configuration
-pml_width = 0.5 * max(wlen_range)
-air_width = 0.5 * max(wlen_range)
+pml_width = 0.38 * max(wlen_range)
+air_width = 2*r
 
 #%% GENERAL GEOMETRY SETUP
 
@@ -64,8 +65,8 @@ cell_size = mp.Vector3(cell_width, cell_width, cell_width)
 source_center = -0.5*cell_width + pml_width
 sources = [mp.Source(mp.GaussianSource(freq_center,
                                        fwidth=freq_width,
-                                       is_integrated=True),
-                                       # cutoff=3.2),
+                                       is_integrated=True,
+                                       cutoff=3.2),
                      center=mp.Vector3(source_center),
                      size=mp.Vector3(0, cell_width, cell_width),
                      component=mp.Ez)]
@@ -133,7 +134,7 @@ enlapsed = time() - temp
 #%% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
 
 temp = time()
-sim.run(until_after_sources=10)
+sim.run(until_after_sources=until_after_sources)
 enlapsed = [enlapsed, time()-temp]
 
 freqs = np.asarray(mp.get_flux_freqs(box_x1))
@@ -169,10 +170,12 @@ params = dict(
     source_center=source_center,
     wlen_range=wlen_range,
     nfreq=nfreq,
+    cutoff=cutoff,
     series=series,
     folder=folder, 
     home=home,
-    enlapsed=enlapsed
+    enlapsed=enlapsed,
+    until_after_sources=until_after_sources,
     )
 
 f = h5.File(file("MidField.h5"), "w")
@@ -290,16 +293,10 @@ enlapsed.append( time() - temp )
 #%% SECOND RUN: SIMULATION :D
 
 temp = time()
-sim.run(until_after_sources=100)
+sim.run(until_after_sources=10*until_after_sources)
 enlapsed.append( time() - temp )
 del temp
 
-# box_x1_flux = mp.get_fluxes(box_x1)
-# box_x2_flux = mp.get_fluxes(box_x2)
-# box_y1_flux = mp.get_fluxes(box_y1)
-# box_y2_flux = mp.get_fluxes(box_y2)
-# box_z1_flux = mp.get_fluxes(box_z1)
-# box_z2_flux = mp.get_fluxes(box_z2)
 box_x1_flux = np.asarray(mp.get_fluxes(box_x1))
 box_x2_flux = np.asarray(mp.get_fluxes(box_x2))
 box_y1_flux = np.asarray(mp.get_fluxes(box_y1))
@@ -309,14 +306,10 @@ box_z2_flux = np.asarray(mp.get_fluxes(box_z2))
 
 #%% ANALYSIS
 
-# scatt_flux = np.asarray(box_x1_flux) - np.asarray(box_x2_flux)
-# scatt_flux = scatt_flux + np.asarray(box_y1_flux) - np.asarray(box_y2_flux)
-# scatt_flux = scatt_flux + np.asarray(box_z1_flux) - np.asarray(box_z2_flux)
 scatt_flux = box_x1_flux - box_x2_flux
 scatt_flux = scatt_flux + box_y1_flux - box_y2_flux
 scatt_flux = scatt_flux + box_z1_flux - box_z2_flux
 
-# intensity = np.asarray(box_x1_flux0)/(2*r)**2
 intensity = box_x1_flux0/(2*r)**2
 # Flux of one of the six monitor planes / Área
 # (the closest one, facing the planewave source) 
