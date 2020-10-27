@@ -299,6 +299,15 @@ def savetxt(file, datanumpylike, overwrite=False, header='', footer=''):
                             value = '"{} {}"'.format(*value)
                     elif isinstance(value, str):
                         value = '"{}"'.format(value)
+                    elif isinstance(value, list):
+                        sep = ", "
+                        new_value = ""
+                        for v in value:
+                            if isinstance(v, str):
+                                new_value = new_value + '"{}"'.format(v) + sep
+                            else:
+                                new_value = new_value + str(v) + sep
+                        value = "[" + new_value[:-len(sep)] + "]"
                     aux.append('{}={}'.format(key, value) + ', ')
                 footer = ''.join(aux)
             except:
