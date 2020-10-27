@@ -35,7 +35,7 @@ nfreq = 100 # Number of frequencies to discretize range
 enlapsed = []
 
 # Saving directories
-series = "2020101701"
+series = "2020102601"
 folder = "MieResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
@@ -188,7 +188,7 @@ enlapsed.append( time() - temp )
 ==> 2000 s = 33 min to complete 1st run
 """
 
-freqs = mp.get_flux_freqs(box_x1)
+freqs = np.asarray(mp.get_flux_freqs(box_x1))
 box_x1_data = sim.get_flux_data(box_x1)
 box_x2_data = sim.get_flux_data(box_x2)
 box_y1_data = sim.get_flux_data(box_y1)
@@ -232,7 +232,7 @@ for a in params: f["Ez"].attrs[a] = params[a]
 f.close()
 del f
 
-data_mid = np.array([1000/freqs, box_x1_flux0, box_x2_flux0, box_y1_flux0, 
+data_mid = np.array([10/freqs, box_x1_flux0, box_x2_flux0, box_y1_flux0, 
                      box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
 
 header_mid = ["Longitud de onda [nm]", 

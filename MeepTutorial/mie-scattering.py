@@ -181,10 +181,10 @@ for a in params: f["Ez"].attrs[a] = params[a]
 f.close()
 del f
 
-data_mid = np.array([1000/freqs, box_x1_flux0, box_x2_flux0, box_y1_flux0, 
+data_mid = np.array([1/freqs, box_x1_flux0, box_x2_flux0, box_y1_flux0, 
                      box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
 
-header_mid = ["Longitud de onda [nm]", 
+header_mid = ["Longitud de onda [μm]", 
               "Flujo X10 [u.a.]",
               "Flujo X20 [u.a]",
               "Flujo Y10 [u.a]",
@@ -364,11 +364,11 @@ header = ["Longitud de onda [nm]",
           "Sección eficaz efectiva (Meep) [u.a.]", 
           "Sección eficaz efectiva (Theory) [u.a.]"]
 
-data_base = np.array([10/freqs, box_x1_flux0, box_x1_flux, box_x2_flux, 
+data_base = np.array([1/freqs, box_x1_flux0, box_x1_flux, box_x2_flux, 
                       box_y1_flux, box_y2_flux, box_z1_flux, box_z2_flux,
                       intensity, scatt_flux, scatt_cross_section]).T
 
-header_base = ["Longitud de onda [nm]", 
+header_base = ["Longitud de onda [μm]", 
                "Flujo X10 [u.a.]",
                "Flujo X1 [u.a]",
                "Flujo X2 [u.a]",
