@@ -308,6 +308,10 @@ def savetxt(file, datanumpylike, overwrite=False, header='', footer=''):
                             else:
                                 new_value = new_value + str(v) + sep
                         value = "[" + new_value[:-len(sep)] + "]"
+                    elif isinstance(value, np.ndarray):
+                        sep = ", "
+                        value = sep.join([str(v) for v in value])
+                        value = "np.array([" + value + "])"
                     aux.append('{}={}'.format(key, value) + ', ')
                 footer = ''.join(aux)
             except:
