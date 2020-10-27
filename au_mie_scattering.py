@@ -30,13 +30,15 @@ medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 # Frequency and wavelength
 wlen_range = np.array([50,65]) # 500-650 nm range from lowest to highest
 nfreq = 100 # Number of frequencies to discretize range
+cutoff = 3.2
 
 # Computation time
 enlapsed = []
+time_factor_cell = 1.2
 
 # Saving directories
 series = "2020102601"
-folder = "MieResults"
+folder = "AuMieResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
 ### OTHER PARAMETERS
@@ -73,7 +75,7 @@ print("Resto Source Center: {}".format(source_center%(1/resolution)))
 sources = [mp.Source(mp.GaussianSource(freq_center,
                                        fwidth=freq_width,
                                        is_integrated=True,
-                                       cutoff=3.2),
+                                       cutoff=cutoff),
                      center=mp.Vector3(source_center),
                      size=mp.Vector3(0, cell_width, cell_width),
                      component=mp.Ez)]
@@ -81,6 +83,11 @@ sources = [mp.Source(mp.GaussianSource(freq_center,
 # (its size parameter fills the entire cell in 2d)
 # >> The planewave source extends into the PML 
 # ==> is_integrated=True must be specified
+
+until_after_sources = time_factor_cell * cell_width
+# Enough time for the pulse to pass through all the cell
+# Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
+# Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
 geometry = [mp.Sphere(material=medium,
                       center=mp.Vector3(),
@@ -163,16 +170,13 @@ enlapsed.append( time() - temp )
 #%% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
 
 temp = time()
-sim.run(until_after_sources=1.2*cell_width)  #1.1
-# Enough time for the pulse to pass through all the cell
+sim.run(until_after_sources=until_after_sources)
     #     mp.stop_when_fields_decayed(
     # np.mean(wlen_range), # dT = mean period of source
     # mp.Ez, # Component of field to check
     # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
     # 1e-3)) # Factor to decay
 enlapsed.append( time() - temp )
-# Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
-# Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
 """
 112x112x112 with resolution 2
@@ -217,6 +221,7 @@ params = dict(
     r=r,
     wlen_range=wlen_range,
     nfreq=nfreq,
+    cutoff=cutoff,
     pml_width=pml_width,
     air_width=air_width,
     source_center=source_center,
@@ -369,7 +374,7 @@ del box_z1_data, box_z2_data
 #%% SECOND RUN: SIMULATION :D
 
 temp = time()
-sim.run(until_after_sources=10*1.2*cell_width) 
+sim.run(until_after_sources=10*until_after_sources) 
     #     mp.stop_when_fields_decayed(
     # np.mean(wlen_range), # dT = mean period of source
     # mp.Ez, # Component of field to check
