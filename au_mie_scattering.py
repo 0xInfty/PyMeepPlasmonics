@@ -4,6 +4,7 @@
 
 # Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
 
+import h5py as h5
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -196,8 +197,100 @@ box_z1_data = sim.get_flux_data(box_z1)
 box_z2_data = sim.get_flux_data(box_z2)
 
 box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
+box_x2_flux0 = np.asarray(mp.get_fluxes(box_x2))
+box_y1_flux0 = np.asarray(mp.get_fluxes(box_y1))
+box_y2_flux0 = np.asarray(mp.get_fluxes(box_y2))
+box_z1_flux0 = np.asarray(mp.get_fluxes(box_z1))
+box_z2_flux0 = np.asarray(mp.get_fluxes(box_z2))
+
+field = sim.get_array(center=mp.Vector3(), 
+                      size=(cell_width, cell_width, cell_width), 
+                      component=mp.Ez)
 
 sim.reset_meep()
+
+#%% SAVE MID DATA
+
+params = dict(
+    from_um_factor=from_um_factor,
+    resolution=resolution,
+    r=r,
+    wlen_range=wlen_range,
+    nfreq=nfreq,
+    pml_width=pml_width,
+    air_width=air_width,
+    source_center=source_center,
+    enlapsed=enlapsed,
+    series=series,
+    folder=folder,
+    home=home
+    )
+
+f = h5.File(file("MidField.h5"), "w")
+f.create_dataset("Ez", data=field)
+for a in params: f["Ez"].attrs[a] = params[a]
+f.close()
+del f
+
+data_mid = np.array([1000/freqs, box_x1_flux0, box_x2_flux0, box_y1_flux0, 
+                     box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
+
+header_mid = ["Longitud de onda [nm]", 
+              "Flujo X10 [u.a.]",
+              "Flujo X20 [u.a]",
+              "Flujo Y10 [u.a]",
+              "Flujo Y20 [u.a]",
+              "Flujo Z10 [u.a]",
+              "Flujo Z20 [u.a]"]
+
+vs.savetxt(file("MidFlux.txt"), data_mid, header=header_mid, footer=params)
+
+#%% PLOT FLUX FOURIER MID DATA
+
+ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
+ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
+         ylims[1]+.1*(ylims[1]-ylims[0]))
+
+fig, ax = plt.subplots(3, 2, sharex=True)
+fig.subplots_adjust(hspace=0, wspace=.05)
+for a in ax[:,1]:
+    a.yaxis.tick_right()
+    a.yaxis.set_label_position("right")
+for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+    a.set_ylabel(h)
+
+for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
+    a.plot(1000/freqs, d)
+    a.set_ylim(*ylims)
+
+plt.savefig(file("MidFlux.png"))
+
+#%% PLOT FLUX WALLS FIELD
+
+index_to_space = lambda i : i/resolution - cell_width/2
+space_to_index = lambda x : round(resolution * (x + cell_width/2))
+
+field_walls = [field[space_to_index(-r),:,:],
+               field[space_to_index(r),:,:],
+               field[:,space_to_index(-r),:],
+               field[:,space_to_index(r),:],
+               field[:,:,space_to_index(-r)],
+               field[:,:,space_to_index(r)]]
+
+zlims = (np.min([np.min(f) for f in field_walls]), 
+         np.max([np.max(f) for f in field_walls]))
+
+fig, ax = plt.subplots(3, 2)
+fig.subplots_adjust(hspace=0.25)
+for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+    a.set_title(h.split(" ")[1].split("0")[0])
+
+for f, a in zip(field_walls, np.reshape(ax, 6)):
+    a.imshow(f.T, interpolation='spline36', cmap='RdBu', 
+             vmin=zlims[0], vmax=zlims[1])
+    a.axis("off")
+
+plt.savefig(file("MidField.png"))
 
 #%% SECOND RUN: SETUP
 
@@ -395,21 +488,6 @@ header_base = ["Longitud de onda [nm]",
                "Intensidad incidente [u.a.]", 
                "Flujo scattereado [u.a.]",
                "Sección eficaz de scattering [u.a.]"]
-
-params = dict(
-    from_um_factor=from_um_factor,
-    resolution=resolution,
-    r=r,
-    wlen_range=wlen_range,
-    nfreq=nfreq,
-    pml_width=pml_width,
-    air_width=air_width,
-    source_center=source_center,
-    enlapsed=enlapsed,
-    series=series,
-    folder=folder,
-    home=home
-    )
 
 vs.savetxt(file("Results.txt"), data, header=header, footer=params)
 vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
