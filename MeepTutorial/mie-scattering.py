@@ -18,12 +18,13 @@ import v_save as vs
 ### MEAN PARAMETERS
 
 # Units: 1μm as length unit
-resolution = 25
+from_um_factor = 1 # Conversion of 1 μm to my length unit (=10nm/1μm)
+resolution = 20
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Dielectric Sphere
 r = 1.0  # radius of sphere
-n_sphere = 2.0 # refrac
+n_sphere = 2.0 # refraction index
 
 # Frequency and wavelength
 wlen_range = np.array([2*np.pi*r/10, 2*np.pi*r/2])
@@ -33,10 +34,12 @@ cutoff = 5
 
 # Computation time
 enlapsed = []
+time_factor_cell = False
 until_after_sources = 10
+second_time_factor = 10
 
 # Saving directories
-series = "2020102712"
+series = "Transition4Resolution"
 folder = "MieResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/MeepTutorial/"
 
@@ -48,8 +51,8 @@ freq_center = np.mean(freq_range)
 freq_width = max(freq_range) - min(freq_range)
 
 # Space configuration
-pml_width = 0.38 * max(wlen_range)
-air_width = 2*r
+pml_width = 0.38 * max(wlen_range) #0.5 * max(wlen_range)
+air_width = 0.5 * max(wlen_range)
 
 #%% GENERAL GEOMETRY SETUP
 
@@ -66,7 +69,7 @@ source_center = -0.5*cell_width + pml_width
 sources = [mp.Source(mp.GaussianSource(freq_center,
                                        fwidth=freq_width,
                                        is_integrated=True,
-                                       cutoff=3.2),
+                                       cutoff=cutoff),
                      center=mp.Vector3(source_center),
                      size=mp.Vector3(0, cell_width, cell_width),
                      component=mp.Ez)]
@@ -74,6 +77,16 @@ sources = [mp.Source(mp.GaussianSource(freq_center,
 # (its size parameter fills the entire cell in 2d)
 # >> The planewave source extends into the PML 
 # ==> is_integrated=True must be specified
+
+if time_factor_cell is not False:
+    until_after_sources = time_factor_cell * cell_width
+else:
+    if until_after_sources is False:
+        raise ValueError("Either time_factor_cell or until_after_sources must be specified")
+    time_factor_cell = until_after_sources/cell_width
+# Enough time for the pulse to pass through all the cell
+# Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
+# Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
 geometry = [mp.Sphere(material=mp.Medium(index=n_sphere),
                       center=mp.Vector3(),
@@ -84,7 +97,6 @@ geometry = [mp.Sphere(material=mp.Medium(index=n_sphere),
 path = os.path.join(home, folder, "{}Results".format(series))
 if not os.path.isdir(path): vs.new_dir(path)
 file = lambda f : os.path.join(path, f)
-
 
 #%% FIRST RUN: SET UP
 
@@ -162,6 +174,7 @@ sim.reset_meep()
 #%% SAVE MID DATA
 
 params = dict(
+    from_um_factor=from_um_factor,
     resolution=resolution,
     r=r,
     pml_width=pml_width,
@@ -176,6 +189,8 @@ params = dict(
     home=home,
     enlapsed=enlapsed,
     until_after_sources=until_after_sources,
+    time_factor_cell=time_factor_cell,
+    second_time_factor=second_time_factor,
     )
 
 f = h5.File(file("MidField.h5"), "w")
@@ -184,10 +199,10 @@ for a in params: f["Ez"].attrs[a] = params[a]
 f.close()
 del f
 
-data_mid = np.array([1/freqs, box_x1_flux0, box_x2_flux0, box_y1_flux0, 
-                     box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
+data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
+                     box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
 
-header_mid = ["Longitud de onda [μm]", 
+header_mid = ["Longitud de onda [nm]", 
               "Flujo X10 [u.a.]",
               "Flujo X20 [u.a]",
               "Flujo Y10 [u.a]",
@@ -293,7 +308,7 @@ enlapsed.append( time() - temp )
 #%% SECOND RUN: SIMULATION :D
 
 temp = time()
-sim.run(until_after_sources=10*until_after_sources)
+sim.run(until_after_sources=second_time_factor*until_after_sources)
 enlapsed.append( time() - temp )
 del temp
 
@@ -326,14 +341,14 @@ scatt_eff_meep = -1 * scatt_cross_section / (np.pi*r**2)
 
 freqs = np.array(freqs)
 scatt_eff_theory = [ps.MieQ(n_sphere, 
-                            1000/f,
-                            2*r*1000,
+                            1e3*from_um_factor/f,
+                            2*r*1e3*from_um_factor,
                             asDict=True)['Qsca'] 
                     for f in freqs]
 # The simulation results are validated by comparing with 
 # analytic theory of PyMieScatt module
 
-#%% PLOT
+#%% TUTORIAL PLOT
 
 plt.figure(dpi=150)
 plt.loglog(2*np.pi*r*np.asarray(freqs),
@@ -349,19 +364,32 @@ plt.tight_layout()
 
 plt.savefig(file("MeepTutPlot.png"))
 
+#%% OUR PLOT
+
+plt.figure()
+plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
+plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
+plt.legend()
+plt.title('Mie Scattering of Lossless Dielectric Sphere')
+plt.tight_layout()
+plt.savefig(file("OurPlot.png"))
+
 #%% SAVE DATA
 
-data = np.array([10/freqs, scatt_eff_meep, scatt_eff_theory]).T
+data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
 
 header = ["Longitud de onda [nm]", 
           "Sección eficaz efectiva (Meep) [u.a.]", 
           "Sección eficaz efectiva (Theory) [u.a.]"]
 
-data_base = np.array([1/freqs, box_x1_flux0, box_x1_flux, box_x2_flux, 
-                      box_y1_flux, box_y2_flux, box_z1_flux, box_z2_flux,
+data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux, 
+                      box_x2_flux, box_y1_flux, box_y2_flux, 
+                      box_z1_flux, box_z2_flux,
                       intensity, scatt_flux, scatt_cross_section]).T
 
-header_base = ["Longitud de onda [μm]", 
+header_base = ["Longitud de onda [nm]", 
                "Flujo X10 [u.a.]",
                "Flujo X1 [u.a]",
                "Flujo X2 [u.a]",
