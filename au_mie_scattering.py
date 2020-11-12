@@ -4,6 +4,7 @@
 
 # Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
 
+import h5py as h5
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,7 +21,7 @@ import v_save as vs
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 4 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 5 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = 6  # Radius of sphere: 60 nm
@@ -29,13 +30,17 @@ medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
 # Frequency and wavelength
 wlen_range = np.array([50,65]) # 500-650 nm range from lowest to highest
 nfreq = 100 # Number of frequencies to discretize range
+cutoff = 3.2
 
 # Computation time
 enlapsed = []
+time_factor_cell = 1.2
+until_after_sources = False
+second_time_factor = 10
 
 # Saving directories
-series = "2020101701"
-folder = "MieResults"
+series = "2020111201"
+folder = "AuMieResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
 ### OTHER PARAMETERS
@@ -72,7 +77,7 @@ print("Resto Source Center: {}".format(source_center%(1/resolution)))
 sources = [mp.Source(mp.GaussianSource(freq_center,
                                        fwidth=freq_width,
                                        is_integrated=True,
-                                       cutoff=3.2),
+                                       cutoff=cutoff),
                      center=mp.Vector3(source_center),
                      size=mp.Vector3(0, cell_width, cell_width),
                      component=mp.Ez)]
@@ -80,6 +85,16 @@ sources = [mp.Source(mp.GaussianSource(freq_center,
 # (its size parameter fills the entire cell in 2d)
 # >> The planewave source extends into the PML 
 # ==> is_integrated=True must be specified
+
+if time_factor_cell is not False:
+    until_after_sources = time_factor_cell * cell_width
+else:
+    if until_after_sources is False:
+        raise ValueError("Either time_factor_cell or until_after_sources must be specified")
+    time_factor_cell = until_after_sources/cell_width
+# Enough time for the pulse to pass through all the cell
+# Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
+# Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
 geometry = [mp.Sphere(material=medium,
                       center=mp.Vector3(),
@@ -162,16 +177,13 @@ enlapsed.append( time() - temp )
 #%% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
 
 temp = time()
-sim.run(until_after_sources=1.2*cell_width)  #1.1
-# Enough time for the pulse to pass through all the cell
+sim.run(until_after_sources=until_after_sources)
     #     mp.stop_when_fields_decayed(
     # np.mean(wlen_range), # dT = mean period of source
     # mp.Ez, # Component of field to check
     # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
     # 1e-3)) # Factor to decay
 enlapsed.append( time() - temp )
-# Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
-# Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
 """
 112x112x112 with resolution 2
@@ -187,7 +199,7 @@ enlapsed.append( time() - temp )
 ==> 2000 s = 33 min to complete 1st run
 """
 
-freqs = mp.get_flux_freqs(box_x1)
+freqs = np.asarray(mp.get_flux_freqs(box_x1))
 box_x1_data = sim.get_flux_data(box_x1)
 box_x2_data = sim.get_flux_data(box_x2)
 box_y1_data = sim.get_flux_data(box_y1)
@@ -196,8 +208,106 @@ box_z1_data = sim.get_flux_data(box_z1)
 box_z2_data = sim.get_flux_data(box_z2)
 
 box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
+box_x2_flux0 = np.asarray(mp.get_fluxes(box_x2))
+box_y1_flux0 = np.asarray(mp.get_fluxes(box_y1))
+box_y2_flux0 = np.asarray(mp.get_fluxes(box_y2))
+box_z1_flux0 = np.asarray(mp.get_fluxes(box_z1))
+box_z2_flux0 = np.asarray(mp.get_fluxes(box_z2))
+
+field = sim.get_array(center=mp.Vector3(), 
+                      size=(cell_width, cell_width, cell_width), 
+                      component=mp.Ez)
 
 sim.reset_meep()
+
+#%% SAVE MID DATA
+
+params = dict(
+    from_um_factor=from_um_factor,
+    resolution=resolution,
+    r=r,
+    wlen_range=wlen_range,
+    nfreq=nfreq,
+    cutoff=cutoff,
+    pml_width=pml_width,
+    air_width=air_width,
+    source_center=source_center,
+    enlapsed=enlapsed,
+    series=series,
+    folder=folder,
+    home=home,
+    until_after_sources=until_after_sources,
+    time_factor_cell=time_factor_cell,
+    second_time_factor=second_time_factor,
+    )
+
+f = h5.File(file("MidField.h5"), "w")
+f.create_dataset("Ez", data=field)
+for a in params: f["Ez"].attrs[a] = params[a]
+f.close()
+del f
+
+data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
+                     box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
+
+header_mid = ["Longitud de onda [nm]", 
+              "Flujo X10 [u.a.]",
+              "Flujo X20 [u.a]",
+              "Flujo Y10 [u.a]",
+              "Flujo Y20 [u.a]",
+              "Flujo Z10 [u.a]",
+              "Flujo Z20 [u.a]"]
+
+vs.savetxt(file("MidFlux.txt"), data_mid, header=header_mid, footer=params)
+
+#%% PLOT FLUX FOURIER MID DATA
+
+ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
+ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
+         ylims[1]+.1*(ylims[1]-ylims[0]))
+
+fig, ax = plt.subplots(3, 2, sharex=True)
+fig.subplots_adjust(hspace=0, wspace=.05)
+for a in ax[:,1]:
+    a.yaxis.tick_right()
+    a.yaxis.set_label_position("right")
+for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+    a.set_ylabel(h)
+
+for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
+    a.plot(1e3*from_um_factor/freqs, d)
+    a.set_ylim(*ylims)
+ax[-1,0].set_xlabel("Wavelength [nm]")
+ax[-1,1].set_xlabel("Wavelength [nm]")
+
+plt.savefig(file("MidFlux.png"))
+
+#%% PLOT FLUX WALLS FIELD
+
+index_to_space = lambda i : i/resolution - cell_width/2
+space_to_index = lambda x : round(resolution * (x + cell_width/2))
+
+field_walls = [field[space_to_index(-r),:,:],
+               field[space_to_index(r),:,:],
+               field[:,space_to_index(-r),:],
+               field[:,space_to_index(r),:],
+               field[:,:,space_to_index(-r)],
+               field[:,:,space_to_index(r)]]
+
+zlims = (np.min([np.min(f) for f in field_walls]), 
+         np.max([np.max(f) for f in field_walls]))
+
+fig, ax = plt.subplots(3, 2)
+fig.subplots_adjust(hspace=0.25)
+for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+    a.set_title(h.split(" ")[1].split("0")[0])
+
+for f, a in zip(field_walls, np.reshape(ax, 6)):
+    a.imshow(f.T, interpolation='spline36', cmap='RdBu', 
+             vmin=zlims[0], vmax=zlims[1])
+    a.axis("off")
+
+plt.savefig(file("MidField.png"))
 
 #%% SECOND RUN: SETUP
 
@@ -276,7 +386,7 @@ del box_z1_data, box_z2_data
 #%% SECOND RUN: SIMULATION :D
 
 temp = time()
-sim.run(until_after_sources=10*1.2*cell_width) 
+sim.run(until_after_sources=second_time_factor*until_after_sources) 
     #     mp.stop_when_fields_decayed(
     # np.mean(wlen_range), # dT = mean period of source
     # mp.Ez, # Component of field to check
@@ -315,8 +425,8 @@ scatt_eff_meep = -1 * scatt_cross_section / (np.pi*r**2)
 
 freqs = np.array(freqs)
 scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
-                            10/f,
-                            2*r*10,
+                            1e3*from_um_factor/f,
+                            2*r*1e3*from_um_factor,
                             asDict=True)['Qsca'] 
                     for f in freqs]
 # The simulation results are validated by comparing with 
@@ -325,8 +435,8 @@ scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]),
 #%% PLOT ALL TOGETHER
 
 plt.figure()
-plt.plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
-plt.plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
+plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
+plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
 plt.legend()
@@ -337,7 +447,7 @@ plt.savefig(file("Comparison.png"))
 #%% PLOT SEPARATE
 
 plt.figure()
-plt.plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
+plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
 plt.legend()
@@ -346,7 +456,7 @@ plt.tight_layout()
 plt.savefig(file("Meep.png"))
 
 plt.figure()
-plt.plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
+plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'bo-',label='Theory')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
 plt.legend()
@@ -359,29 +469,29 @@ plt.savefig(file("Theory.png"))
 fig, axes = plt.subplots(nrows=2, sharex=True)
 fig.subplots_adjust(hspace=0)
 
-axes[0].plot(10/freqs, scatt_eff_meep,'bo-',label='Meep')
+axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
 axes[0].yaxis.tick_right()
 axes[0].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
 axes[0].legend()
 
-axes[1].plot(10/freqs, scatt_eff_theory,'bo-',label='Theory')
+axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'bo-',label='Theory')
 axes[1].set_xlabel('Wavelength [nm]')
 axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
 axes[1].legend()
 
 plt.savefig(file("Comparison.png"))
 
-
 #%% SAVE DATA
 
-data = np.array([10/freqs, scatt_eff_meep, scatt_eff_theory]).T
+data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
 
 header = ["Longitud de onda [nm]", 
           "Sección eficaz efectiva (Meep) [u.a.]", 
           "Sección eficaz efectiva (Theory) [u.a.]"]
 
-data_base = np.array([10/freqs, box_x1_flux0, box_x1_flux, box_x2_flux, 
-                      box_y1_flux, box_y2_flux, box_z1_flux, box_z2_flux,
+data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux,
+                      box_x2_flux, box_y1_flux, box_y2_flux, 
+                      box_z1_flux, box_z2_flux, 
                       intensity, scatt_flux, scatt_cross_section]).T
 
 header_base = ["Longitud de onda [nm]", 
@@ -396,20 +506,27 @@ header_base = ["Longitud de onda [nm]",
                "Flujo scattereado [u.a.]",
                "Sección eficaz de scattering [u.a.]"]
 
-params = dict(
-    from_um_factor=from_um_factor,
-    resolution=resolution,
-    r=r,
-    wlen_range=wlen_range,
-    nfreq=nfreq,
-    pml_width=pml_width,
-    air_width=air_width,
-    source_center=source_center,
-    enlapsed=enlapsed,
-    series=series,
-    folder=folder,
-    home=home
-    )
-
 vs.savetxt(file("Results.txt"), data, header=header, footer=params)
 vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
+
+#%% PLOT FLUX FOURIER FINAL DATA
+
+ylims = (np.min(data_base[:,2:8]), np.max(data_base[:,2:8]))
+ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
+         ylims[1]+.1*(ylims[1]-ylims[0]))
+
+fig, ax = plt.subplots(3, 2, sharex=True)
+fig.subplots_adjust(hspace=0, wspace=.05)
+for a in ax[:,1]:
+    a.yaxis.tick_right()
+    a.yaxis.set_label_position("right")
+for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+    a.set_ylabel(h)
+
+for d, a in zip(data_base[:,2:8].T, np.reshape(ax, 6)):
+    a.plot(1e3*from_um_factor/freqs, d)
+    a.set_ylim(*ylims)
+ax[-1,0].set_xlabel("Wavelength [nm]")
+ax[-1,1].set_xlabel("Wavelength [nm]")
+
+plt.savefig(file("FinalFlux.png"))
