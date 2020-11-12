@@ -21,7 +21,7 @@ import v_save as vs
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 4 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 5 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = 6  # Radius of sphere: 60 nm
@@ -39,7 +39,7 @@ until_after_sources = False
 second_time_factor = 10
 
 # Saving directories
-series = "2020102601"
+series = "2020111201"
 folder = "AuMieResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
@@ -275,8 +275,10 @@ for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
     a.set_ylabel(h)
 
 for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
-    a.plot(1000/freqs, d)
+    a.plot(1e3*from_um_factor/freqs, d)
     a.set_ylim(*ylims)
+ax[-1,0].set_xlabel("Wavelength [nm]")
+ax[-1,1].set_xlabel("Wavelength [nm]")
 
 plt.savefig(file("MidFlux.png"))
 
@@ -434,7 +436,7 @@ scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]),
 
 plt.figure()
 plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'bo-',label='Theory')
+plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
 plt.legend()
@@ -479,7 +481,6 @@ axes[1].legend()
 
 plt.savefig(file("Comparison.png"))
 
-
 #%% SAVE DATA
 
 data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
@@ -507,3 +508,25 @@ header_base = ["Longitud de onda [nm]",
 
 vs.savetxt(file("Results.txt"), data, header=header, footer=params)
 vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
+
+#%% PLOT FLUX FOURIER FINAL DATA
+
+ylims = (np.min(data_base[:,2:8]), np.max(data_base[:,2:8]))
+ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
+         ylims[1]+.1*(ylims[1]-ylims[0]))
+
+fig, ax = plt.subplots(3, 2, sharex=True)
+fig.subplots_adjust(hspace=0, wspace=.05)
+for a in ax[:,1]:
+    a.yaxis.tick_right()
+    a.yaxis.set_label_position("right")
+for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+    a.set_ylabel(h)
+
+for d, a in zip(data_base[:,2:8].T, np.reshape(ax, 6)):
+    a.plot(1e3*from_um_factor/freqs, d)
+    a.set_ylim(*ylims)
+ax[-1,0].set_xlabel("Wavelength [nm]")
+ax[-1,1].set_xlabel("Wavelength [nm]")
+
+plt.savefig(file("FinalFlux.png"))
