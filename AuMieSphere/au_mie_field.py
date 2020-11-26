@@ -31,20 +31,21 @@ r = 6  # Radius of sphere: 60 nm
 
 # Frequency and wavelength
 wlen_range = np.array([50,65]) # 500-650 nm range from lowest to highest
-nfreq = 50 # Number of frequencies to discretize range
+nfreq = 100 # Number of frequencies to discretize range
 cutoff = 3.2
 
 # Computation time
 enlapsed = []
-time_factor_cell = 1.2
+time_factor_cell = 0#.5
 until_after_sources = False
 
 # Saving data
 period_line = 1/10 * min(wlen_range)
 period_plane = 1/50 * min(wlen_range)
+meep_flux = True
 
 # Saving directories
-series = "Resolution{}NFreq{}".format(resolution, nfreq)
+series = "TimeFactorCell{}".format(time_factor_cell)
 folder = "AuMieSphere/AuMieFieldResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
@@ -123,6 +124,28 @@ sim = mp.Simulation(resolution=resolution,
                     k_point=mp.Vector3(),
                     symmetries=symmetries)
 
+if meep_flux:
+    # Scattered power --> Computed by surrounding it with closed DFT flux box 
+    # (its size and orientation are irrelevant because of Poynting's theorem) 
+    box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(x=-r),
+                                        size=mp.Vector3(0,2*r,2*r)))
+    box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(x=+r),
+                                        size=mp.Vector3(0,2*r,2*r)))
+    box_y1 = sim.add_flux(freq_center, freq_width, nfreq,
+                          mp.FluxRegion(center=mp.Vector3(y=-r),
+                                        size=mp.Vector3(2*r,0,2*r)))
+    box_y2 = sim.add_flux(freq_center, freq_width, nfreq,
+                          mp.FluxRegion(center=mp.Vector3(y=+r),
+                                        size=mp.Vector3(2*r,0,2*r)))
+    box_z1 = sim.add_flux(freq_center, freq_width, nfreq,
+                          mp.FluxRegion(center=mp.Vector3(z=-r),
+                                        size=mp.Vector3(2*r,2*r,0)))
+    box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
+                          mp.FluxRegion(center=mp.Vector3(z=+r),
+                                        size=mp.Vector3(2*r,2*r,0)))
+
 temp = time()
 sim.init_sim()
 enlapsed.append( time() - temp )
@@ -165,6 +188,22 @@ temp = time()
 sim.run(*to_do_while_running, until_after_sources=until_after_sources)
 enlapsed.append( time() - temp )
 
+if meep_flux:
+    freqs = np.asarray(mp.get_flux_freqs(box_x1))
+    box_x1_data = sim.get_flux_data(box_x1)
+    box_x2_data = sim.get_flux_data(box_x2)
+    box_y1_data = sim.get_flux_data(box_y1)
+    box_y2_data = sim.get_flux_data(box_y2)
+    box_z1_data = sim.get_flux_data(box_z1)
+    box_z2_data = sim.get_flux_data(box_z2)
+    
+    box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
+    box_x2_flux0 = np.asarray(mp.get_fluxes(box_x2))
+    box_y1_flux0 = np.asarray(mp.get_fluxes(box_y1))
+    box_y2_flux0 = np.asarray(mp.get_fluxes(box_y2))
+    box_z1_flux0 = np.asarray(mp.get_fluxes(box_z1))
+    box_z2_flux0 = np.asarray(mp.get_fluxes(box_z2))
+
 #%% SAVE METADATA
 
 params = dict(
@@ -200,6 +239,20 @@ for s in planes_series:
     g.close()
 del g
 
+if meep_flux:
+    data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
+                         box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
+    
+    header_mid = ["Longitud de onda [nm]", 
+                  "Flujo X10 [u.a.]",
+                  "Flujo X20 [u.a]",
+                  "Flujo Y10 [u.a]",
+                  "Flujo Y20 [u.a]",
+                  "Flujo Z10 [u.a]",
+                  "Flujo Z20 [u.a]"]
+    
+    vs.savetxt(file("MidFlux.txt"), data_mid, header=header_mid, footer=params)
+
 #%% GET READY TO LOAD DATA
 
 f = h5.File(file("Lines.h5"), "r")
@@ -213,6 +266,29 @@ for s in planes_series:
     results_plane.append( gi["Ez"] )
 del gi
 
+#%% PLOT FLUX FOURIER MID DATA
+
+if meep_flux:
+    ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
+    ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
+             ylims[1]+.1*(ylims[1]-ylims[0]))
+    
+    fig, ax = plt.subplots(3, 2, sharex=True)
+    fig.subplots_adjust(hspace=0, wspace=.05)
+    for a in ax[:,1]:
+        a.yaxis.tick_right()
+        a.yaxis.set_label_position("right")
+    for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+        a.set_ylabel(h)
+    
+    for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
+        a.plot(1e3*from_um_factor/freqs, d)
+        a.set_ylim(*ylims)
+    ax[-1,0].set_xlabel("Wavelength [nm]")
+    ax[-1,1].set_xlabel("Wavelength [nm]")
+    
+    plt.savefig(file("MidFlux.png"))
+
 #%% SHOW ALL LINES IN COLOR MAP
 
 plt.figure()
@@ -222,21 +298,6 @@ plt.ylabel("Tiempo (int)")
 plt.show()
 
 plt.savefig(file("AxisXColorMap.png"))
-
-#%% SHOW ONE LINE
-
-i = 10
-label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_line)
-
-plt.figure()
-ax = plt.subplot()
-plt.plot(np.linspace(-cell_width/2, cell_width/2, len(results_line[i,:])), 
-         results_line[i,:])
-plt.xlabel("Distancia en x (u.a.)")
-plt.ylabel("Campo eléctrico Ez (u.a.)")
-ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
-
-plt.savefig(file("AxisXLineIndex{}.png".format(i)))
 
 #%% MAKE LINES GIF
 
@@ -284,6 +345,10 @@ space_to_index = lambda x : round(resolution * (x + cell_width/2))
 source_field = np.asarray(results_line[:, space_to_index(source_center)])
 
 plt.figure()
+# plt.plot(np.linspace(0, 
+#                      2*cutoff*(max(wlen_range)-min(wlen_range)) + until_after_sources, 
+#                      source_field.size), 
+#          source_field)
 plt.plot(source_field)
 plt.xlabel("Tiempo (u.a.)")
 plt.ylabel("Campo eléctrico Ez (u.a.)")
@@ -428,164 +493,77 @@ ax[-1,1].set_xlabel("Wavelength [nm]")
 
 plt.savefig(file("PlanesFluxFourier.png"))
 
-#%% FOURIER FOR ONE DOT IN TIME
-
-k = 1200
-
-n = results_plane[0].shape[1]
-planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
-
-index_to_space = lambda i : i * cell_width/n - cell_width/2
-space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
-
-results_plane_crop = [p[0:k, 
-                        space_to_index(-r):space_to_index(r), 
-                        space_to_index(-r):space_to_index(r)]
-                      for p in results_plane]
-
-n_crop = results_plane_crop[0].shape[1]
-n_t = results_plane_crop[0].shape[0]
-
-index_to_space_crop = lambda i : i * 2*r/n_crop - r
-space_to_index_crop = lambda x : round(n_crop * (x + r) / (2*r))
-
-i, j = [space_to_index_crop(0), space_to_index_crop(0)]
-fourier_freq_planes = np.fft.rfftfreq(k, d=period_plane)
-fourier_lines_dots = [np.abs(np.fft.rfft(p[:,i,j])) for p in results_plane_crop]
-
-fig, ax = plt.subplots(3, 2)
-fig.subplots_adjust(hspace=0.25)
-for a, h in zip(np.reshape(ax, 6), planes_labels):
-    a.set_title(h.split(" ")[1].split("0")[0])
-
-for d, a in zip(fourier_lines_dots, np.reshape(ax, 6)):
-    a.plot(1e3*from_um_factor/fourier_freq_planes, d)
-    a.set_xlim(*wlen_range*1e3*from_um_factor)
-    a.xaxis.set_visible(False)
-    a.yaxis.set_visible(False)
-ax[-1,0].xaxis.set_visible(True)
-ax[-1,1].xaxis.set_visible(True)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
-
-plt.savefig(file("DotsFluxFourier-{}-{}.png".format(k, n_t)))
-
-#%% FOURIER FOR WHOLE PLANES IN TIME
-
-k = 1200
-
-n = results_plane[0].shape[1]
-planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
-
-index_to_space = lambda i : i * cell_width/n - cell_width/2
-space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
-
-results_plane_crop = [p[0:k, 
-                        space_to_index(-r):space_to_index(r), 
-                        space_to_index(-r):space_to_index(r)]
-                      for p in results_plane]
-
-n_crop = results_plane_crop[0].shape[1]
-n_t = results_plane[0].shape[0]
-space_index = [0,0]
-    
-fourier_lines_planes = [np.ndarray((k//2 + 1, n_crop, n_crop)) for i in range(6)]
-fourier_freq_planes = np.fft.rfftfreq(k, d=period_plane)
-for p, fp in zip(results_plane_crop, fourier_lines_planes):
-    for i in range(n_crop):
-        for j in range(n_crop):
-            fp[:, i, j] = np.abs(np.fft.rfft(p[:, i, j]))
-
-# fourier_planes = []
-# for fp in fourier_lines_planes:
-#     data = [dblquad(fpd, -r, r, -r, r) for fpd in fp]
-#     fourier_planes.append(data)
-
-fourier_planes = [np.array([np.sum(fpd)/(n_crop)**2 for fpd in fp]) for fp in fourier_lines_planes]
-
-fig, ax = plt.subplots(3, 2)
-fig.subplots_adjust(hspace=0.25)
-for a, h in zip(np.reshape(ax, 6), planes_labels):
-    a.set_title(h.split(" ")[1].split("0")[0])
-
-for d, a in zip(fourier_planes, np.reshape(ax, 6)):
-    a.plot(1e3*from_um_factor/fourier_freq_planes, d)
-    a.set_xlim(*wlen_range*1e3*from_um_factor)
-    a.xaxis.set_visible(False)
-    a.yaxis.set_visible(False)
-ax[-1,0].xaxis.set_visible(True)
-ax[-1,1].xaxis.set_visible(True)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
-
-plt.savefig(file("PlanesFluxFourier-{}-{}.png".format(k, n_t)))
-
-
 #%% MAKE FOURIER FOR ONE DOT IN TIME GIF
 
-# What should be parameters
-nframes_zero = 1000
-nframes_step = 10
-nframes = int((results_plane[0].shape[0] - nframes_zero)/nframes_step)
-
-# Generate data to plot
-n = results_plane[0].shape[1]
-planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
-
-index_to_space = lambda i : i * cell_width/n - cell_width/2
-space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
-
-results_plane_crop = [p[:, 
-                        space_to_index(-r):space_to_index(r), 
-                        space_to_index(-r):space_to_index(r)]
-                      for p in results_plane]
-
-n_crop = results_plane_crop[0].shape[1]
-n_t = results_plane_crop[0].shape[0]
-
-index_to_space_crop = lambda i : i * 2*r/n_crop - r
-space_to_index_crop = lambda x : round(n_crop * (x + r) / (2*r))
-
-i, j = [space_to_index_crop(0), space_to_index_crop(0)]
-call_x_series = lambda k : 1e3*from_um_factor/np.fft.rfftfreq(k, d=period_plane)
-call_y_series = lambda k : [np.abs(np.fft.rfft(p[0:k,i,j])) for p in results_plane_crop]
-label_function = lambda k : 'Tiempo: {:.1f} u.a.'.format(k*period_plane)
-
-# Animation base
-fig, ax = plt.subplots(3, 2)
-fig.subplots_adjust(hspace=0.25)
-# lims = (np.min(results_plane), np.max(results_plane))
-
-def make_pic_fourier(k):    
+for zoom in [False, True]:
     
-    for d, a, ps in zip(call_y_series(k), np.reshape(ax, 6), planes_series):
-        a.clear()
-        a.set_title(ps)
-        a.plot(call_x_series(k), d)
-        # a.set_xlim(*wlen_range*1e3*from_um_factor)
-        a.xaxis.set_visible(False)
-        # a.yaxis.set_visible(False)
-    ax[-1,0].xaxis.set_visible(True)
-    ax[-1,1].xaxis.set_visible(True)
-    ax[-1,0].set_xlabel("Wavelength [nm]")
-    ax[-1,1].set_xlabel("Wavelength [nm]")
-    ax[0,1].text(-.37, 1.2, label_function(k), transform=ax[0,1].transAxes)
-    plt.show()
+    # What should be parameters
+    frames_zero = 10
+    frames_end = results_plane[0].shape[0]
+    nframes_step = 15
+    if frames_end>results_plane[0].shape[0]: raise ValueError("Too large!")
+    nframes = int((frames_end - frames_zero)/nframes_step)
+
     
-    return ax
-
-def make_gif_fourier(gif_filename):
-    pics = []
-    for k in range(nframes_zero, nframes*nframes_step+nframes_zero, nframes_step):
-        ax = make_pic_fourier(k)
-        plt.savefig('temp_pic.png') 
-        pics.append(mim.imread('temp_pic.png')) 
-        print(str(k)+'/'+str(nframes+nframes_zero))
-    mim.mimsave(gif_filename+'.gif', pics, fps=5)
-    os.remove('temp_pic.png')
-    print('Saved gif')
-
-make_gif_fourier(file("DotsFluxFourier2"))
+    # Generate data to plot
+    n = results_plane[0].shape[1]
+    planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
+    
+    index_to_space = lambda i : i * cell_width/n - cell_width/2
+    space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
+    
+    results_plane_crop = [p[:, 
+                            space_to_index(-r):space_to_index(r), 
+                            space_to_index(-r):space_to_index(r)]
+                          for p in results_plane]
+    
+    n_crop = results_plane_crop[0].shape[1]
+    n_t = results_plane_crop[0].shape[0]
+    
+    index_to_space_crop = lambda i : i * 2*r/n_crop - r
+    space_to_index_crop = lambda x : round(n_crop * (x + r) / (2*r))
+    
+    i, j = [space_to_index_crop(0), space_to_index_crop(0)]
+    call_x_series = lambda k : 1e3*from_um_factor/np.fft.rfftfreq(k, d=period_plane)
+    call_y_series = lambda k : [np.abs(np.fft.rfft(p[0:k,i,j])) for p in results_plane_crop]
+    label_function = lambda k : 'Tiempo: {:.1f} u.a.'.format(k*period_plane)
+    
+    # Animation base
+    fig, ax = plt.subplots(3, 2)
+    fig.subplots_adjust(hspace=0.25)
+    # lims = (np.min(results_plane), np.max(results_plane))
+    
+    def make_pic_fourier(k):    
+        
+        for d, a, ps in zip(call_y_series(k), np.reshape(ax, 6), planes_series):
+            a.clear()
+            a.set_title(ps)
+            a.plot(call_x_series(k), d)
+            if zoom: a.set_xlim(*wlen_range*1e3*from_um_factor)
+            a.xaxis.set_visible(False)
+            # a.yaxis.set_visible(False)
+        ax[-1,0].xaxis.set_visible(True)
+        ax[-1,1].xaxis.set_visible(True)
+        ax[-1,0].set_xlabel("Wavelength [nm]")
+        ax[-1,1].set_xlabel("Wavelength [nm]")
+        ax[0,1].text(-.37, 1.2, label_function(k), transform=ax[0,1].transAxes)
+        plt.show()
+        
+        return ax
+    
+    def make_gif_fourier(gif_filename):
+        pics = []
+        for k in range(frames_zero, frames_end, nframes_step):
+            ax = make_pic_fourier(k)
+            plt.savefig('temp_pic.png') 
+            pics.append(mim.imread('temp_pic.png')) 
+            print(str(k)+'/'+str(nframes_step*nframes+frames_zero))
+        mim.mimsave(gif_filename+'.gif', pics, fps=5)
+        os.remove('temp_pic.png')
+        print('Saved gif')
+    
+    if zoom: make_gif_fourier(file("DotsFluxFourierZoom"))
+    else: make_gif_fourier(file("DotsFluxFourier"))
 
 #%%
 
