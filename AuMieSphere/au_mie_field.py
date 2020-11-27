@@ -36,16 +36,17 @@ cutoff = 3.2
 
 # Computation time
 enlapsed = []
-time_factor_cell = 0#.5
+time_factor_cell = 1.2#.5
 until_after_sources = False
 
 # Saving data
 period_line = 1/10 * min(wlen_range)
 period_plane = 1/50 * min(wlen_range)
 meep_flux = True
+H_field = True
 
 # Saving directories
-series = "TimeFactorCell{}".format(time_factor_cell)
+series = "Testing" #"TimeFactorCell{}".format(time_factor_cell)
 folder = "AuMieSphere/AuMieFieldResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
@@ -99,17 +100,17 @@ else:
 # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
 # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
-def get_line(sim, line_center, line_size):
+def get_line(sim, line_center, line_size, component):
     return sim.get_array(
         center=mp.Vector3(*line_center), 
         size=mp.Vector3(*line_size), 
-        component=mp.Ez)
+        component=component) # mp.Ez, mp.Hy
 
-def get_plane(sim, plane_center, plane_size):
+def get_plane(sim, plane_center, plane_size, component):
     return sim.get_array(
         center=mp.Vector3(*plane_center), 
         size=mp.Vector3(*plane_size), 
-        component=mp.Ez)
+        component=component)
 
 path = os.path.join(home, folder, "{}Results".format(series))
 if not os.path.isdir(path): vs.new_dir(path)
@@ -152,27 +153,30 @@ enlapsed.append( time() - temp )
 
 #%% DEFINE SAVE STEP FUNCTIONS
 
-f, save_line = vs.save_slice_generator(
-    sim, lambda sim: get_line(sim, [0, 0, 0], [cell_width, 0, 0]), 
-    file("Lines.h5"), "Ez")
-gx1, save_plane_x1 = vs.save_slice_generator(
-    sim, lambda sim: get_plane(sim, [-r, 0, 0], [0, cell_width, cell_width]), 
-    file("Planes_X1.h5"), "Ez")
-gx2, save_plane_x2 = vs.save_slice_generator(
-    sim, lambda sim: get_plane(sim, [r, 0, 0], [0, cell_width, cell_width]), 
-    file("Planes_X2.h5"), "Ez")
-gy1, save_plane_y1 = vs.save_slice_generator(
-    sim, lambda sim: get_plane(sim, [0, -r, 0], [cell_width, 0, cell_width]), 
-    file("Planes_Y1.h5"), "Ez")
-gy2, save_plane_y2 = vs.save_slice_generator(
-    sim, lambda sim: get_plane(sim, [0, r, 0], [cell_width, 0, cell_width]), 
-    file("Planes_Y2.h5"), "Ez")
-gz1, save_plane_z1 = vs.save_slice_generator(
-    sim, lambda sim: get_plane(sim, [0, 0, -r], [cell_width, cell_width, 0]), 
-    file("Planes_Z1.h5"), "Ez")
-gz2, save_plane_z2 = vs.save_slice_generator(
-    sim, lambda sim: get_plane(sim, [0, 0, r], [cell_width, cell_width, 0]), 
-    file("Planes_Z2.h5"), "Ez")
+def slice_generator_params(get_slice, center, size):
+    if H_field: 
+        datasets = ["Ez", "Hy"]
+        get_slices = [lambda sim: get_slice(sim, center, size, mp.Ez),
+                      lambda sim: get_slice(sim, center, size, mp.Hy)]
+    else: 
+        datasets = "Ez"
+        get_slices = lambda sim: get_slice(sim, center, size, mp.Ez)
+    return datasets, get_slices
+
+f, save_line = vs.save_slice_generator(sim, file("Lines.h5"), 
+    *slice_generator_params(get_line, [0, 0, 0], [cell_width, 0, 0]))
+gx1, save_plane_x1 = vs.save_slice_generator(sim, file("Planes_X1.h5"), 
+    *slice_generator_params(get_line, [-r, 0, 0], [0, cell_width, cell_width]))
+gx2, save_plane_x2 = vs.save_slice_generator(sim, file("Planes_X2.h5"),
+    *slice_generator_params(get_plane, [r, 0, 0], [0, cell_width, cell_width]))
+gy1, save_plane_y1 = vs.save_slice_generator(sim, file("Planes_Y1.h5"), 
+    *slice_generator_params(get_plane, [0, -r, 0], [cell_width, 0, cell_width]))
+gy2, save_plane_y2 = vs.save_slice_generator(sim, file("Planes_Y2.h5"),
+    *slice_generator_params(get_plane, [0, r, 0], [cell_width, 0, cell_width]))
+gz1, save_plane_z1 = vs.save_slice_generator(sim, file("Planes_Z1.h5"), 
+    *slice_generator_params(get_plane, [0, 0, -r], [cell_width, cell_width, 0]))
+gz2, save_plane_z2 = vs.save_slice_generator(sim, file("Planes_Z2.h5"),
+    *slice_generator_params(get_plane, [0, 0, r], [cell_width, cell_width, 0]))
 
 to_do_while_running = [mp.at_every(period_line, save_line),
                        mp.at_every(period_plane, save_plane_x1),
@@ -227,15 +231,21 @@ params = dict(
     )
 
 planes_series = ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]
+if H_field:
+    fields_series = ["Ez", "Hy"]
+else:
+    fields_series = "Ez"
 
 f = h5.File(file("Lines.h5"), "r+")
-for a in params: f["Ez"].attrs[a] = params[a]
+for fs in fields_series:
+    for a in params: f[fs].attrs[a] = params[a]
 f.close()
 del f
 
 for s in planes_series:
     g = h5.File(file("Planes_{}.h5".format(s)), "r+")
-    for a in params: g["Ez"].attrs[a] = params[a]
+    for f in fields_series: 
+        for a in params: g[fs].attrs[a] = params[a]
     g.close()
 del g
 
@@ -256,14 +266,17 @@ if meep_flux:
 #%% GET READY TO LOAD DATA
 
 f = h5.File(file("Lines.h5"), "r")
-results_line = f["Ez"]
+results_line_E = f["Ez"]
+results_line_H = f["Hy"]
 
 g = []
-results_plane = []
+results_plane_E = []
+results_plane_H = []
 for s in planes_series:
     gi = h5.File(file("Planes_{}.h5".format(s)), "r")
     g.append(gi)
-    results_plane.append( gi["Ez"] )
+    results_plane_E.append( gi["Ez"] )
+    results_plane_H.append( gi["Ez"] )
 del gi
 
 #%% PLOT FLUX FOURIER MID DATA
@@ -291,35 +304,39 @@ if meep_flux:
 
 #%% SHOW ALL LINES IN COLOR MAP
 
-plt.figure()
-plt.imshow(results_line, interpolation='spline36', cmap='RdBu')
-plt.xlabel("Distancia en x (int)")
-plt.ylabel("Tiempo (int)")
-plt.show()
+for fs, rl in zip(fields_series, [results_line_E, results_line_H]):
+    plt.figure()
+    plt.imshow(rl, interpolation='spline36', cmap='RdBu')
+    plt.xlabel("Distancia en x (int)")
+    plt.ylabel("Tiempo (int)")
+    plt.show()
 
-plt.savefig(file("AxisXColorMap.png"))
+    plt.savefig(file("AxisXColorMap{}.png".format(fs)))
 
 #%% MAKE LINES GIF
 
 # What should be parameters
 nframes_step = 3
-nframes = int(results_line.shape[0]/nframes_step)
-call_series = lambda i : results_line[i,:]
+nframes = int(results_line_E.shape[0]/nframes_step)
+call_series = lambda i : results_line_E[i,:]
+call_series_x = lambda i : np.linspace(-cell_width/2, cell_width/2, 
+                                       len(results_line_E[i,:]))
 label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_line)
+label_y = "Campo eléctrico Ez (u.a.)"
+lims = (np.min(results_line_E), np.max(results_line_E))
+color = 'C0'
 
 # Animation base
 fig = plt.figure()
 ax = plt.subplot()
-lims = (np.min(results_line), np.max(results_line))
 
 def make_pic_line(i):
     ax.clear()
-    plt.plot(np.linspace(-cell_width/2, cell_width/2, len(results_line[i,:])), 
-             call_series(i))
+    plt.plot(call_series_x(i), call_series(i), color)
     ax.set_ylim(*lims)
     ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
     plt.xlabel("Distancia en x (u.a.)")
-    plt.ylabel("Campo eléctrico Ez (u.a.)")
+    plt.ylabel(label_y)
     plt.show()
     return ax
 
@@ -330,37 +347,60 @@ def make_gif_line(gif_filename):
         plt.savefig('temp_pic.png') 
         pics.append(mim.imread('temp_pic.png')) 
         print(str(i+1)+'/'+str(nframes))
-    mim.mimsave(gif_filename+'.gif', pics, fps=5)
+    mim.mimsave(gif_filename, pics, fps=5)
     os.remove('temp_pic.png')
-    fig.close()
+    plt.close(fig)
     print('Saved gif')
 
-make_gif_line(file("AxisX"))
+make_gif_line(file("AxisXEz.gif"))
+
+#%% MAKE LINES GIF FOR HY
+
+# What should be parameters
+nframes_step = 3
+nframes = int(results_line_H.shape[0]/nframes_step)
+call_series = lambda i : results_line_H[i,:]
+call_series_x = lambda i : np.linspace(-cell_width/2, cell_width/2, 
+                                       len(results_line_H[i,:]))
+label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_line)
+label_y = "Campo magnético Hy (u.a.)"
+lims = (np.min(results_line_H), np.max(results_line_H))
+color = 'C1'
+
+# Animation base
+fig = plt.figure()
+ax = plt.subplot()
+
+make_gif_line(file("AxisXHy.gif"))
 
 #%% SHOW SOURCE
 
 index_to_space = lambda i : i/resolution - cell_width/2
 space_to_index = lambda x : round(resolution * (x + cell_width/2))
 
-source_field = np.asarray(results_line[:, space_to_index(source_center)])
+source_field_E = np.asarray(results_line_E[:, space_to_index(source_center)])
+source_field_H = np.asarray(results_line_H[:, space_to_index(source_center)])
 
 plt.figure()
-# plt.plot(np.linspace(0, 
-#                      2*cutoff*(max(wlen_range)-min(wlen_range)) + until_after_sources, 
-#                      source_field.size), 
-#          source_field)
-plt.plot(source_field)
+plt.plot(np.arange(len(source_field_E))*period_line, source_field_E)
 plt.xlabel("Tiempo (u.a.)")
 plt.ylabel("Campo eléctrico Ez (u.a.)")
 
-plt.savefig(file("Source.png"))
+plt.savefig(file("SourceEz.png"))
+
+plt.figure()
+plt.plot(np.arange(len(source_field_H))*period_line, source_field_H, 'C1')
+plt.xlabel("Tiempo (u.a.)")
+plt.ylabel("Campo magnético Hy (u.a.)")
+
+plt.savefig(file("SourceHy.png"))
 
 #%% MAKE FOURIER FOR SOURCE
 
 index_to_space = lambda i : i/resolution - cell_width/2
 space_to_index = lambda x : round(resolution * (x + cell_width/2))
 
-source_field = np.asarray(results_line[:, space_to_index(source_center)])
+source_field = np.asarray(results_line_E[:, space_to_index(source_center)])
 
 fourier = np.abs(np.fft.rfft(source_field))
 fourier_freq = np.fft.rfftfreq(len(source_field), d=period_line)
@@ -378,6 +418,7 @@ plt.savefig(file("SourceFFT.png"))
 
 plt.xlim(freq_center-2*freq_width, freq_center+2*freq_width)
 plt.show()
+
 plt.savefig(file("SourceFFTZoom.png"))
 
 #%% SHOW ONE PLANE
@@ -385,12 +426,12 @@ plt.savefig(file("SourceFFTZoom.png"))
 i = 10
 label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_plane)
 call_series = lambda i, d : d[i,:,:]
-n = results_plane[0].shape[1]
+n = results_plane_E[0].shape[1]
 
 index_to_space = lambda i : i * cell_width/n - cell_width/2
 space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
 
-zlims = (np.min(results_plane), np.max(results_plane))
+zlims = (np.min(results_plane_E), np.max(results_plane_E))
 planes_labels = ["Flujo {} [u.a.]".format(s) for s in planes_series]
 
 fig, ax = plt.subplots(3, 2)
@@ -398,7 +439,7 @@ fig.subplots_adjust(hspace=0.25)
 for a, h in zip(np.reshape(ax, 6), planes_labels):
     a.set_title(h.split(" ")[1].split("0")[0])
 
-for p, a in zip(results_plane, np.reshape(ax, 6)):
+for p, a in zip(results_plane_E, np.reshape(ax, 6)):
     a.imshow(call_series(i, p).T, interpolation='spline36', cmap='RdBu', 
              vmin=zlims[0], vmax=zlims[1])
     a.axis("off")
@@ -407,26 +448,26 @@ plt.savefig(file("PlanesIndex{}".format(i)))
 
 #%% FOURIER FOR ONE DOT
 
-n = results_plane[0].shape[1]
+n = results_plane_E[0].shape[1]
 planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
 
 index_to_space = lambda i : i * cell_width/n - cell_width/2
 space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
 
-results_plane_crop = [p[:, 
+results_plane_E_crop = [p[:, 
                         space_to_index(-r):space_to_index(r), 
                         space_to_index(-r):space_to_index(r)]
-                      for p in results_plane]
+                      for p in results_plane_E]
 
-n_crop = results_plane_crop[0].shape[1]
-n_t = results_plane_crop[0].shape[0]
+n_crop = results_plane_E_crop[0].shape[1]
+n_t = results_plane_E_crop[0].shape[0]
 
 index_to_space_crop = lambda i : i * 2*r/n_crop - r
 space_to_index_crop = lambda x : round(n_crop * (x + r) / (2*r))
 
 i, j = [space_to_index_crop(0), space_to_index_crop(0)]
 fourier_freq_planes = np.fft.rfftfreq(n_t, d=period_plane)
-fourier_lines_dots = [np.abs(np.fft.rfft(p[:,i,j])) for p in results_plane_crop]
+fourier_lines_dots = [np.abs(np.fft.rfft(p[:,i,j])) for p in results_plane_E_crop]
 
 fig, ax = plt.subplots(3, 2)
 fig.subplots_adjust(hspace=0.25)
@@ -447,34 +488,35 @@ plt.savefig(file("DotsFluxFourier.png"))
 
 #%% FOURIER FOR WHOLE PLANES
 
-n = results_plane[0].shape[1]
+n = results_plane_E[0].shape[1]
 planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
 
 index_to_space = lambda i : i * cell_width/n - cell_width/2
 space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
 
-results_plane_crop = [p[:, 
+results_plane_E_crop = [p[:, 
                         space_to_index(-r):space_to_index(r), 
                         space_to_index(-r):space_to_index(r)]
-                      for p in results_plane]
+                      for p in results_plane_E]
 
-n_crop = results_plane_crop[0].shape[1]
-n_t = results_plane[0].shape[0]
+n_crop = results_plane_E_crop[0].shape[1]
+n_t = results_plane_E[0].shape[0]
 space_index = [0,0]
     
 fourier_lines_planes = [np.ndarray((n_t//2 + 1, n_crop, n_crop)) for i in range(6)]
 fourier_freq_planes = np.fft.rfftfreq(n_t, d=period_plane)
-for p, fp in zip(results_plane_crop, fourier_lines_planes):
+for p, fp in zip(results_plane_E_crop, fourier_lines_planes):
     for i in range(n_crop):
         for j in range(n_crop):
-            fp[:, i, j] = np.abs(np.fft.rfft(p[:, i, j]))
+            fp[:, i, j] = np.abs(np.fft.rfft(p[:, i, j]))**2
 
 # fourier_planes = []
 # for fp in fourier_lines_planes:
 #     data = [dblquad(fpd, -r, r, -r, r) for fpd in fp]
 #     fourier_planes.append(data)
 
-fourier_planes = [np.array([np.sum(fpd)/(n_crop)**2 for fpd in fp]) for fp in fourier_lines_planes]
+fourier_planes = [np.array([(1e3*from_um_factor)**2*np.sum(fpd)/(n_crop)**2 
+                            for fpd in fp]) for fp in fourier_lines_planes]
 
 fig, ax = plt.subplots(3, 2)
 fig.subplots_adjust(hspace=0.25)
@@ -499,39 +541,38 @@ for zoom in [False, True]:
     
     # What should be parameters
     frames_zero = 10
-    frames_end = results_plane[0].shape[0]
+    frames_end = results_plane_E[0].shape[0]
     nframes_step = 15
-    if frames_end>results_plane[0].shape[0]: raise ValueError("Too large!")
+    if frames_end>results_plane_E[0].shape[0]: raise ValueError("Too large!")
     nframes = int((frames_end - frames_zero)/nframes_step)
 
-    
     # Generate data to plot
-    n = results_plane[0].shape[1]
+    n = results_plane_E[0].shape[1]
     planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
     
     index_to_space = lambda i : i * cell_width/n - cell_width/2
     space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
     
-    results_plane_crop = [p[:, 
+    results_plane_E_crop = [p[:, 
                             space_to_index(-r):space_to_index(r), 
                             space_to_index(-r):space_to_index(r)]
-                          for p in results_plane]
+                          for p in results_plane_E]
     
-    n_crop = results_plane_crop[0].shape[1]
-    n_t = results_plane_crop[0].shape[0]
+    n_crop = results_plane_E_crop[0].shape[1]
+    n_t = results_plane_E_crop[0].shape[0]
     
     index_to_space_crop = lambda i : i * 2*r/n_crop - r
     space_to_index_crop = lambda x : round(n_crop * (x + r) / (2*r))
     
     i, j = [space_to_index_crop(0), space_to_index_crop(0)]
     call_x_series = lambda k : 1e3*from_um_factor/np.fft.rfftfreq(k, d=period_plane)
-    call_y_series = lambda k : [np.abs(np.fft.rfft(p[0:k,i,j])) for p in results_plane_crop]
+    call_y_series = lambda k : [np.abs(np.fft.rfft(p[0:k,i,j])) for p in results_plane_E_crop]
     label_function = lambda k : 'Tiempo: {:.1f} u.a.'.format(k*period_plane)
     
     # Animation base
     fig, ax = plt.subplots(3, 2)
     fig.subplots_adjust(hspace=0.25)
-    # lims = (np.min(results_plane), np.max(results_plane))
+    # lims = (np.min(results_plane_E), np.max(results_plane_E))
     
     def make_pic_fourier(k):    
         
@@ -558,12 +599,12 @@ for zoom in [False, True]:
             plt.savefig('temp_pic.png') 
             pics.append(mim.imread('temp_pic.png')) 
             print(str(k)+'/'+str(nframes_step*nframes+frames_zero))
-        mim.mimsave(gif_filename+'.gif', pics, fps=5)
+        mim.mimsave(gif_filename, pics, fps=5)
         os.remove('temp_pic.png')
         print('Saved gif')
     
-    if zoom: make_gif_fourier(file("DotsFluxFourierZoom"))
-    else: make_gif_fourier(file("DotsFluxFourier"))
+    if zoom: make_gif_fourier(file("DotsFluxFourierZoom.gif"))
+    else: make_gif_fourier(file("DotsFluxFourier.gif"))
 
 #%%
 

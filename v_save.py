@@ -423,7 +423,7 @@ def savefile_helper(folder,
 
 #%%
 
-def save_slice_generator(sim, get_slice, filename, dataname):
+def save_slice_generator(sim, filename, datanames, get_slices):
     """
     Generates a Meep stepfunction to save slices or outputs to HDF5.
 
@@ -432,17 +432,17 @@ def save_slice_generator(sim, get_slice, filename, dataname):
     sim : mp.Simulation
         Meep simulation instance. Must be initialized so that ground set of 
         data can be saved.
-    get_slice : function
+    filename : str
+        Filename of the HDF5 file to be created. Must include full path and .h5 
+        extension. Beware! If already in existance, old file is replaced.
+    datanames : str or list of str
+        HDF5 dataset name.
+    get_slices : function or list of functions
         Function 'get_slice(sim, state)' that takes 'sim' Meep simulation 
         instance as required argument and may take a second argument 'state', 
         which is a string with value 'step' or 'finish'. Must return the 
         desired array to be saved for each time step that the stepfunction 
         is called on.
-    filename : str
-        Filename of the HDF5 file to be created. Must include full path and .h5 
-        extension. Beware! If already in existance, old file is replaced.
-    dataname : TYPE
-        HDF5 dataset name.
 
     Returns
     -------
@@ -451,9 +451,9 @@ def save_slice_generator(sim, get_slice, filename, dataname):
         once the simulation is finished. Meanwhile, it must exist as a global 
         variable.
     save_slice_stepfun : function
-        Stepfunction that will execute function 'get_slice' on each step and 
-        save the results, appending them to the 'dataname' dataset inside the 
-        'filename' HDF5 file.
+        Stepfunction that will execute the list of functions 'get_slice' on 
+        each step and save the results, appending each of them to the 
+        associated 'dataname' dataset inside the 'filename' HDF5 file.
         
     See also
     --------
@@ -462,29 +462,48 @@ def save_slice_generator(sim, get_slice, filename, dataname):
 
     """
     
-    data = get_slice(sim) # Data zero
-    shape = data.shape
-    dueshape  = (1,*shape)
-    
+    if type(datanames)!=list:
+        datanames = [datanames]
+    if type(get_slices)!=list:
+        get_slices = [get_slices]
+    if len(datanames)!=len(get_slices):
+        raise ValueError("Must have as many datanames as step functions")
+
     file = h5.File(filename, 'w', libver='latest')    
-    file.create_dataset(dataname, chunks=dueshape, 
-                        maxshape=tuple(None for d in dueshape), 
-                        data=data.reshape(dueshape))
+    
+    shapes = []
+    dueshapes = []
+    for get_slice, dataname in zip(get_slices, datanames):
+        
+        data = get_slice(sim) # Data zero
+        shape = data.shape
+        dueshape  = (1,*shape)
+        
+        file.create_dataset(dataname, chunks=dueshape, 
+                            maxshape=tuple(None for d in dueshape), 
+                            data=data.reshape(dueshape))
+        
+        shapes.append(shape)
+        dueshapes.append(dueshape)
+    
     file.swmr_mode = True
     
     def save_slice_stepfun(sim, state):
         
         if state=="step":
-            data_now = get_slice(sim)
             
-            dim_before = file[dataname].shape[0]
-            shape_now = ( dim_before+1, *shape )
-            file[dataname].resize( shape_now )
+            for i in range(len(datanames)):
             
-            file[dataname][dim_before,] = data_now.reshape(dueshape)
-            
-            file[dataname].flush()
-            # Notify the reader process that new data has been written
+                data_now = get_slices[i](sim)
+                
+                dim_before = file[datanames[i]].shape[0]
+                shape_now = ( dim_before+1, *shapes[i] )
+                file[datanames[i]].resize( shape_now )
+                
+                file[datanames[i]][dim_before,] = data_now.reshape(dueshapes[i])
+                
+                file[datanames[i]].flush()
+                # Notify the reader process that new data has been written
             
         elif state=="finish":
             file.close()
