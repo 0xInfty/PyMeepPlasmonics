@@ -111,10 +111,10 @@ sim.init_sim()
 
 #%% DEFINE SAVE STEP FUNCTIONS
 
-f, save_xz_plane = vs.save_slice_generator(sim, get_xz_plane, 
-                                           file("XZPlane.h5"), "Ez")
-g, save_xy_plane = vs.save_slice_generator(sim, get_xy_plane, 
-                                           file("XYPlane.h5"), "Ez")
+f, save_xz_plane = vs.save_slice_generator(sim, file("XZPlane.h5"), 
+                                           "Ez", get_xz_plane)
+g, save_xy_plane = vs.save_slice_generator(sim, file("XYPlane.h5"), 
+                                           "Ez", get_xy_plane)
 
 to_do_while_running = [mp.at_every(period_planes, save_xz_plane, save_xy_plane)]
 

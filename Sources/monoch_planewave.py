@@ -114,8 +114,8 @@ sim.init_sim()
 
 #%% DEFINE SAVE STEP FUNCTIONS
 
-f, save_line = vs.save_slice_generator(sim, get_line, file("Lines.h5"), "Ez")
-g, save_plane = vs.save_slice_generator(sim, get_plane, file("Planes.h5"), "Ez")
+f, save_line = vs.save_slice_generator(sim, file("Lines.h5"), "Ez", get_line)
+g, save_plane = vs.save_slice_generator(sim, file("Planes.h5"), "Ez", get_plane)
 
 to_do_while_running = [mp.at_every(period_line, save_line),
                        mp.at_every(period_plane, save_plane)]
