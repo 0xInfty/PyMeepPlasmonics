@@ -36,7 +36,7 @@ cutoff = 3.2
 
 # Computation time
 enlapsed = []
-time_factor_cell = 1.2#.5
+time_factor_cell = 1.2
 until_after_sources = False
 
 # Saving data
@@ -46,7 +46,7 @@ meep_flux = True
 H_field = True
 
 # Saving directories
-series = "Testing" #"TimeFactorCell{}".format(time_factor_cell)
+series = "TimeFactorCell{}".format(time_factor_cell)
 folder = "AuMieSphere/AuMieFieldResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
@@ -352,7 +352,7 @@ def make_gif_line(gif_filename):
     plt.close(fig)
     print('Saved gif')
 
-make_gif_line(file("AxisXEz.gif"))
+make_gif_line(file("AxisXEzCrop.gif"))
 
 #%% MAKE LINES GIF FOR HY
 
@@ -376,7 +376,7 @@ make_gif_line(file("AxisXHy.gif"))
 #%% SHOW SOURCE
 
 index_to_space = lambda i : i/resolution - cell_width/2
-space_to_index = lambda x : round(resolution * (x + cell_width/2))
+space_to_index = lambda x : int(round(resolution * (x + cell_width/2)))
 
 source_field_E = np.asarray(results_line_E[:, space_to_index(source_center)])
 source_field_H = np.asarray(results_line_H[:, space_to_index(source_center)])
@@ -398,7 +398,7 @@ plt.savefig(file("SourceHy.png"))
 #%% MAKE FOURIER FOR SOURCE
 
 index_to_space = lambda i : i/resolution - cell_width/2
-space_to_index = lambda x : round(resolution * (x + cell_width/2))
+space_to_index = lambda x : int(round(resolution * (x + cell_width/2)))
 
 source_field = np.asarray(results_line_E[:, space_to_index(source_center)])
 
@@ -429,7 +429,7 @@ call_series = lambda i, d : d[i,:,:]
 n = results_plane_E[0].shape[1]
 
 index_to_space = lambda i : i * cell_width/n - cell_width/2
-space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
+space_to_index = lambda x : int(round(n * (x + cell_width/2) / cell_width))
 
 zlims = (np.min(results_plane_E), np.max(results_plane_E))
 planes_labels = ["Flujo {} [u.a.]".format(s) for s in planes_series]
@@ -452,7 +452,7 @@ n = results_plane_E[0].shape[1]
 planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
 
 index_to_space = lambda i : i * cell_width/n - cell_width/2
-space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
+space_to_index = lambda x : int(round(n * (x + cell_width/2) / cell_width))
 
 results_plane_E_crop = [p[:, 
                         space_to_index(-r):space_to_index(r), 
@@ -463,7 +463,7 @@ n_crop = results_plane_E_crop[0].shape[1]
 n_t = results_plane_E_crop[0].shape[0]
 
 index_to_space_crop = lambda i : i * 2*r/n_crop - r
-space_to_index_crop = lambda x : round(n_crop * (x + r) / (2*r))
+space_to_index_crop = lambda x : int(round(n_crop * (x + r) / (2*r)))
 
 i, j = [space_to_index_crop(0), space_to_index_crop(0)]
 fourier_freq_planes = np.fft.rfftfreq(n_t, d=period_plane)
@@ -492,7 +492,7 @@ n = results_plane_E[0].shape[1]
 planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
 
 index_to_space = lambda i : i * cell_width/n - cell_width/2
-space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
+space_to_index = lambda x : int(round(n * (x + cell_width/2) / cell_width))
 
 results_plane_E_crop = [p[:, 
                         space_to_index(-r):space_to_index(r), 
@@ -546,23 +546,24 @@ for zoom in [False, True]:
     if frames_end>results_plane_E[0].shape[0]: raise ValueError("Too large!")
     nframes = int((frames_end - frames_zero)/nframes_step)
 
+    
     # Generate data to plot
     n = results_plane_E[0].shape[1]
     planes_labels = ["Flujo {} [u.a]".format(l) for l in planes_series]
     
     index_to_space = lambda i : i * cell_width/n - cell_width/2
-    space_to_index = lambda x : round(n * (x + cell_width/2) / cell_width)
+    space_to_index = lambda x : int(round(n * (x + cell_width/2) / cell_width))
     
-    results_plane_E_crop = [p[:, 
-                            space_to_index(-r):space_to_index(r), 
-                            space_to_index(-r):space_to_index(r)]
-                          for p in results_plane_E]
+    results_plane_E_crop = np.array(
+        [p[:, space_to_index(-r):space_to_index(r), 
+              space_to_index(-r):space_to_index(r)]
+                          for p in results_plane_E])
     
     n_crop = results_plane_E_crop[0].shape[1]
     n_t = results_plane_E_crop[0].shape[0]
     
     index_to_space_crop = lambda i : i * 2*r/n_crop - r
-    space_to_index_crop = lambda x : round(n_crop * (x + r) / (2*r))
+    space_to_index_crop = lambda x : int(round(n_crop * (x + r) / (2*r)))
     
     i, j = [space_to_index_crop(0), space_to_index_crop(0)]
     call_x_series = lambda k : 1e3*from_um_factor/np.fft.rfftfreq(k, d=period_plane)
@@ -602,6 +603,7 @@ for zoom in [False, True]:
         mim.mimsave(gif_filename, pics, fps=5)
         os.remove('temp_pic.png')
         print('Saved gif')
+        plt.close(fig)
     
     if zoom: make_gif_fourier(file("DotsFluxFourierZoom.gif"))
     else: make_gif_fourier(file("DotsFluxFourier.gif"))
