@@ -21,7 +21,7 @@ import v_save as vs
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 5 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = 6  # Radius of sphere: 60 nm
@@ -39,8 +39,8 @@ until_after_sources = False
 second_time_factor = 10
 
 # Saving directories
-series = "2020111201"
-folder = "AuMieResults"
+series = "FontAtMiddle"
+folder = "AuMieSphere/AuMieResults"
 home = "/home/vall/Documents/Thesis/ThesisPython/"
 
 ### OTHER PARAMETERS
@@ -432,6 +432,34 @@ scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]),
 # The simulation results are validated by comparing with 
 # analytic theory of PyMieScatt module
 
+#%% SAVE FINAL DATA
+
+data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
+
+header = ["Longitud de onda [nm]", 
+          "Sección eficaz efectiva (Meep) [u.a.]", 
+          "Sección eficaz efectiva (Theory) [u.a.]"]
+
+data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux,
+                      box_x2_flux, box_y1_flux, box_y2_flux, 
+                      box_z1_flux, box_z2_flux, 
+                      intensity, scatt_flux, scatt_cross_section]).T
+
+header_base = ["Longitud de onda [nm]", 
+               "Flujo X10 [u.a.]",
+               "Flujo X1 [u.a]",
+               "Flujo X2 [u.a]",
+               "Flujo Y1 [u.a]",
+               "Flujo Y2 [u.a]",
+               "Flujo Z1 [u.a]",
+               "Flujo Z2 [u.a]",
+               "Intensidad incidente [u.a.]", 
+               "Flujo scattereado [u.a.]",
+               "Sección eficaz de scattering [u.a.]"]
+
+vs.savetxt(file("Results.txt"), data, header=header, footer=params)
+vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
+
 #%% PLOT ALL TOGETHER
 
 plt.figure()
@@ -480,34 +508,6 @@ axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
 axes[1].legend()
 
 plt.savefig(file("Comparison.png"))
-
-#%% SAVE DATA
-
-data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
-
-header = ["Longitud de onda [nm]", 
-          "Sección eficaz efectiva (Meep) [u.a.]", 
-          "Sección eficaz efectiva (Theory) [u.a.]"]
-
-data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux,
-                      box_x2_flux, box_y1_flux, box_y2_flux, 
-                      box_z1_flux, box_z2_flux, 
-                      intensity, scatt_flux, scatt_cross_section]).T
-
-header_base = ["Longitud de onda [nm]", 
-               "Flujo X10 [u.a.]",
-               "Flujo X1 [u.a]",
-               "Flujo X2 [u.a]",
-               "Flujo Y1 [u.a]",
-               "Flujo Y2 [u.a]",
-               "Flujo Z1 [u.a]",
-               "Flujo Z2 [u.a]",
-               "Intensidad incidente [u.a.]", 
-               "Flujo scattereado [u.a.]",
-               "Sección eficaz de scattering [u.a.]"]
-
-vs.savetxt(file("Results.txt"), data, header=header, footer=params)
-vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
 
 #%% PLOT FLUX FOURIER FINAL DATA
 
