@@ -13,6 +13,8 @@ DottableWrapper : class
 @author: Vall
 """
 
+import meep as mp
+
 #%%
 
 class WrapperList(list):
@@ -265,3 +267,36 @@ class DottableWrapper:
         instances = dict(instances)
         self.__dict__.update(instances)
         self.all.update(instances)
+        
+        
+#%%
+
+class Line(mp.Volume):
+    
+    """A Meep Volume subclass that holds a line instead of a whole volume"""
+
+    def __init__(self, center=mp.Vector3(), size=mp.Vector3(), 
+                 is_cylindrical=False, vertices=[]):
+        
+        super().__init__(center=center, size=size, dims=1, 
+                         is_cylindrical=is_cylindrical, vertices=vertices)
+        
+        nvertices = len(self.get_vertices())
+        if nvertices>2:
+            raise TypeError(f"Must have 2 vertices and not {nvertices}")
+
+#%%
+
+class Plane(mp.Volume):
+    
+    """A Meep Volume subclass that holds a line instead of a whole volume"""
+
+    def __init__(self, center=mp.Vector3(), size=mp.Vector3(), 
+                 is_cylindrical=False, vertices=[]):
+        
+        super().__init__(center=center, size=size, dims=1, 
+                         is_cylindrical=is_cylindrical, vertices=vertices)
+        
+        nvertices = len(self.get_vertices())
+        if nvertices<3 or nvertices>4:
+            raise TypeError(f"Must have 3 or 4 vertices and not {nvertices}")
