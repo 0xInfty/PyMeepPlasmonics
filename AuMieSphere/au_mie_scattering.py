@@ -39,9 +39,9 @@ until_after_sources = False
 second_time_factor = 10
 
 # Saving directories
-series = "FontAtMiddle"
-folder = "AuMieSphere/AuMieResults"
-home = "/home/vall/Documents/Thesis/ThesisPython/"
+series = "SerialRes2"
+folder = "AuMieSphere/AuMie"
+home = "/home/vall/Documents/Thesis/ThesisResults/"
 
 ### OTHER PARAMETERS
 
@@ -64,9 +64,11 @@ air_width = air_width - air_width%(1/resolution)
 pml_width = pml_width - pml_width%(1/resolution)
 pml_layers = [mp.PML(thickness=pml_width)]
 
-symmetries = [mp.Mirror(mp.Y), 
-              mp.Mirror(mp.Z, phase=-1)]
-# Cause of symmetry, two mirror planes reduce cell size to 1/4
+# symmetries = [mp.Mirror(mp.Y), 
+#               mp.Mirror(mp.Z, phase=-1)]
+# Two mirror planes reduce cell size to 1/4
+# Issue related that lead me to comment this lines:
+# https://github.com/NanoComp/meep/issues/1484
 
 cell_width = 2 * (pml_width + air_width + r)
 cell_width = cell_width - cell_width%(1/resolution)
@@ -101,7 +103,7 @@ geometry = [mp.Sphere(material=medium,
                       radius=r)]
 # Au sphere with frequency-dependant characteristics imported from Meep.
 
-path = os.path.join(home, folder, "{}Results".format(series))
+path = os.path.join(home, folder, f"{series}")
 if not os.path.isdir(path): vs.new_dir(path)
 file = lambda f : os.path.join(path, f)
 
@@ -111,8 +113,8 @@ sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
                     boundary_layers=pml_layers,
                     sources=sources,
-                    k_point=mp.Vector3(),
-                    symmetries=symmetries)
+                    k_point=mp.Vector3())#,
+                    # symmetries=symmetries)
 # >> k_point zero specifies boundary conditions needed
 # for the source to be infinitely extended
 
@@ -316,7 +318,7 @@ sim = mp.Simulation(resolution=resolution,
                     boundary_layers=pml_layers,
                     sources=sources,
                     k_point=mp.Vector3(),
-                    symmetries=symmetries,
+                    # symmetries=symmetries,
                     geometry=geometry)
 
 box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
@@ -507,7 +509,7 @@ axes[1].set_xlabel('Wavelength [nm]')
 axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
 axes[1].legend()
 
-plt.savefig(file("Comparison.png"))
+plt.savefig(file("SeparatedComparison.png"))
 
 #%% PLOT FLUX FOURIER FINAL DATA
 
