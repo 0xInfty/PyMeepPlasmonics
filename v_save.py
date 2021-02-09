@@ -23,7 +23,14 @@ saveanimation : function
 """
 
 import matplotlib.pyplot as plt
+# import meep as mp
 import numpy as np
+# try:
+#     from mpi4py import MPI
+#     LOADED_MPI4PY = True
+# except ModuleNotFoundError:
+#     print("Importing without module 'mpi4py'")
+#     LOADED_MPI4PY = False
 import h5py as h5
 import os
 from re import findall
@@ -469,7 +476,7 @@ def save_slice_generator(sim, filename, datanames, get_slices):
     if len(datanames)!=len(get_slices):
         raise ValueError("Must have as many datanames as step functions")
 
-    file = h5.File(filename, 'w', libver='latest')    
+    file = h5.File(filename, 'w', libver='latest')
     
     shapes = []
     dueshapes = []
@@ -509,7 +516,7 @@ def save_slice_generator(sim, filename, datanames, get_slices):
             file.close()
         
         return
-        
+            
     return file, save_slice_stepfun
 
 #%%
