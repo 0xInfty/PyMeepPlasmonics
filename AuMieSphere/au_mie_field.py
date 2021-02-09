@@ -46,9 +46,9 @@ meep_flux = True
 H_field = True
 
 # Saving directories
-series = "TimeFactorCell{}".format(time_factor_cell)
-folder = "AuMieSphere/AuMieFieldResults"
-home = "/home/vall/Documents/Thesis/ThesisPython/"
+series = "Testing123"#"TimeFactorCell{}".format(time_factor_cell)
+folder = "AuMieSphere/AuMieField"
+home = "/home/vall/Documents/Thesis/ThesisResults/"
 
 ### OTHER PARAMETERS
 
@@ -68,9 +68,11 @@ air_width = air_width - air_width%(1/resolution)
 pml_width = pml_width - pml_width%(1/resolution)
 pml_layers = [mp.PML(thickness=pml_width)]
 
-symmetries = [mp.Mirror(mp.Y), 
-              mp.Mirror(mp.Z, phase=-1)]
-# Cause of symmetry, two mirror planes reduce cell size to 1/4
+# symmetries = [mp.Mirror(mp.Y), 
+#               mp.Mirror(mp.Z, phase=-1)]
+# Two mirror planes reduce cell size to 1/4
+# Issue related that lead me to comment this lines:
+# https://github.com/NanoComp/meep/issues/1484
 
 cell_width = 2 * (pml_width + air_width + r)
 cell_width = cell_width - cell_width%(1/resolution)
@@ -112,7 +114,7 @@ def get_plane(sim, plane_center, plane_size, component):
         size=mp.Vector3(*plane_size), 
         component=component)
 
-path = os.path.join(home, folder, "{}Results".format(series))
+path = os.path.join(home, folder, f"{series}")
 if not os.path.isdir(path): vs.new_dir(path)
 file = lambda f : os.path.join(path, f)
 
@@ -122,8 +124,8 @@ sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
                     boundary_layers=pml_layers,
                     sources=sources,
-                    k_point=mp.Vector3(),
-                    symmetries=symmetries)
+                    k_point=mp.Vector3())
+                    # symmetries=symmetries)
 
 if meep_flux:
     # Scattered power --> Computed by surrounding it with closed DFT flux box 
@@ -193,14 +195,7 @@ sim.run(*to_do_while_running, until_after_sources=until_after_sources)
 enlapsed.append( time() - temp )
 
 if meep_flux:
-    freqs = np.asarray(mp.get_flux_freqs(box_x1))
-    box_x1_data = sim.get_flux_data(box_x1)
-    box_x2_data = sim.get_flux_data(box_x2)
-    box_y1_data = sim.get_flux_data(box_y1)
-    box_y2_data = sim.get_flux_data(box_y2)
-    box_z1_data = sim.get_flux_data(box_z1)
-    box_z2_data = sim.get_flux_data(box_z2)
-    
+    freqs = np.asarray(mp.get_flux_freqs(box_x1))    
     box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
     box_x2_flux0 = np.asarray(mp.get_fluxes(box_x2))
     box_y1_flux0 = np.asarray(mp.get_fluxes(box_y1))
