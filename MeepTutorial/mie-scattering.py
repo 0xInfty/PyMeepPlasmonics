@@ -4,11 +4,16 @@
 
 # Scattering efficiency of an homogeneous sphere given an incident planewave.
 
+import sys
+sys.path.append("/home/vall/Documents/Thesis/ThesisPython")
+
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
 from time import time
+import os
 import PyMieScatt as ps
+import v_save as vs
 
 #%%
 
@@ -25,11 +30,17 @@ frq_cen = 0.5*(frq_min+frq_max)
 dfrq = frq_max-frq_min
 nfrq = 100
 
+from_um_factor = 1 # Conversion of 1 μm to my length unit (=10nm/1μm)
 resolution = 25
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 dpml = 0.5*wvl_max
 dair = 0.5*wvl_max
+
+# Saving directories
+series = "pmpyParallel7"
+folder = "MeepTutorial/TestPS"
+home = "/home/vall/Documents/Thesis/ThesisResults"
 
 #%% FIRST RUN: GEOMETRY SETUP
 
@@ -52,6 +63,11 @@ sources = [mp.Source(mp.GaussianSource(frq_cen,fwidth=dfrq,is_integrated=True),
 # >> The planewave source extends into the PML 
 # ==> is_integrated=True must be specified
 
+path = os.path.join(home, folder, series)
+if not os.path.isdir(path): vs.new_dir(path)
+file = lambda f : os.path.join(path, f)
+
+temp = time()
 sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
                     boundary_layers=pml_layers,
@@ -85,7 +101,8 @@ box_z2 = sim.add_flux(frq_cen, dfrq, nfrq,
 
 temp = time()
 sim.init_sim()
-enlapsed = time() - temp
+enlapsed = [time() - temp]
+print("Enlapsed on 1st Building: {} s".format(enlapsed[-1]))
 
 """
 8x8x8 with resolution 25
@@ -97,7 +114,8 @@ enlapsed = time() - temp
 
 temp = time()
 sim.run(until_after_sources=10)
-enlapsed = [enlapsed, time()-temp]
+enlapsed = [*enlapsed, time()-temp]
+print("Enlapsed on 1st Simulation: {} s".format(enlapsed[-1]))
 
 freqs = mp.get_flux_freqs(box_x1)
 box_x1_data = sim.get_flux_data(box_x1)
@@ -107,9 +125,37 @@ box_y2_data = sim.get_flux_data(box_y2)
 box_z1_data = sim.get_flux_data(box_z1)
 box_z2_data = sim.get_flux_data(box_z2)
 
-box_x1_flux0 = mp.get_fluxes(box_x1)
+box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
+box_x2_flux0 = np.asarray(mp.get_fluxes(box_x2))
+box_y1_flux0 = np.asarray(mp.get_fluxes(box_y1))
+box_y2_flux0 = np.asarray(mp.get_fluxes(box_y2))
+box_z1_flux0 = np.asarray(mp.get_fluxes(box_z1))
+box_z2_flux0 = np.asarray(mp.get_fluxes(box_z2))
+
+freqs = np.array(freqs)
 
 sim.reset_meep()
+
+#%% FIST RUN: SAVE MID DATA
+
+params = dict(
+    from_um_factor=from_um_factor,
+    resolution=resolution,
+    enlapsed=enlapsed,
+    )
+
+data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
+                     box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
+
+header_mid = ["Longitud de onda [nm]", 
+              "Flujo X10 [u.a.]",
+              "Flujo X20 [u.a]",
+              "Flujo Y10 [u.a]",
+              "Flujo Y20 [u.a]",
+              "Flujo Z10 [u.a]",
+              "Flujo Z20 [u.a]"]
+
+vs.savetxt(file("MidFlux.txt"), data_mid, header=header_mid, footer=params)
 
 #%% SECOND RUN: GEOMETRY SETUP
 
@@ -119,6 +165,7 @@ geometry = [mp.Sphere(material=mp.Medium(index=n_sphere),
 # Lossless dielectric sphere 
 # Wavelength-independent refractive index of 2.0
 
+temp = time()
 sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
                     boundary_layers=pml_layers,
@@ -152,23 +199,28 @@ sim.load_minus_flux_data(box_y1, box_y1_data)
 sim.load_minus_flux_data(box_y2, box_y2_data)
 sim.load_minus_flux_data(box_z1, box_z1_data)
 sim.load_minus_flux_data(box_z2, box_z2_data)
+enlapsed = [*enlapsed, time()-temp]
+print("Enlapsed on 2nd Building: {} s".format(enlapsed[-1]))
 
 #%% SECOND RUN: SIMULATION :D
 
+temp = time()
 sim.run(until_after_sources=100)
 
-box_x1_flux = mp.get_fluxes(box_x1)
-box_x2_flux = mp.get_fluxes(box_x2)
-box_y1_flux = mp.get_fluxes(box_y1)
-box_y2_flux = mp.get_fluxes(box_y2)
-box_z1_flux = mp.get_fluxes(box_z1)
-box_z2_flux = mp.get_fluxes(box_z2)
+box_x1_flux = np.asarray(mp.get_fluxes(box_x1))
+box_x2_flux = np.asarray(mp.get_fluxes(box_x2))
+box_y1_flux = np.asarray(mp.get_fluxes(box_y1))
+box_y2_flux = np.asarray(mp.get_fluxes(box_y2))
+box_z1_flux = np.asarray(mp.get_fluxes(box_z1))
+box_z2_flux = np.asarray(mp.get_fluxes(box_z2))
+enlapsed = [*enlapsed, time()-temp]
+print("Enlapsed on 2nd Simulation: {} s".format(enlapsed[-1]))
 
 #%% ANALYSIS
 
-scatt_flux = np.asarray(box_x1_flux) - np.asarray(box_x2_flux)
-scatt_flux = scatt_flux + np.asarray(box_y1_flux) - np.asarray(box_y2_flux)
-scatt_flux = scatt_flux + np.asarray(box_z1_flux) - np.asarray(box_z2_flux)
+scatt_flux = box_x1_flux - box_x2_flux
+scatt_flux = scatt_flux + box_y1_flux - box_y2_flux
+scatt_flux = scatt_flux + box_z1_flux - box_z2_flux
 
 intensity = np.asarray(box_x1_flux0)/(2*r)**2
 # Flux of one of the six monitor planes / Área
@@ -203,3 +255,34 @@ plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
 plt.legend()
 plt.title('Mie Scattering of a Lossless Dielectric Sphere')
 plt.tight_layout()
+plt.savefig(file("Plot.png"))
+
+#%% SAVE FINAL DATA
+
+data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
+
+params["enlapsed"] = enlapsed
+
+header = ["Longitud de onda [nm]", 
+          "Sección eficaz efectiva (Meep) [u.a.]", 
+          "Sección eficaz efectiva (Theory) [u.a.]"]
+
+data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux,
+                      box_x2_flux, box_y1_flux, box_y2_flux, 
+                      box_z1_flux, box_z2_flux, 
+                      intensity, scatt_flux, scatt_cross_section]).T
+
+header_base = ["Longitud de onda [nm]", 
+               "Flujo X10 [u.a.]",
+               "Flujo X1 [u.a]",
+               "Flujo X2 [u.a]",
+               "Flujo Y1 [u.a]",
+               "Flujo Y2 [u.a]",
+               "Flujo Z1 [u.a]",
+               "Flujo Z2 [u.a]",
+               "Intensidad incidente [u.a.]", 
+               "Flujo scattereado [u.a.]",
+               "Sección eficaz de scattering [u.a.]"]
+
+vs.savetxt(file("Results.txt"), data, header=header, footer=params)
+vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
