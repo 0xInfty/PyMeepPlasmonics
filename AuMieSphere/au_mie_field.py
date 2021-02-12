@@ -17,6 +17,14 @@ from scipy.stats import norm
 # from scipy.integrate import dblquad
 from time import time
 import v_save as vs
+from v_class import Line, Plane
+
+try:
+    from mpi4py import MPI
+    LOADED_MPI4PY = True
+except ModuleNotFoundError:
+    print("Importing without module 'mpi4py'")
+    LOADED_MPI4PY = False
 
 #%% PARAMETERS
 
@@ -102,18 +110,6 @@ else:
 # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
 # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
-def get_line(sim, line_center, line_size, component):
-    return sim.get_array(
-        center=mp.Vector3(*line_center), 
-        size=mp.Vector3(*line_size), 
-        component=component) # mp.Ez, mp.Hy
-
-def get_plane(sim, plane_center, plane_size, component):
-    return sim.get_array(
-        center=mp.Vector3(*plane_center), 
-        size=mp.Vector3(*plane_size), 
-        component=component)
-
 path = os.path.join(home, folder, f"{series}")
 if not os.path.isdir(path): vs.new_dir(path)
 file = lambda f : os.path.join(path, f)
@@ -155,15 +151,115 @@ enlapsed.append( time() - temp )
 
 #%% DEFINE SAVE STEP FUNCTIONS
 
-def slice_generator_params(get_slice, center, size):
+def slice_generator_params(center, size):
     if H_field: 
         datasets = ["Ez", "Hy"]
-        get_slices = [lambda sim: get_slice(sim, center, size, mp.Ez),
-                      lambda sim: get_slice(sim, center, size, mp.Hy)]
+        components = [mp.Ez, mp.Hy]
     else: 
         datasets = "Ez"
-        get_slices = lambda sim: get_slice(sim, center, size, mp.Ez)
-    return datasets, get_slices
+        components = mp.Ez
+    return datasets, components
+
+def save_slice_generator(sim, filename, slices,
+                         datasets, components,
+                         parallel=False):
+    """
+    Generates a Meep step function to save slices or outputs to HDF5.
+
+    Parameters
+    ----------
+    sim : mp.Simulation
+        Meep simulation instance. Must be initialized so that ground set of 
+        data can be saved.
+    filename : str
+        Filename of the HDF5 file to be created. Must include full path and .h5 
+        extension. Beware! If already in existance, old file is replaced.
+    datasets : str or list of str
+        HDF5 dataset name or names.
+    slices : mp.Volume or list of mp.Volume instances
+        Simulation volume or volumes to get data from.
+    components : int or list of int
+        Which field component or components to get slices from. Remember that 
+        in Meep library, mp.Ez is 0, for example.
+    parallel : bool
+        Parameter that says wheter Meep is run in parallel or not.
+
+    Returns
+    -------
+    file : h5.File
+        HDF5 file instance of module h5py, initialized as 'w'. Will be closed 
+        once the simulation is finished. Meanwhile, it must exist as a global 
+        variable.
+    save_slice_stepfun : function
+        Stepfunction that will execute the list of functions 'get_slice' on 
+        each step and save the results, appending each of them to the 
+        associated 'dataname' dataset inside the 'filename' HDF5 file.
+        
+    See also
+    --------
+    mp.Simulation
+    h5.File
+
+    """
+    
+    if type(datasets)!=list:
+        datasets = [datasets]
+    if type(components)!=list:
+        components = [components]
+    if type(slices)!=list:
+        slices = [slices]
+    if len(datasets)!=len(components):
+        raise ValueError("Must have as many datanames as components")
+
+    if parallel:
+        file = h5.File(filename, 'w', libver='latest',
+                       driver='mpio', comm=MPI.COMM_WORLD)
+    else:
+        file = h5.File(filename, 'w', libver='latest')
+    
+    save_slice_stepfun = []
+    
+    # for i in range(len(slices)):
+        
+    #     for j in range(len(datasets)):
+            
+    #         this_stepfun = lambda sim, step : 
+            
+    #         save_slice_stepfun.append(
+    #             mp.in_volume(slices[i], 
+    #                          mp.output_field_function,
+    #                          real_only=True)
+    #             )
+    
+    # def save_slice_stepfun(sim, state):
+        
+    #     if state=="step":
+            
+    #         for i in range(len(slices)):
+                
+                
+                
+    #             for j in range(len(datasets)):
+            
+    #             data_now = get_slices[i](sim)
+                
+    #             dim_before = file[datasets[i]].shape[0]
+    #             shape_now = ( dim_before+1, *shapes[i] )
+    #             file[datasets[i]].resize( shape_now )
+                
+    #             file[datasets[i]][dim_before,] = data_now.reshape(dueshapes[i])
+                
+    #             file[datasets[i]].flush()
+    #             # Notify the reader process that new data has been written
+            
+    #     elif state=="finish":
+    #         file.close()
+        
+    #     return
+            
+    # return file, save_slice_stepfun
+
+
 
 f, save_line = vs.save_slice_generator(sim, file("Lines.h5"), 
     *slice_generator_params(get_line, [0, 0, 0], [cell_width, 0, 0]))
