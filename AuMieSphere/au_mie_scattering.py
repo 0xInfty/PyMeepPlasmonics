@@ -4,6 +4,9 @@
 
 # Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
 
+import sys
+sys.path.append("/home/vall/Documents/Thesis/ThesisPython")
+
 import h5py as h5
 import meep as mp
 import numpy as np
@@ -21,7 +24,7 @@ import v_save as vs
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 3 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = 6  # Radius of sphere: 60 nm
@@ -39,7 +42,7 @@ until_after_sources = False
 second_time_factor = 10
 
 # Saving directories
-series = "SerialRes2"
+series = "NoSymmetryRes3"
 folder = "AuMieSphere/AuMie"
 home = "/home/vall/Documents/Thesis/ThesisResults/"
 

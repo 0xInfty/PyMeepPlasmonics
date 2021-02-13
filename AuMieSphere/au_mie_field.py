@@ -6,6 +6,9 @@ Created on Wed Oct  7 14:34:09 2020
 @author: luciana, 0xInfty
 """
 
+import sys
+sys.path.append("/home/vall/Documents/Thesis/ThesisPython")
+
 import h5py as h5
 import imageio as mim
 import meep as mp
