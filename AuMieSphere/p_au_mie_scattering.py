@@ -31,20 +31,20 @@ import v_save as vs
 @cli.option("--resolution", "-res", required=True, type=int,
             help="Wavelength range expressed in multiples of 10 nm")
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
-@cli.option("--radius", "-r", "r", default=6, type=int,
+@cli.option("--from-um-factor", "-fum", "from_um_factor", 
+            default=10e-3, type=float,
+            help="Conversion of 1 μm to my length unit (i.e. 10e-3=10nm/1μm)")
+@cli.option("--radius", "-r", "r", default=6, type=float,
             help="Radius of sphere expressed in multiples of 10 nm")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
 # 500-650 nm range from lowest to highest
-def main(series, resolution, r, wlen_range):
+def main(series, resolution, from_um_factor, r, wlen_range):
 
     #%% PARAMETERS    
 
     ### MEAN PARAMETERS
-    
-    # Units: 10 nm as length unit
-    from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
     
     # Au sphere
     medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
