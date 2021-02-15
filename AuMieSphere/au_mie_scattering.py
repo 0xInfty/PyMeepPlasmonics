@@ -4,8 +4,16 @@
 
 # Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
 
+from socket import gethostname
+if "Nano" in gethostname():
+    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+elif "vall" in gethostname():
+    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+else:
+    raise ValueError("Your PC must be registered at the top of this code")
+
 import sys
-sys.path.append("/home/vall/Documents/Thesis/ThesisPython")
+sys.path.append(syshome)
 
 import h5py as h5
 import meep as mp
@@ -44,7 +52,7 @@ second_time_factor = 10
 # Saving directories
 series = "NoSymmetryRes3"
 folder = "AuMieSphere/AuMie"
-home = "/home/vall/Documents/Thesis/ThesisResults/"
+home = vs.get_home()
 
 ### OTHER PARAMETERS
 

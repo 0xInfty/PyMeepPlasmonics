@@ -6,8 +6,16 @@ Created on Wed Oct  7 14:34:09 2020
 @author: luciana, 0xInfty
 """
 
+from socket import gethostname
+if "Nano" in gethostname():
+    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+elif "vall" in gethostname():
+    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+else:
+    raise ValueError("Your PC must be registered at the top of this code")
+
 import sys
-sys.path.append("/home/vall/Documents/Thesis/ThesisPython")
+sys.path.append(syshome)
 
 import h5py as h5
 import imageio as mim
@@ -51,7 +59,6 @@ H_field = True
 # Saving directories
 series = "Testing123"#"TimeFactorCell{}".format(time_factor_cell)
 folder = "AuMieSphere/AuMieField"
-home = "/home/vall/Documents/Thesis/ThesisResults/"
 
 ### OTHER PARAMETERS
 
@@ -117,6 +124,7 @@ def get_plane(sim, plane_center, plane_size, component):
         size=mp.Vector3(*plane_size), 
         component=component)
 
+home = vs.get_home()
 path = os.path.join(home, folder, f"{series}")
 if not os.path.isdir(path): vs.new_dir(path)
 file = lambda f : os.path.join(path, f)
