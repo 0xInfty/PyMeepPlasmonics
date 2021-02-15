@@ -22,18 +22,19 @@ saveanimation : function
 @author: Vall
 """
 
+import h5py as h5
 import matplotlib.pyplot as plt
 # import meep as mp
-import numpy as np
 # try:
 #     from mpi4py import MPI
 #     LOADED_MPI4PY = True
 # except ModuleNotFoundError:
 #     print("Importing without module 'mpi4py'")
 #     LOADED_MPI4PY = False
-import h5py as h5
+import numpy as np
 import os
 from re import findall
+from socket import gethostname
 
 #%%
 
@@ -518,6 +519,32 @@ def save_slice_generator(sim, filename, datanames, get_slices):
         return
             
     return file, save_slice_stepfun
+
+#%%
+
+def get_home():
+    """Returns home path for results according to which CPU is running"""
+    
+    string = gethostname()
+    if "Nano" in string:
+        return "/home/nanofisica/Documents/Vale/ThesisResults"
+    elif "vall" in string:
+        return "/home/vall/Documents/Thesis/ThesisResults"
+    else:
+        raise ValueError("Your PC must appear inside return_home definition")
+
+#%%
+
+def get_sys_home():
+    """Returns home path for repository according to which CPU is running"""
+    
+    string = gethostname()
+    if "Nano" in string:
+        return "/home/nanofisica/Documents/Vale/ThesisPython"
+    elif "vall" in string:
+        return "/home/vall/Documents/Thesis/ThesisPython"
+    else:
+        raise ValueError("Your PC must appear inside return_home definition")
 
 #%%
 
