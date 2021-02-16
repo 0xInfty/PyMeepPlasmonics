@@ -292,8 +292,8 @@ fig.subplots_adjust(hspace=0, wspace=.05)
 for a in ax[:,1]:
     a.yaxis.tick_right()
     a.yaxis.set_label_position("right")
-for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
-    a.set_ylabel(h)
+for a, hm in zip(np.reshape(ax, 6), header_mid[1:]):
+    a.set_ylabel(hm)
 
 for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
     a.plot(1e3*from_um_factor/freqs, d)
@@ -320,8 +320,8 @@ plt.savefig(file("MidFlux.png"))
 
 # fig, ax = plt.subplots(3, 2)
 # fig.subplots_adjust(hspace=0.25)
-# for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
-#     a.set_title(h.split(" ")[1].split("0")[0])
+# for a, hm in zip(np.reshape(ax, 6), header_mid[1:]):
+#     a.set_title(hm.split(" ")[1].split("0")[0])
 
 # for f, a in zip(field_walls, np.reshape(ax, 6)):
 #     a.imshow(f.T, interpolation='spline36', cmap='RdBu', 
@@ -497,8 +497,8 @@ plt.savefig(file("Spectra.png"))
 # for a in ax[:,1]:
 #     a.yaxis.tick_right()
 #     a.yaxis.set_label_position("right")
-# for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
-#     a.set_ylabel(h)
+# for a, hm in zip(np.reshape(ax, 6), header_mid[1:]):
+#     a.set_ylabel(hm)
 
 # for d, a in zip(data_base[:,2:8].T, np.reshape(ax, 6)):
 #     a.plot(1e3*from_um_factor/freqs, d)
