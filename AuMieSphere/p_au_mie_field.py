@@ -6,11 +6,19 @@ Created on Wed Oct  7 14:34:09 2020
 @author: luciana, 0xInfty
 """
 
+from socket import gethostname
+if "Nano" in gethostname():
+    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+elif "vall" in gethostname():
+    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+else:
+    raise ValueError("Your PC must be registered at the top of this code")
+
 import sys
-sys.path.append("/home/vall/Documents/Thesis/ThesisPython")
+sys.path.append(syshome)
 
 import click as cli
-import h5py as h5
+# import h5py as h5
 # import imageio as mim
 import meep as mp
 # from matplotlib import animation
@@ -22,6 +30,8 @@ import os
 from time import time
 import v_click as vc
 import v_save as vs
+
+# from v_class import Line, Plane
     
 #%% COMMAND LINE FORMATTER
 
@@ -67,7 +77,6 @@ def main(series, resolution, r, wlen_range, meep_flux, H_field):
     if series is None:
         series = f"TestParallelRes{resolution}"
     folder = "AuMieSphere/AuMieField"
-    home = "/home/vall/Documents/Thesis/ThesisResults/"
     
     ### OTHER PARAMETERS
     
@@ -133,6 +142,7 @@ def main(series, resolution, r, wlen_range, meep_flux, H_field):
             size=mp.Vector3(*plane_size), 
             component=component)
     
+    home = vs.get_home()
     path = os.path.join(home, folder, f"{series}")
     if (not os.path.isdir(path)) and mp.am_master(): 
         vs.new_dir(path)
@@ -144,7 +154,8 @@ def main(series, resolution, r, wlen_range, meep_flux, H_field):
                         cell_size=cell_size,
                         boundary_layers=pml_layers,
                         sources=sources,
-                        k_point=mp.Vector3())
+                        k_point=mp.Vector3(),
+                        filename_prefix=file("Data"))
                         # symmetries=symmetries)
     
     if meep_flux:
@@ -175,45 +186,55 @@ def main(series, resolution, r, wlen_range, meep_flux, H_field):
     
     #%% DEFINE SAVE STEP FUNCTIONS
     
-    def slice_generator_params(get_slice, center, size):
-        if H_field: 
-            datasets = ["Ez", "Hy"]
-            get_slices = [lambda sim: get_slice(sim, center, size, mp.Ez),
-                          lambda sim: get_slice(sim, center, size, mp.Hy)]
-        else: 
-            datasets = "Ez"
-            get_slices = lambda sim: get_slice(sim, center, size, mp.Ez)
-        return datasets, get_slices
+    # def slice_generator_params(get_slice, center, size):
+    #     if H_field: 
+    #         datasets = ["Ez", "Hy"]
+    #         get_slices = [lambda sim: get_slice(sim, center, size, mp.Ez),
+    #                       lambda sim: get_slice(sim, center, size, mp.Hy)]
+    #     else: 
+    #         datasets = "Ez"
+    #         get_slices = lambda sim: get_slice(sim, center, size, mp.Ez)
+    #     return datasets, get_slices
     
-    f, save_line = vs.save_slice_generator(sim, file("Lines.h5"), 
-        *slice_generator_params(get_line, [0, 0, 0], [cell_width, 0, 0]), 
-        parallel=True)
-    gx1, save_plane_x1 = vs.save_slice_generator(sim, file("Planes_X1.h5"), 
-        *slice_generator_params(get_line, [-r, 0, 0], [0, cell_width, cell_width]), 
-        parallel=True)
-    gx2, save_plane_x2 = vs.save_slice_generator(sim, file("Planes_X2.h5"),
-        *slice_generator_params(get_plane, [r, 0, 0], [0, cell_width, cell_width]),
-        parallel=True)
-    gy1, save_plane_y1 = vs.save_slice_generator(sim, file("Planes_Y1.h5"), 
-        *slice_generator_params(get_plane, [0, -r, 0], [cell_width, 0, cell_width]),
-        parallel=True)
-    gy2, save_plane_y2 = vs.save_slice_generator(sim, file("Planes_Y2.h5"),
-        *slice_generator_params(get_plane, [0, r, 0], [cell_width, 0, cell_width]),
-        parallel=True)
-    gz1, save_plane_z1 = vs.save_slice_generator(sim, file("Planes_Z1.h5"), 
-        *slice_generator_params(get_plane, [0, 0, -r], [cell_width, cell_width, 0]),
-        parallel=True)
-    gz2, save_plane_z2 = vs.save_slice_generator(sim, file("Planes_Z2.h5"),
-        *slice_generator_params(get_plane, [0, 0, r], [cell_width, cell_width, 0]),
-        parallel=True)
+    # f, save_line = vs.save_slice_generator(sim, file("Lines.h5"), 
+    #     *slice_generator_params(get_line, [0, 0, 0], [cell_width, 0, 0]), 
+    #     parallel=True)
+    # gx1, save_plane_x1 = vs.save_slice_generator(sim, file("Planes_X1.h5"), 
+    #     *slice_generator_params(get_line, [-r, 0, 0], [0, cell_width, cell_width]), 
+    #     parallel=True)
+    # gx2, save_plane_x2 = vs.save_slice_generator(sim, file("Planes_X2.h5"),
+    #     *slice_generator_params(get_plane, [r, 0, 0], [0, cell_width, cell_width]),
+    #     parallel=True)
+    # gy1, save_plane_y1 = vs.save_slice_generator(sim, file("Planes_Y1.h5"), 
+    #     *slice_generator_params(get_plane, [0, -r, 0], [cell_width, 0, cell_width]),
+    #     parallel=True)
+    # gy2, save_plane_y2 = vs.save_slice_generator(sim, file("Planes_Y2.h5"),
+    #     *slice_generator_params(get_plane, [0, r, 0], [cell_width, 0, cell_width]),
+    #     parallel=True)
+    # gz1, save_plane_z1 = vs.save_slice_generator(sim, file("Planes_Z1.h5"), 
+    #     *slice_generator_params(get_plane, [0, 0, -r], [cell_width, cell_width, 0]),
+    #     parallel=True)
+    # gz2, save_plane_z2 = vs.save_slice_generator(sim, file("Planes_Z2.h5"),
+    #     *slice_generator_params(get_plane, [0, 0, r], [cell_width, cell_width, 0]),
+    #     parallel=True)
     
-    to_do_while_running = [mp.at_every(period_line, save_line),
-                           mp.at_every(period_plane, save_plane_x1),
-                           mp.at_every(period_plane, save_plane_x2),
-                           mp.at_every(period_plane, save_plane_y1),
-                           mp.at_every(period_plane, save_plane_y2),
-                           mp.at_every(period_plane, save_plane_z1),
-                           mp.at_every(period_plane, save_plane_z2)]
+    def f(r, ez):
+        return ez
+    
+    to_do_while_running = [
+        mp.in_volume(Line(size=[cell_width, 0, 0]),
+                       mp.at_every(period_line, 
+                                   mp.to_appended("ez", 
+                                                  mp.output_efield_z))),
+        ]
+    
+    # to_do_while_running = [mp.at_every(period_line, save_line),
+    #                        mp.at_every(period_plane, save_plane_x1),
+    #                        mp.at_every(period_plane, save_plane_x2),
+    #                        mp.at_every(period_plane, save_plane_y1),
+    #                        mp.at_every(period_plane, save_plane_y2),
+    #                        mp.at_every(period_plane, save_plane_z1),
+    #                        mp.at_every(period_plane, save_plane_z2)]
        
     #%% RUN!
     
@@ -261,15 +282,15 @@ def main(series, resolution, r, wlen_range, meep_flux, H_field):
     # f = h5.File(file("Lines.h5"), "r+")
     # for fs in fields_series:
     #     for a in params: f[fs].attrs[a] = params[a]
-    f.close()
+    # f.close()
     # del f
     
-    gx1.close()
-    gx2.close()
-    gy1.close()
-    gy2.close()
-    gz1.close()
-    gz2.close()
+    # gx1.close()
+    # gx2.close()
+    # gy1.close()
+    # gy2.close()
+    # gz1.close()
+    # gz2.close()
     
     # for s in planes_series:
     #     g = h5.File(file("Planes_{}.h5".format(s)), "r+")
