@@ -33,7 +33,7 @@ import v_save as vs
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 3 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 d = 2.7  # Diameter of ellipsoid: 27 nm
@@ -84,10 +84,10 @@ pml_layers = [mp.PML(thickness=pml_width)]
 # https://github.com/NanoComp/meep/issues/1484
 
 cell_width_z = 2 * (pml_width + air_width + h/2) # Parallel to polarization.
-# cell_width_z = cell_width_z - cell_width_z%(1/resolution)
+cell_width_z = cell_width_z - cell_width_z%(1/resolution)
 
 cell_width_r = 2 * (pml_width + air_width + d/2) # Parallel to incidence.
-# cell_width = cell_width - cell_width%(1/resolution)
+cell_width_r = cell_width_r - cell_width_r%(1/resolution)
 
 cell_size = mp.Vector3(cell_width_r, cell_width_r, cell_width_z)
 
@@ -116,8 +116,7 @@ else:
 # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
 geometry = [mp.Ellipsoid(size=mp.Vector3(d, d, h),
-                         material=medium,
-                         center=mp.Vector3())]
+                         material=medium)]
 # Au ellipsoid with frequency-dependant characteristics imported from Meep.
 
 path = os.path.join(home, folder, f"{series}")
@@ -295,8 +294,8 @@ for a in ax[:,1]:
 for a, hm in zip(np.reshape(ax, 6), header_mid[1:]):
     a.set_ylabel(hm)
 
-for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
-    a.plot(1e3*from_um_factor/freqs, d)
+for dm, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
+    a.plot(1e3*from_um_factor/freqs, dm)
     a.set_ylim(*ylims)
 ax[-1,0].set_xlabel("Wavelength [nm]")
 ax[-1,1].set_xlabel("Wavelength [nm]")
@@ -474,7 +473,7 @@ header_base = ["Longitud de onda [nm]",
 vs.savetxt(file("Results.txt"), data, header=header, footer=params)
 vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
 
-#%% PLOT
+#%% PLOT SCATTERING
 
 plt.figure()
 plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
@@ -482,9 +481,21 @@ plt.xlabel('Wavelength [nm]')
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
 plt.legend()
 plt.title(f'Mie Scattering of Au Ellipsoid ({ 1e3*from_um_factor*d }x' +
-          '{ 1e3*from_um_factor*d }x{ 1e3*from_um_factor*d } nm)') 
+          f'{ 1e3*from_um_factor*d }x{ 1e3*from_um_factor*h } nm)') 
 plt.tight_layout()
-plt.savefig(file("Spectra.png"))
+plt.savefig(file("ScattSpectra.png"))
+
+#%% PLOT ABSORPTION
+
+plt.figure()
+plt.plot(1e3*from_um_factor/freqs, 1-scatt_eff_meep,'bo-',label='Meep')
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Absorption efficiency [σ/πr$^{2}$]')
+plt.legend()
+plt.title(f'Absorption of Au Ellipsoid ({ 1e3*from_um_factor*d }x' +
+          f'{ 1e3*from_um_factor*d }x{ 1e3*from_um_factor*h } nm)') 
+plt.tight_layout()
+plt.savefig(file("AbsSpectra.png"))
 
 #%% PLOT FLUX FOURIER FINAL DATA
 

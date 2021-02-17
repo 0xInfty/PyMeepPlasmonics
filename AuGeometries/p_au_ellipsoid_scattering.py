@@ -33,7 +33,7 @@ import v_save as vs
 #%% COMMAND LINE FORMATTER
 
 @cli.command()
-@cli.option("--series", "-s", type=str, 
+@cli.option("--series", "-s", type=str, default="Test",
             help="Series name used to create a folder and save files")
 @cli.option("--resolution", "-res", required=True, type=int,
             help="Wavelength range expressed in multiples of 10 nm")
@@ -48,8 +48,10 @@ import v_save as vs
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
+@cli.option("--nfreq", "-nf", "nfreq", type=int, default=100,
+            help="Number of frequencies to discretize wavelength range")
 # 500-650 nm range from lowest to highest
-def main(series, resolution, from_um_factor, r, wlen_range):
+def main(series, resolution, from_um_factor, d, h, wlen_range, nfreq):
     
     #%% PARAMETERS
     
@@ -57,15 +59,11 @@ def main(series, resolution, from_um_factor, r, wlen_range):
     
     # Units: 10 nm as length unit
     from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-    resolution = 3 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
     
     # Au sphere
-    d = 2.7  # Diameter of ellipsoid: 27 nm
-    h = 12  # Height of ellipsoid: 120 nm
     medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
     
     # Frequency and wavelength
-    wlen_range = np.array([50,65]) # 500-650 nm range from lowest to highest
     nfreq = 100 # Number of frequencies to discretize range
     cutoff = 3.2
     
@@ -76,8 +74,6 @@ def main(series, resolution, from_um_factor, r, wlen_range):
     second_time_factor = 10
     
     # Saving directories
-    if series is None:
-        series = "Test"
     folder = "AuGeometries/AuEllipsoid"
     home = vs.get_home()
     
@@ -109,10 +105,10 @@ def main(series, resolution, from_um_factor, r, wlen_range):
     # https://github.com/NanoComp/meep/issues/1484
     
     cell_width_z = 2 * (pml_width + air_width + h/2) # Parallel to polarization.
-    # cell_width_z = cell_width_z - cell_width_z%(1/resolution)
+    cell_width_z = cell_width_z - cell_width_z%(1/resolution)
     
     cell_width_r = 2 * (pml_width + air_width + d/2) # Parallel to incidence.
-    # cell_width = cell_width - cell_width%(1/resolution)
+    cell_width_r = cell_width_r - cell_width_r%(1/resolution)
     
     cell_size = mp.Vector3(cell_width_r, cell_width_r, cell_width_z)
     
@@ -324,8 +320,8 @@ def main(series, resolution, from_um_factor, r, wlen_range):
         for a, hm in zip(np.reshape(ax, 6), header_mid[1:]):
             a.set_ylabel(hm)
         
-        for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
-            a.plot(1e3*from_um_factor/freqs, d)
+        for dm, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
+            a.plot(1e3*from_um_factor/freqs, dm)
             a.set_ylim(*ylims)
         ax[-1,0].set_xlabel("Wavelength [nm]")
         ax[-1,1].set_xlabel("Wavelength [nm]")
@@ -507,7 +503,7 @@ def main(series, resolution, from_um_factor, r, wlen_range):
         vs.savetxt(file("BaseResults.txt"), data_base, 
                    header=header_base, footer=params)
     
-    #%% PLOT
+    #%% PLOT SCATTERING
     
     if mp.my_rank()==1:
         plt.figure()
@@ -515,10 +511,23 @@ def main(series, resolution, from_um_factor, r, wlen_range):
         plt.xlabel('Wavelength [nm]')
         plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
         plt.legend()
-        plt.title(f'Mie Scattering of Au Ellipsoid ({ 1e3*from_um_factor*d }x' +
-                  '{ 1e3*from_um_factor*d }x{ 1e3*from_um_factor*d } nm)') 
+        plt.title(f'Scattering of Au Ellipsoid ({ 1e3*from_um_factor*d }x' +
+                  f'{ 1e3*from_um_factor*d }x{ 1e3*from_um_factor*h } nm)') 
         plt.tight_layout()
-        plt.savefig(file("Spectra.png"))
+        plt.savefig(file("ScattSpectra.png"))
+
+    #%% PLOT ABSORPTION
+    
+    if mp.am_master():
+        plt.figure()
+        plt.plot(1e3*from_um_factor/freqs, 1-scatt_eff_meep,'bo-',label='Meep')
+        plt.xlabel('Wavelength [nm]')
+        plt.ylabel('Absorption efficiency [σ/πr$^{2}$]')
+        plt.legend()
+        plt.title(f'Absorption of Au Ellipsoid ({ 1e3*from_um_factor*d }x' +
+                  f'{ 1e3*from_um_factor*d }x{ 1e3*from_um_factor*h } nm)') 
+        plt.tight_layout()
+        plt.savefig(file("AbsSpectra.png"))
     
     #%% PLOT FLUX FOURIER FINAL DATA
     
@@ -542,3 +551,8 @@ def main(series, resolution, from_um_factor, r, wlen_range):
         # ax[-1,1].set_xlabel("Wavelength [nm]")
         
         # plt.savefig(file("FinalFlux.png"))
+
+#%%
+
+if __name__ == '__main__':
+    main()
