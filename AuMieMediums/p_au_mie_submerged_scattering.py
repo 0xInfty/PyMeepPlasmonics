@@ -73,7 +73,7 @@ def main(series, resolution, from_um_factor, r, index, wlen_range):
     # Saving directories
     if series is None:
         series = f"TestParallelRes{resolution}"
-    folder = "AuMieSphere/AuMie"
+    folder = "AuMieMediums/AllWater"
     
     ### OTHER PARAMETERS
     
