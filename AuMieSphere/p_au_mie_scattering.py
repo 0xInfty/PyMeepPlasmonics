@@ -36,6 +36,8 @@ import v_save as vs
 @cli.command()
 @cli.option("--series", "-s", type=str, 
             help="Series name used to create a folder and save files")
+@cli.option("--folder", "-f", type=str, 
+            help="Series folder used to save files")
 @cli.option("--resolution", "-res", required=True, type=int,
             help="Wavelength range expressed in multiples of 10 nm")
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
@@ -48,7 +50,7 @@ import v_save as vs
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
 # 500-650 nm range from lowest to highest
-def main(series, resolution, from_um_factor, r, wlen_range):
+def main(series, folder, resolution, from_um_factor, r, wlen_range):
 
     #%% PARAMETERS    
 
@@ -70,7 +72,8 @@ def main(series, resolution, from_um_factor, r, wlen_range):
     # Saving directories
     if series is None:
         series = f"TestParallelRes{resolution}"
-    folder = "AuMieSphere/AuMie"
+    if folder is None:
+        folder = "AuMieSphere/AuMie/AuMieTest"
     
     ### OTHER PARAMETERS
     
