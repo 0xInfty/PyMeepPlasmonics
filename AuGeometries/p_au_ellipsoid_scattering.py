@@ -35,6 +35,8 @@ import v_save as vs
 @cli.command()
 @cli.option("--series", "-s", type=str, default="Test",
             help="Series name used to create a folder and save files")
+@cli.option("--folder", "-f", type=str, default="AuGeometries/AuEllipsoid",
+            help="Series folder used to save files")
 @cli.option("--resolution", "-res", required=True, type=int,
             help="Wavelength range expressed in multiples of 10 nm")
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
@@ -51,7 +53,7 @@ import v_save as vs
 @cli.option("--nfreq", "-nf", "nfreq", type=int, default=100,
             help="Number of frequencies to discretize wavelength range")
 # 500-650 nm range from lowest to highest
-def main(series, resolution, from_um_factor, d, h, wlen_range, nfreq):
+def main(series, folder, resolution, from_um_factor, d, h, wlen_range, nfreq):
     
     #%% PARAMETERS
     
@@ -74,7 +76,6 @@ def main(series, resolution, from_um_factor, d, h, wlen_range, nfreq):
     second_time_factor = 10
     
     # Saving directories
-    folder = "AuGeometries/AuEllipsoid"
     home = vs.get_home()
     
     ### OTHER PARAMETERS
