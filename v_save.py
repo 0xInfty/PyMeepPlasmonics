@@ -304,7 +304,7 @@ def savetxt(file, datanumpylike, overwrite=False, header='', footer=''):
                     if isinstance(value, tuple) and len(value) == 2:
                         condition = isinstance(value[0], str)
                         if not condition and isinstance(value[1], str):
-                            value = '"{} {}"'.format(*value)
+                            value = '"{}, {}"'.format(*value)
                     elif isinstance(value, str):
                         value = '"{}"'.format(value)
                     aux.append('{}={}'.format(key, value) + ', ')
