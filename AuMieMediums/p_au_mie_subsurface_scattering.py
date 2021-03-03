@@ -53,8 +53,11 @@ import v_save as vs
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
 # 500-650 nm range from lowest to highest
+@cli.option("--second-time-factor", "-sectime", "second_time_factor", 
+            type=float, default=10,
+            help="How much longer should the 2nd simulation be than the 1st")
 def main(series, folder, resolution, from_um_factor, r, displacement,
-         submerged_index, surface_index, wlen_range):
+         submerged_index, surface_index, wlen_range, second_time_factor):
 
     #%% PARAMETERS
     
@@ -62,7 +65,6 @@ def main(series, folder, resolution, from_um_factor, r, displacement,
     
     # Units: 10 nm as length unit
     from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-    resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
     
     # Au sphere
     medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
@@ -75,7 +77,6 @@ def main(series, folder, resolution, from_um_factor, r, displacement,
     enlapsed = []
     time_factor_cell = 1.2
     until_after_sources = False
-    second_time_factor = 10
     
     # Saving directories
     if series is None:
@@ -289,33 +290,32 @@ def main(series, folder, resolution, from_um_factor, r, displacement,
     
     #%% SECOND RUN: SETUP
     
-    if mp.am_master():
-        sim = mp.Simulation(resolution=resolution,
-                            cell_size=cell_size,
-                            boundary_layers=pml_layers,
-                            sources=sources,
-                            k_point=mp.Vector3(),
-                            # symmetries=symmetries,
-                            geometry=geometry)
-        
-        box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                              mp.FluxRegion(center=mp.Vector3(x=-r),
-                                            size=mp.Vector3(0,2*r,2*r)))
-        box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                              mp.FluxRegion(center=mp.Vector3(x=+r),
-                                            size=mp.Vector3(0,2*r,2*r)))
-        box_y1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                              mp.FluxRegion(center=mp.Vector3(y=-r),
-                                            size=mp.Vector3(2*r,0,2*r)))
-        box_y2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                              mp.FluxRegion(center=mp.Vector3(y=+r),
-                                            size=mp.Vector3(2*r,0,2*r)))
-        box_z1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                              mp.FluxRegion(center=mp.Vector3(z=-r),
-                                            size=mp.Vector3(2*r,2*r,0)))
-        box_z2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                              mp.FluxRegion(center=mp.Vector3(z=+r),
-                                            size=mp.Vector3(2*r,2*r,0)))
+    sim = mp.Simulation(resolution=resolution,
+                        cell_size=cell_size,
+                        boundary_layers=pml_layers,
+                        sources=sources,
+                        k_point=mp.Vector3(),
+                        # symmetries=symmetries,
+                        geometry=geometry)
+    
+    box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(x=-r),
+                                        size=mp.Vector3(0,2*r,2*r)))
+    box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(x=+r),
+                                        size=mp.Vector3(0,2*r,2*r)))
+    box_y1 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(y=-r),
+                                        size=mp.Vector3(2*r,0,2*r)))
+    box_y2 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(y=+r),
+                                        size=mp.Vector3(2*r,0,2*r)))
+    box_z1 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(z=-r),
+                                        size=mp.Vector3(2*r,2*r,0)))
+    box_z2 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(z=+r),
+                                        size=mp.Vector3(2*r,2*r,0)))
         
     #%% SECOND RUN: INITIALIZE
     

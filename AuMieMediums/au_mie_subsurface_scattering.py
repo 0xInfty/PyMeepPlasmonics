@@ -30,7 +30,7 @@ import v_save as vs
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = 5.15 # Radius of sphere: 60 nm
@@ -51,8 +51,8 @@ until_after_sources = False
 second_time_factor = 10
 
 # Saving directories
-series = "Test"
-folder = "AuMieMediums/GlassNWater"
+series = f"TestParallelRes{resolution}"
+folder = "AuMieMediums/TestSubSurface"
 home = vs.get_home()
 
 ### OTHER PARAMETERS
@@ -398,7 +398,7 @@ header_base = ["Longitud de onda [nm]",
 vs.savetxt(file("Results.txt"), data, header=header, footer=params)
 vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params)
 
-#%% PLOT ALL TOGETHER
+#%% PLOT SCATTERING
 
 plt.figure()
 plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-')
