@@ -92,9 +92,9 @@ sources = [mp.Source(mp.GaussianSource(freq_center,
                                        fwidth=freq_width,
                                        is_integrated=True,
                                        cutoff=cutoff),
-                     center=mp.Vector3(z=source_center),
-                     size=mp.Vector3(cell_width, cell_width, 0),
-                     component=mp.Ex)]
+                     center=mp.Vector3(source_center),
+                     size=mp.Vector3(0, cell_width, cell_width),
+                     component=mp.Ez)]
 # Ez-polarized planewave pulse 
 # (its size parameter fills the entire cell in 2d)
 # >> The planewave source extends into the PML 
@@ -111,11 +111,11 @@ else:
 # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
 geometry = [mp.Block(material=mp.Medium(index=submerged_index),
-                     center=mp.Vector3(0, 0, cell_width/2-(cell_width/2+r-displacement)/2+displacement),
-                     size=mp.Vector3(cell_width, cell_width, cell_width/2+r-displacement)),
+                     center=mp.Vector3(-cell_width/2+(cell_width/2-r+displacement)/2+displacement,0,0),
+                     size=mp.Vector3(cell_width/2+r-displacement, cell_width, cell_width)),
             mp.Block(material=mp.Medium(index=surface_index),
-                     center=mp.Vector3(0,0,-cell_width/2+(cell_width/2-r+displacement)/2+displacement),
-                     size=mp.Vector3(cell_width, cell_width, cell_width/2-r+displacement)),
+                     center=mp.Vector3(cell_width/2-(cell_width/2+r-displacement)/2+displacement,0,0),
+                     size=mp.Vector3(cell_width/2-r+displacement, cell_width, cell_width)),
             mp.Sphere(material=medium,#mp.Medium(index=1.8),
                       center=mp.Vector3(),
                       radius=r)]
