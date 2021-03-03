@@ -145,7 +145,7 @@ def main(series, folder, resolution, from_um_factor, r, displacement,
                 mp.Block(material=mp.Medium(index=surface_index),
                          center=mp.Vector3(0,0,-cell_width/2+(cell_width/2-r+displacement)/2+displacement),
                          size=mp.Vector3(cell_width, cell_width, cell_width/2-r+displacement)),
-                mp.Sphere(material=mp.Medium(index=1.8),#=medium,
+                mp.Sphere(material=medium,#mp.Medium(index=1.8),
                           center=mp.Vector3(),
                           radius=r)]
     # Au sphere with frequency-dependant characteristics imported from Meep.
