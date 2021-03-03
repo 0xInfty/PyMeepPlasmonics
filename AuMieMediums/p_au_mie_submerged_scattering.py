@@ -4,7 +4,7 @@
 
 # Adapted from Meep Tutorial: Mie Scattering of a Lossless Dielectric Sphere
 
-# Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
+# Scattering efficiency in visible spectrum of submerged Au sphere.
 
 from socket import gethostname
 if "Nano" in gethostname():
@@ -18,14 +18,11 @@ import sys
 sys.path.append(syshome)
 
 import click as cli
-import h5py as h5
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
-from mpi4py import MPI
 import os
 from time import time
-import PyMieScatt as ps
 from v_materials import import_medium
 import v_click as vc
 import v_save as vs
@@ -211,10 +208,6 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
     box_z1_flux0 = np.asarray(mp.get_fluxes(box_z1))
     box_z2_flux0 = np.asarray(mp.get_fluxes(box_z2))
     
-    field = sim.get_array(center=mp.Vector3(), 
-                          size=(cell_width, cell_width, cell_width), 
-                          component=mp.Ez)
-    
     sim.reset_meep()
     
     #%% SAVE MID DATA
@@ -223,6 +216,7 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
         from_um_factor=from_um_factor,
         resolution=resolution,
         r=r,
+        index=index,
         wlen_range=wlen_range,
         nfreq=nfreq,
         cutoff=cutoff,
@@ -237,13 +231,6 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
         time_factor_cell=time_factor_cell,
         second_time_factor=second_time_factor,
         )
- 
-    f = h5.File(file("MidField.h5"), "w", 
-                driver='mpio', comm=MPI.COMM_WORLD)
-    f.create_dataset("Ez", data=field)
-    for a in params: f["Ez"].attrs[a] = params[a]
-    f.close()
-    del f
     
     data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
                           box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
@@ -282,35 +269,7 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
         ax[-1,1].set_xlabel("Wavelength [nm]")
         
         plt.savefig(file("MidFlux.png"))
-    
-    #%% PLOT FLUX WALLS FIELD
-    
-    if mp.am_master():
-        index_to_space = lambda i : i/resolution - cell_width/2
-        space_to_index = lambda x : round(resolution * (x + cell_width/2))
-        
-        field_walls = [field[space_to_index(-r),:,:],
-                        field[space_to_index(r),:,:],
-                        field[:,space_to_index(-r),:],
-                        field[:,space_to_index(r),:],
-                        field[:,:,space_to_index(-r)],
-                        field[:,:,space_to_index(r)]]
-        
-        zlims = (np.min([np.min(f) for f in field_walls]), 
-                  np.max([np.max(f) for f in field_walls]))
-        
-        fig, ax = plt.subplots(3, 2)
-        fig.subplots_adjust(hspace=0.25)
-        for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
-            a.set_title(h.split(" ")[1].split("0")[0])
-        
-        for f, a in zip(field_walls, np.reshape(ax, 6)):
-            a.imshow(f.T, interpolation='spline36', cmap='RdBu', 
-                      vmin=zlims[0], vmax=zlims[1])
-            a.axis("off")
-        
-        plt.savefig(file("MidField.png"))
-    
+
     #%% SECOND RUN: SETUP
     
     sim = mp.Simulation(resolution=resolution,
@@ -346,20 +305,6 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
     sim.init_sim()
     enlapsed.append( time() - temp )
     
-    """
-    112x112x112 with resolution 2
-    (24 cells in diameter)
-    ==> 5.16 s to build with sphere
-    
-    116x116x116 with resolution 2
-    (24 cells inside diameter)
-    ==> 9.71 s to build with sphere
-    
-    67 x 67 x 67 with resolution 4
-    (48 cells inside diameter)
-    ==> 14.47 s to build with sphere
-    """
-    
     temp = time()
     sim.load_minus_flux_data(box_x1, box_x1_data)
     sim.load_minus_flux_data(box_x2, box_x2_data)
@@ -370,20 +315,6 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
     enlapsed.append( time() - temp )
     del box_x1_data, box_x2_data, box_y1_data, box_y2_data
     del box_z1_data, box_z2_data
-    
-    """
-    112x112x112 with resolution 2
-    (24 cells in diameter)
-    ==> 0.016 s to add flux
-    
-    116x116x116 with resolution 2
-    (24 cells inside diameter)
-    ==> 0.021 s to add flux
-    
-    67 x 67 x 67 with resolution 4
-    (48 cells inside diameter)
-    ==> 0.043 s to add flux
-    """
     
     #%% SECOND RUN: SIMULATION :D
     
@@ -426,21 +357,13 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
     # = scattering cross section / cross sectional area of the sphere
     
     freqs = np.array(freqs)
-    scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
-                                1e3*from_um_factor/f,
-                                2*r*1e3*from_um_factor,
-                                asDict=True)['Qsca'] 
-                        for f in freqs]
-    # The simulation results are validated by comparing with 
-    # analytic theory of PyMieScatt module
     
     #%% SAVE FINAL DATA
     
-    data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
+    data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep]).T
     
     header = ["Longitud de onda [nm]", 
-              "Sección eficaz efectiva (Meep) [u.a.]", 
-              "Sección eficaz efectiva (Theory) [u.a.]"]
+              "Sección eficaz efectiva (Meep) [u.a.]"]
     
     data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux,
                           box_x2_flux, box_y1_flux, box_y2_flux, 
@@ -465,57 +388,16 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
         vs.savetxt(file("BaseResults.txt"), data_base, 
                    header=header_base, footer=params)
     
-    #%% PLOT ALL TOGETHER
+    #%% PLOT SCATTERING
     
     if mp.my_rank()==1:
         plt.figure()
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
+        plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-')
         plt.xlabel('Wavelength [nm]')
         plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        plt.legend()
         plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
         plt.tight_layout()
-        plt.savefig(file("Comparison.png"))
-    
-    #%% PLOT SEPARATE
-    
-    if mp.am_master():
-        plt.figure()
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        plt.xlabel('Wavelength [nm]')
-        plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        plt.legend()
-        plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
-        plt.tight_layout()
-        plt.savefig(file("Meep.png"))
-        
-        plt.figure()
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'bo-',label='Theory')
-        plt.xlabel('Wavelength [nm]')
-        plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        plt.legend()
-        plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
-        plt.tight_layout()
-        plt.savefig(file("Theory.png"))
-    
-    #%% PLOT ONE ABOVE THE OTHER
-    
-    if mp.my_rank()==1:
-        fig, axes = plt.subplots(nrows=2, sharex=True)
-        fig.subplots_adjust(hspace=0)
-        
-        axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        axes[0].yaxis.tick_right()
-        axes[0].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        axes[0].legend()
-        
-        axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'bo-',label='Theory')
-        axes[1].set_xlabel('Wavelength [nm]')
-        axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        axes[1].legend()
-        
-        plt.savefig(file("SeparatedComparison.png"))
+        plt.savefig(file("Scattering.png"))
         
     #%% PLOT FLUX FOURIER FINAL DATA
     
