@@ -49,8 +49,12 @@ import v_save as vs
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
+@cli.option("--stime", "-st", "second_time_factor", 
+            type=float, default=10,
+            help="Second simulation total time expressed as multiples of 1st")
 # 500-650 nm range from lowest to highest
-def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
+def main(series, folder, resolution, from_um_factor, r, index, 
+         wlen_range, second_time_factor):
 
     #%% PARAMETERS    
 
@@ -67,7 +71,6 @@ def main(series, folder, resolution, from_um_factor, r, index, wlen_range):
     enlapsed = []
     time_factor_cell = 1.2
     until_after_sources = False
-    second_time_factor = 10
     
     # Saving directories
     if series is None:
