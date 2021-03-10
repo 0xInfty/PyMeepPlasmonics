@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """The 'v_save' module saves data, dealing with overwriting.
 
-It could be divided into 2 sections:
+It could be divided into 2 main sections:
     (1) making new directories and free files to avoid overwriting 
     ('new_dir', 'free_file')
     (2) saving data into files with the option of not overwriting 
@@ -70,6 +70,153 @@ def find_numbers(string):
             numbers[i] = int(n) 
     
     return numbers
+
+#%%
+
+def filter_by_string_must(string_list, string_must):
+    
+    """Filters list of strings by asking a required string to be always present.
+    
+    Parameters
+    ----------
+    string_list : list of str
+        The list of strings to filter.
+    string_must : str
+        The string that must always be present on each of the list elements.
+    
+    Returns
+    -------
+    filtered_string_list: list of str
+        The filtered list of strings.
+    """
+    
+    filtered_string_list = []
+    for s in string_list:
+        if string_must in s:
+            filtered_string_list.append(s)
+    
+    return filtered_string_list
+
+#%%
+
+def sort_by_number(string_list, number_index=0):
+    
+    """Sorts list of strings by a variable number of recurrent position.
+    
+    Parameters
+    ----------
+    string_list : list of str
+        The list of strings to order.
+    number_index=0 : int, optional
+        The index of the recurrent number inside the expression (0 would be 
+        the 1st number, 1 the 2nd and so on)
+    
+    Returns
+    -------
+    sorted_string_list: list of str
+        The ordered list of strings.
+    """
+    
+    numbers = [find_numbers(s)[number_index] for s in string_list]
+    index = np.argsort(numbers)
+    sorted_string_list = [string_list[i] for i in index]
+    
+    return sorted_string_list
+
+#%%
+
+def nparray_to_string(my_nparray):
+                
+    this_string = []
+    for n in my_nparray:
+        if not isinstance(n, np.ndarray):
+            this_string.append(str(n))
+        else:
+            this_string.append( nparray_to_string(n) )
+    my_string = "[" + ", ".join(this_string) + "]"
+    
+    return my_string
+
+#%%
+
+def dict_to_string(my_dict):
+    
+    aux = []
+    for key, value in my_dict.items():
+        if isinstance(value, str):
+            value = '"{}"'.format(value)
+        elif isinstance(value, np.ndarray):
+            value = "np.array(" + nparray_to_string(value) + ")"
+        elif isinstance(value, tuple) and len(value) == 2:
+            condition = isinstance(value[0], str)
+            if not condition and isinstance(value[1], str):
+                value = '"{}, {}"'.format(*value)
+        aux.append(f'{key}={value}' + ', ')
+    my_string = ''.join(aux)[:-2]
+                
+    return my_string
+
+#%%
+
+def string_to_nparray(my_nparray_string):
+    
+    return eval(f"np.array({my_nparray_string})")
+
+#%%
+
+def string_to_dict(my_dict_string):
+    
+    return eval(f"dict({my_dict_string})")
+
+#%%
+
+def fix_params_dict(faulty_params):
+
+    """Fixes the faulty params dict caused by wlen_range np.array on vs.savetxt
+    
+    Parameters
+    ----------
+    faulty_params : str
+        The faulty params dict wrongly expressed as a string.
+    
+    Returns
+    -------
+    fixed_params : dict
+        The fixed params dict correctly expressed as a dict.
+    """
+    
+    problem = faulty_params.split("wlen_range=")[1].split(", nfreq")[0]
+    solved = ", ".join(problem.split(" "))
+    fixed_params = solved.join(faulty_params.split(problem))
+    fixed_params = eval(f"dict({fixed_params})")
+
+    return fixed_params
+
+#%%
+
+def get_home():
+    """Returns home path for results according to which CPU is running"""
+    
+    string = gethostname()
+    if "Nano" in string:
+        return "/home/nanofisica/Documents/Vale/ThesisResults"
+    elif "vall" in string:
+        return "/home/vall/Documents/Thesis/ThesisResults"
+    else:
+        raise ValueError("Your PC must appear inside return_home definition")
+
+#%%
+
+def get_sys_home():
+    """Returns home path for repository according to which CPU is running"""
+    
+    string = gethostname()
+    if "Nano" in string:
+        return "/home/nanofisica/Documents/Vale/ThesisPython"
+    elif "vall" in string:
+        return "/home/vall/Documents/Thesis/ThesisPython"
+    else:
+        raise ValueError("Your PC must appear inside return_home definition")
 
 #%%
 
@@ -522,32 +669,6 @@ def save_slice_generator(sim, filename, datanames, get_slices):
 
 #%%
 
-def get_home():
-    """Returns home path for results according to which CPU is running"""
-    
-    string = gethostname()
-    if "Nano" in string:
-        return "/home/nanofisica/Documents/Vale/ThesisResults"
-    elif "vall" in string:
-        return "/home/vall/Documents/Thesis/ThesisResults"
-    else:
-        raise ValueError("Your PC must appear inside return_home definition")
-
-#%%
-
-def get_sys_home():
-    """Returns home path for repository according to which CPU is running"""
-    
-    string = gethostname()
-    if "Nano" in string:
-        return "/home/nanofisica/Documents/Vale/ThesisPython"
-    elif "vall" in string:
-        return "/home/vall/Documents/Thesis/ThesisPython"
-    else:
-        raise ValueError("Your PC must appear inside return_home definition")
-
-#%%
-
 def retrieve_footer(file, comment_marker='#'):
     """Retrieves the footer of a .txt file saved with np.savetxt.
     
@@ -583,21 +704,7 @@ def retrieve_footer(file, comment_marker='#'):
         try:
             last_line = last_line.split(comment_marker + ' ')[-1]
             last_line = last_line.split('\n')[0]
-            footer = eval('dict({})'.format(last_line))
-            for key, value in footer.items():
-                try:
-                    number = find_numbers(value)
-                    if len(number) == 1:
-                        number = number[0]
-                        if len(value.split(' ')) == 2:
-                            footer[key] = (
-                                number, 
-                                value.split(' ')[-1]
-                                )
-                        else:
-                            footer[key] = number
-                except TypeError:
-                    value = value
+            footer = string_to_dict(last_line)
         except:
             footer = last_line
         return footer
