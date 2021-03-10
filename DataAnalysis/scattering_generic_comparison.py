@@ -15,42 +15,23 @@ import v_save as vs
 #%% PARAMETERS
 
 # Saving directories
-folder = ["AuMieMediums/AllWaterTest"]
+folder = ["AuMieSphere/AuMie/7)Diameters/WLen4560",
+          "AuMieSphere/AuMie/7)Diameters/WLen4560"]
 home = vs.get_home()
 
 # Sorting and labelling data series
-sorting_method = ["classic"] # "number2"
-series_label = [lambda s : s] #lambda s : f"Second Time Factor x{vs.find_numbers(s)[2]}"
-series_must = ["BackToVacuum"] # leave "" per default
+sorting_function = [vs.sort_by_number, vs.sort_by_number]
+series_label = [lambda s : f"Meep {vs.find_numbers(s)[0]} nm",
+                lambda s : f"Mie {vs.find_numbers(s)[0]} nm"]
+series_must = ["SC", "SC"] # leave "" per default
+series_column = [1, 2]
 
 # Scattering plot options
-series_colors = [plab.cm.Blues]
-series_linestyles = ["solid"]
-
-#%% SORTING METHOD
-
-def sorting_function_definer(sorting_method):
-    
-    if sorting_method=="classic":
-        def sorting_function(l):
-            l.sort()
-            return l
-    
-    elif "number" in sorting_method:
-        reference_index = vs.find_numbers(sorting_method)[0]
-        def sorting_function(l):
-            numbers = [vs.find_numbers(s)[reference_index] for s in l]
-            index = np.argsort(numbers)
-            return [l[i] for i in index]
-    
-    else:
-        raise ValueError("Define your own function instead of using this :P")
-    
-    return sorting_function
-
-sorting_function = [sorting_function_definer(sm) for sm in sorting_method]
-
-# sorting_function = lambda l : [*l[-4:-1], l[-5]]
+plot_title = "Scattering for Au spheres in vacuum with different diameters"
+series_colors = [plab.cm.Reds, plab.cm.Reds]
+series_linestyles = ["solid", "dashed"]
+plot_make_big = True
+plot_file = os.path.join(home, "DataAnalysis/VacuumDiametersWLen4560AllScatt.png")
 
 #%% LOAD DATA
 
@@ -67,11 +48,7 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
     file.append( lambda f, s : os.path.join(path[-1], f, s) )
     
     series.append( os.listdir(path[-1]) )
-    to_remove_items = []
-    for s in series[-1]: 
-        if sm not in s: to_remove_items.append(s)
-    for s in to_remove_items: series[-1].remove(s)
-    del to_remove_items
+    series[-1] = vs.filter_by_string_must(series[-1], sm)
     series[-1] = sf(series[-1])
     
     data.append( [] )
@@ -81,14 +58,9 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
         params[-1].append(vs.retrieve_footer(file[-1](s, "Results.txt")))
     header.append( vs.retrieve_header(file[-1](s, "Results.txt")) )
     
-    fixed_params = []
-    for p in params[-1]:
-        problem = p.split("wlen_range=")[1].split(", nfreq")[0]
-        solved = ", ".join(problem.split(" "))
-        fixed = solved.join(p.split(problem))
-        fixed_params.append(eval(f"dict({fixed})"))
-    params[-1] = fixed_params
-    del p, problem, solved, fixed, fixed_params
+    for i in range(len(params[-1])):
+        if not isinstance(params[-1][i], dict): 
+            params[-1][i] = vs.fix_params_dict(params[-1][i])
     
     # r = [p["r"] for p in params]
     # from_um_factor = [p["from_um_factor"] for p in params]
@@ -96,8 +68,8 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
 #%% GET MAX WAVELENGTH
 
 max_wlen = []
-for d in data:
-    max_wlen.append( [d[i][np.argmax(d[i][:,1]), 0] for i in range(len(d))] )
+for d, sc in zip(data, series_column):
+    max_wlen.append( [d[i][np.argmax(d[i][:,sc]), 0] for i in range(len(d))] )
 
 #%% PLOT
 
@@ -105,14 +77,19 @@ colors = [sc(np.linspace(0,1,len(s)+3))[3:]
           for sc, s in zip(series_colors, series)]
 
 plt.figure()
-for s, d, p, sl, c, ls in zip(series, data, params, series_label, 
-                              colors, series_linestyles):
+plt.title(plot_title)
+for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
+                                     series_label, colors, series_linestyles):
 
-    for ss, sd, sp, sc in zip(s, d, p, c):
-        plt.plot(sd[:,0], sd[:,1] / max(sd[:,1]), 
-                 linestyle=ls, color=sc, label=sl(ss))
+    for ss, sd, sp, spc in zip(s, d, p, pc):
+        plt.plot(sd[:,0], sd[:,sc] / max(sd[:,sc]), 
+                 linestyle=pls, color=spc, label=psl(ss))
 
 plt.xlabel("Wavelength [nm]")
 plt.ylabel("Normalized Scattering Cross Section")
 plt.legend()
-vs.saveplot(file("", "AllScatt.png"), overwrite=True)
+if plot_make_big:
+    mng = plt.get_current_fig_manager()
+    mng.window.showMaximized()
+del mng
+vs.saveplot(plot_file, overwrite=True)
