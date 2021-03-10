@@ -31,14 +31,7 @@ params = []
 for s in series:
     params.append(vs.retrieve_footer(file(s, "Results.txt")))
 
-fixed_params = []
-for p in params:
-    problem = p.split("wlen_range=")[1].split(", nfreq")[0]
-    solved = ", ".join(problem.split(" "))
-    fixed = solved.join(p.split(problem))
-    fixed_params.append(eval(f"dict({fixed})"))
-params = fixed_params
-del p, problem, solved, fixed, fixed_params
+params = [vs.fix_params_dict(p) for p in params]
 
 enlapsed = [p["enlapsed"] for p in params]
 total = np.array([sum(e) for e in enlapsed])
@@ -47,7 +40,7 @@ enlapsed = np.array(enlapsed)
 #%% PLOT
 
 plt.figure()
-plt.plot(nprocesses, total_0, 'ro-', label="Serie 1")
+# plt.plot(nprocesses, total_0, 'ro-', label="Serie 1")
 plt.plot(nprocesses, total, 'bo-', label="Serie 2")
 plt.xlabel("Número de subprocesos")
 plt.ylabel("Tiempo total (s)")
