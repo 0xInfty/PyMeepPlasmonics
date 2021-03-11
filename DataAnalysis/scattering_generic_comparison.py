@@ -31,7 +31,7 @@ plot_title = "Scattering for Au spheres in vacuum with different diameters"
 series_colors = [plab.cm.Reds, plab.cm.Reds]
 series_linestyles = ["solid", "dashed"]
 plot_make_big = True
-plot_file = os.path.join(home, "DataAnalysis/VacuumDiametersWLen4560AllScatt.png")
+plot_file = lambda n : os.path.join(home, "DataAnalysis", n)
 
 #%% LOAD DATA
 
@@ -92,4 +92,4 @@ if plot_make_big:
     mng = plt.get_current_fig_manager()
     mng.window.showMaximized()
 del mng
-vs.saveplot(plot_file, overwrite=True)
+vs.saveplot(plot_file("AllScatt.png"), overwrite=True)
