@@ -74,12 +74,6 @@ air_width = air_width - air_width%(1/resolution)
 pml_width = pml_width - pml_width%(1/resolution)
 pml_layers = [mp.PML(thickness=pml_width)]
 
-# symmetries = [mp.Mirror(mp.Y), 
-#               mp.Mirror(mp.Z, phase=-1)]
-# Two mirror planes reduce cell size to 1/4
-# Issue related that lead me to comment this lines:
-# https://github.com/NanoComp/meep/issues/1484
-
 cell_width = 2 * (pml_width + air_width + r)
 cell_width = cell_width - cell_width%(1/resolution)
 cell_size = mp.Vector3(cell_width, cell_width, cell_width)
@@ -108,10 +102,7 @@ else:
 # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
 # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
 
-geometry = [mp.Block(material=mp.Medium(index=submerged_index),
-                     center=mp.Vector3(),
-                     size=cell_size),
-            mp.Sphere(material=medium,
+geometry = [mp.Sphere(material=medium,
                       center=mp.Vector3(),
                       radius=r)]
 # Au sphere with frequency-dependant characteristics imported from Meep.
@@ -128,8 +119,7 @@ sim = mp.Simulation(resolution=resolution,
                     boundary_layers=pml_layers,
                     sources=sources,
                     k_point=mp.Vector3(),
-                    geometry=[geometry[0]])#,
-                    # symmetries=symmetries)
+                    default_material=mp.Medium(index=submerged_index))
 # >> k_point zero specifies boundary conditions needed
 # for the source to be infinitely extended
 
@@ -253,7 +243,7 @@ sim = mp.Simulation(resolution=resolution,
                     boundary_layers=pml_layers,
                     sources=sources,
                     k_point=mp.Vector3(),
-                    # symmetries=symmetries,
+                    default_material=mp.Medium(index=submerged_index),
                     geometry=geometry)
 
 box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 

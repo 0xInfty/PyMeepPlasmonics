@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import os
 from time import time
 from v_materials import import_medium
-import v_click as vc
+import v_class as vc
 import v_save as vs
 # from v_units import MeepUnitsManager
 
@@ -43,7 +43,7 @@ import v_save as vs
             help="Conversion of 1 μm to my length unit (i.e. 10e-3=10nm/1μm)")
 @cli.option("--radius", "-r", "r", default=6, type=float,
             help="Radius of sphere expressed in multiples of 10 nm")
-@cli.option("--index", "-i", "index", 
+@cli.option("--index", "-i", "submerged_index", 
             type=float, default=1.333,
             help="Reflective index of sourrounding medium")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
@@ -53,7 +53,7 @@ import v_save as vs
             type=float, default=10,
             help="Second simulation total time expressed as multiples of 1st")
 # 500-650 nm range from lowest to highest
-def main(series, folder, resolution, from_um_factor, r, index, 
+def main(series, folder, resolution, from_um_factor, r, submerged_index, 
          wlen_range, second_time_factor):
 
     #%% PARAMETERS    
@@ -96,12 +96,6 @@ def main(series, folder, resolution, from_um_factor, r, index,
     pml_width = pml_width - pml_width%(1/resolution)
     pml_layers = [mp.PML(thickness=pml_width)]
     
-    # symmetries = [mp.Mirror(mp.Y), 
-    #               mp.Mirror(mp.Z, phase=-1)]
-    # Two mirror planes reduce cell size to 1/4
-    # Issue related that lead me to comment this lines:
-    # https://github.com/NanoComp/meep/issues/1484
-    
     cell_width = 2 * (pml_width + air_width + r)
     cell_width = cell_width - cell_width%(1/resolution)
     cell_size = mp.Vector3(cell_width, cell_width, cell_width)
@@ -130,10 +124,7 @@ def main(series, folder, resolution, from_um_factor, r, index,
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
     
-    geometry = [mp.Block(material=mp.Medium(index=index),
-                         center=mp.Vector3(),
-                         size=cell_size),
-                mp.Sphere(material=medium,
+    geometry = [mp.Sphere(material=medium,
                           center=mp.Vector3(),
                           radius=r)]
     # Au sphere with frequency-dependant characteristics imported from Meep.
@@ -152,8 +143,7 @@ def main(series, folder, resolution, from_um_factor, r, index,
                         boundary_layers=pml_layers,
                         sources=sources,
                         k_point=mp.Vector3(),
-                        geometry=[geometry[0]])#,
-                        # symmetries=symmetries)
+                        default_material=mp.Medium(index=submerged_index))
     # >> k_point zero specifies boundary conditions needed
     # for the source to be infinitely extended
     
@@ -219,7 +209,7 @@ def main(series, folder, resolution, from_um_factor, r, index,
         from_um_factor=from_um_factor,
         resolution=resolution,
         r=r,
-        index=index,
+        submerged_index=submerged_index,
         wlen_range=wlen_range,
         nfreq=nfreq,
         cutoff=cutoff,
@@ -280,7 +270,7 @@ def main(series, folder, resolution, from_um_factor, r, index,
                         boundary_layers=pml_layers,
                         sources=sources,
                         k_point=mp.Vector3(),
-                        # symmetries=symmetries,
+                        default_material=mp.Medium(index=submerged_index),
                         geometry=geometry)
     
     box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
