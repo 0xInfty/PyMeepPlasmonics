@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import v_save as vs
+import v_utilities as vu
 
 #%% PARAMETERS
 
@@ -31,7 +32,7 @@ params = []
 for s in series:
     params.append(vs.retrieve_footer(file(s, "Results.txt")))
 
-params = [vs.fix_params_dict(p) for p in params]
+params = [vu.fix_params_dict(p) for p in params]
 
 enlapsed = [p["enlapsed"] for p in params]
 total = np.array([sum(e) for e in enlapsed])

@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
 import v_save as vs
+import v_utilities as vu
 
 #%% PARAMETERS
 
@@ -20,9 +21,9 @@ folder = ["AuMieSphere/AuMie/7)Diameters/WLen4560",
 home = vs.get_home()
 
 # Sorting and labelling data series
-sorting_function = [vs.sort_by_number, vs.sort_by_number]
-series_label = [lambda s : f"Meep {vs.find_numbers(s)[0]} nm",
-                lambda s : f"Mie {vs.find_numbers(s)[0]} nm"]
+sorting_function = [vu.sort_by_number, vu.sort_by_number]
+series_label = [lambda s : f"Meep {vu.find_numbers(s)[0]} nm",
+                lambda s : f"Mie {vu.find_numbers(s)[0]} nm"]
 series_must = ["SC", "SC"] # leave "" per default
 series_column = [1, 2]
 
@@ -48,7 +49,7 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
     file.append( lambda f, s : os.path.join(path[-1], f, s) )
     
     series.append( os.listdir(path[-1]) )
-    series[-1] = vs.filter_by_string_must(series[-1], sm)
+    series[-1] = vu.filter_by_string_must(series[-1], sm)
     series[-1] = sf(series[-1])
     
     data.append( [] )
@@ -60,7 +61,7 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
     
     for i in range(len(params[-1])):
         if not isinstance(params[-1][i], dict): 
-            params[-1][i] = vs.fix_params_dict(params[-1][i])
+            params[-1][i] = vu.fix_params_dict(params[-1][i])
     
     # r = [p["r"] for p in params]
     # from_um_factor = [p["from_um_factor"] for p in params]

@@ -11,23 +11,24 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
 import v_save as vs
+import v_utilities as vu
 
 #%% PARAMETERS
 
 # Saving directories
-folder = ["AuMieSphere/AuMie/10)MaxRes/Max103Res",
-          "AuMieSphere/AuMie/10)MaxRes/Max103Res"]
+folder = ["AuMieSphere/AuMie/10)MaxRes/Max103FU20Res",
+          "AuMieSphere/AuMie/10)MaxRes/Max103FU20Res"]
 home = vs.get_home()
 
 # Sorting and labelling data series
-sorting_function = [lambda l : vs.sort_by_number(l, -1), 
-                    lambda l : vs.sort_by_number(l, -1)]
+sorting_function = [lambda l : vu.sort_by_number(l, -1), 
+                    lambda l : vu.sort_by_number(l, -1)]
 def special_label(s):
     if "5" in s:
         return "Mie"
     else:
         return ""
-series_label = [lambda s : f"Meep Resolution {vs.find_numbers(s)[-1]}",
+series_label = [lambda s : f"Meep Resolution {vu.find_numbers(s)[-1]}",
                 special_label]
 series_must = ["", ""] # leave "" per default
 series_column = [1, 2]
@@ -37,7 +38,7 @@ plot_title = "Scattering for Au spheres in vacuum with 103 nm diameter"
 series_colors = [plab.cm.Reds, plab.cm.Reds]
 series_linestyles = ["solid", "dashed"]
 plot_make_big = True
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Max103Res" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/Max103FU20Res" + n)
 
 #%% LOAD DATA
 
@@ -54,7 +55,7 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
     file.append( lambda f, s : os.path.join(path[-1], f, s) )
     
     series.append( os.listdir(path[-1]) )
-    series[-1] = vs.filter_by_string_must(series[-1], sm)
+    series[-1] = vu.filter_by_string_must(series[-1], sm)
     series[-1] = sf(series[-1])
     
     data.append( [] )
@@ -66,7 +67,7 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
     
     for i in range(len(params[-1])):
         if not isinstance(params[-1][i], dict): 
-            params[-1][i] = vs.fix_params_dict(params[-1][i])
+            params[-1][i] = vu.fix_params_dict(params[-1][i])
     
     # r = [p["r"] for p in params]
     # from_um_factor = [p["from_um_factor"] for p in params]
@@ -79,7 +80,9 @@ for d, sc in zip(data, series_column):
 
 dif_max_wlen = [ml - max_wlen[1][0] for ml in max_wlen[0]]
 
-resolution = [p["resolution"] for p in params[0]]
+resolution = [vu.find_numbers(s)[-1] for s in series[0]]
+
+
 
 plt.figure()
 plt.title("Difference in scattering maximum's wavelength for Au 103 nm sphere")

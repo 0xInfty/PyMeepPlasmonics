@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
 import v_save as vs
+import v_utilities as vu
 
 #%% PARAMETERS
 
@@ -19,8 +20,8 @@ folder = "AuMieMediums/AllWaterTest/TestSecTime/Test103Res2SecTime"
 home = vs.get_home()
 
 # Sorting and labelling data series
-sorting_function = lambda l : vs.sort_by_number(l, 2)
-series_label = lambda s : f"Second Time Factor x{vs.find_numbers(s)[2]}"
+sorting_function = lambda l : vu.sort_by_number(l, 2)
+series_label = lambda s : f"Second Time Factor x{vu.find_numbers(s)[2]}"
 recognize_string = "Test" # leave "" per default
 
 #%% LOAD DATA
@@ -29,7 +30,7 @@ path = os.path.join(home, folder)
 file = lambda f, s : os.path.join(path, f, s)
 
 series = os.listdir(path)
-series = vs.filter_by_string_must(series, recognize_string)
+series = vu.filter_by_string_must(series, recognize_string)
 series = sorting_function(series)
 
 data = []
@@ -39,7 +40,7 @@ for s in series:
     params.append(vs.retrieve_footer(file(s, "Results.txt")))
 header  = vs.retrieve_header(file(s, "Results.txt"))
 
-params = [vs.fix_params_dict(p) for p in params]
+params = [vu.fix_params_dict(p) for p in params]
 
 r = [p["r"] for p in params]
 from_um_factor = [p["from_um_factor"] for p in params]

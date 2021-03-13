@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
 import v_save as vs
+import v_utilities as vu
 
 #%% PARAMETERS
 
@@ -28,8 +29,8 @@ vacuum_path = os.path.join(home, vacuum_folder)
 vacuum_file = lambda f, s : os.path.join(vacuum_path, f, s)
 
 vacuum_series = os.listdir(vacuum_path)
-vacuum_series = vs.filter_by_string_must(vacuum_series, "SC")
-vacuum_series = vs.sort_by_number(vacuum_series, 0)
+vacuum_series = vu.filter_by_string_must(vacuum_series, "SC")
+vacuum_series = vu.sort_by_number(vacuum_series, 0)
 
 vacuum_data = []
 vacuum_params = []
@@ -38,7 +39,7 @@ for s in vacuum_series:
     vacuum_params.append(vs.retrieve_footer(vacuum_file(s, "Results.txt")))
 vacuum_header = vs.retrieve_header(vacuum_file(s, "Results.txt"))
 
-vacuum_params = [vs.fix_params_dict(p) for p in vacuum_params]
+vacuum_params = [vu.fix_params_dict(p) for p in vacuum_params]
 
 #%% LOAD WATER DATA
 
@@ -46,8 +47,8 @@ water_path = os.path.join(home, water_folder)
 water_file = lambda f, s : os.path.join(water_path, f, s)
 
 water_series = os.listdir(water_path)
-water_series = vs.filter_by_string_must(water_series, "AllWater")
-water_series = vs.sort_by_number(water_series, 0)
+water_series = vu.filter_by_string_must(water_series, "AllWater")
+water_series = vu.sort_by_number(water_series, 0)
 
 water_data = []
 water_params = []
@@ -56,7 +57,7 @@ for s in water_series:
     water_params.append(vs.retrieve_footer(water_file(s, "Results.txt")))
 water_header = vs.retrieve_header(water_file(s, "Results.txt"))
 
-water_params = [vs.fix_params_dict(p) for p in water_params]
+water_params = [vu.fix_params_dict(p) for p in water_params]
 
 #%% LOAD GLASS N WATER DATA
 
@@ -64,7 +65,7 @@ glassnwater_path = os.path.join(home, glassnwater_folder)
 glassnwater_file = lambda f, s : os.path.join(glassnwater_path, f, s)
 
 glassnwater_series = os.listdir(glassnwater_path)
-glassnwater_series = vs.sort_by_number(glassnwater_series, 0)
+glassnwater_series = vu.sort_by_number(glassnwater_series, 0)
 
 glassnwater_data = []
 glassnwater_params = []
@@ -73,7 +74,7 @@ for s in glassnwater_series:
     glassnwater_params.append(vs.retrieve_footer(glassnwater_file(s, "Results.txt")))
 glassnwater_header = vs.retrieve_header(glassnwater_file(s, "Results.txt"))
 
-glassnwater_params = [vs.fix_params_dict(p) for p in glassnwater_params]
+glassnwater_params = [vu.fix_params_dict(p) for p in glassnwater_params]
 
 #%% LOAD MARIAN'S DATA
 
@@ -82,12 +83,12 @@ marian_file = lambda s : os.path.join(marian_path, s)
 
 marian_series = os.listdir(marian_path)
 
-marian_exp_series = vs.filter_by_string_must(marian_series, "exp")
-marian_exp_series = vs.filter_by_string_must(marian_exp_series, "glass")
-marian_exp_series = vs.sort_by_number(marian_exp_series)
+marian_exp_series = vu.filter_by_string_must(marian_series, "exp")
+marian_exp_series = vu.filter_by_string_must(marian_exp_series, "glass")
+marian_exp_series = vu.sort_by_number(marian_exp_series)
 
-marian_mie_series = vs.filter_by_string_must(marian_series, "mie")
-marian_mie_series = vs.sort_by_number(marian_mie_series)
+marian_mie_series = vu.filter_by_string_must(marian_series, "mie")
+marian_mie_series = vu.sort_by_number(marian_mie_series)
 
 marian_exp_data = []
 for s in marian_exp_series:
