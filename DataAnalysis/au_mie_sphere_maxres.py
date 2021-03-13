@@ -90,9 +90,8 @@ rsq, parameters = va.nonlinear_fit(np.array(resolution),
                                    np.array(dif_max_wlen), 
                                    exponential_fit)
 
-plt.figure()
 plt.title("Difference in scattering maximum's wavelength for Au 103 nm sphere")
-plt.plot(resolution, dif_max_wlen, 'o-')
+plt.legend(["Data", "Fit"])
 plt.xlabel("Resolution")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
