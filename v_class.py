@@ -13,7 +13,9 @@ DottableWrapper : class
 @author: Vall
 """
 
+import click as cli
 import meep as mp
+import numpy as np
 
 #%%
 
@@ -300,3 +302,30 @@ class Plane(mp.Volume):
         nvertices = len(self.get_vertices())
         if nvertices<3 or nvertices>4:
             raise TypeError(f"Must have 3 or 4 vertices and not {nvertices}")
+
+#%%
+
+class NumpyArrayParamType(cli.ParamType):
+    
+    """A np.ndarray parameter class for Click console-line commands' arguments."""
+    
+    name = "nparray"
+
+    def convert(self, value, param, ctx):
+        try:
+            a = eval(value)
+            if type(a) is np.ndarray:
+                return a
+            elif type(a) is list:
+                return np.array(a)
+        except TypeError:
+            self.fail(
+                "expected string for np.array() conversion, got "
+                f"{value!r} of type {type(value).__name__}",
+                param,
+                ctx,
+            )
+        except ValueError:
+            self.fail(f"{value!r} is not a valid np.array", param, ctx)
+            
+NUMPY_ARRAY = NumpyArrayParamType()

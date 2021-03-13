@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import os
 from time import time
 from v_materials import import_medium
-import v_click as vc
+import v_class as vc
 import v_save as vs
 # from v_units import MeepUnitsManager
 

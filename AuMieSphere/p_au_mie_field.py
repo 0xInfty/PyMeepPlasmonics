@@ -20,7 +20,7 @@ import os
 # from scipy.stats import norm
 # from scipy.integrate import dblquad
 from time import time
-import v_click as vc
+import v_class as vc
 import v_save as vs
     
 #%% COMMAND LINE FORMATTER
