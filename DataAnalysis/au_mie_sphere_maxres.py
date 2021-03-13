@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
+import v_analysis as va
 import v_save as vs
 import v_utilities as vu
 
@@ -82,7 +83,12 @@ dif_max_wlen = [ml - max_wlen[1][0] for ml in max_wlen[0]]
 
 resolution = [vu.find_numbers(s)[-1] for s in series[0]]
 
+def exponential_fit(X, A, b, C):
+    return A * np.exp(-b*X) + C
 
+rsq, parameters = va.nonlinear_fit(np.array(resolution), 
+                                   np.array(dif_max_wlen), 
+                                   exponential_fit)
 
 plt.figure()
 plt.title("Difference in scattering maximum's wavelength for Au 103 nm sphere")
