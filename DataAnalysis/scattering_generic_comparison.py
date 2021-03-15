@@ -49,6 +49,7 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
     file.append( lambda f, s : os.path.join(path[-1], f, s) )
     
     series.append( os.listdir(path[-1]) )
+    series[-1] = vu.filter_to_only_directories(series[-1])
     series[-1] = vu.filter_by_string_must(series[-1], sm)
     series[-1] = sf(series[-1])
     

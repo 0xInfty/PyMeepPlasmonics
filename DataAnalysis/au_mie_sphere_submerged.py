@@ -159,3 +159,22 @@ plt.ylabel("Rescaled Scattering [a.u.]")
 plt.xlim([450, 650])
 plt.legend(framealpha=1)
 vs.saveplot(water_file("", "Scatt103.png"), overwrite=True)
+
+#%% WATER VS THEORY 103 nm
+
+plt.figure()
+plt.title("Scattering of Au sphere with 103 nm diameter submerged in water")
+scatt = water_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
+plt.plot(water_data[-1][:,0], scatt/max(scatt),
+         linestyle="solid", color='#1f77b4', label="Meep")
+scatt = glassnwater_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
+plt.plot(marian_mie_data[-1][:,0], 
+         marian_mie_data[-1][:,1] / max(marian_mie_data[-1][:,1]), 
+         linestyle="dashed", color='#1f77b4', label="Mie")
+plt.xlabel("Wavelength [nm]")
+plt.ylabel("Normalized Scattering Cross Section [a.u.]")
+plt.xlim([500, 650])
+plt.legend(framealpha=1)
+plt.grid()
+vs.saveplot(os.path.join(home, "DataAnalysis/AllWater103Comparison.png"), 
+            overwrite=True)

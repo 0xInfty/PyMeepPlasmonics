@@ -203,6 +203,30 @@ def filter_by_string_must(string_list, string_must):
 
 #%%
 
+def filter_to_only_directories(string_list):
+
+    """Filters list of strings by returning only directories.
+    
+    Parameters
+    ----------
+    string_list : list of str
+        The list of strings to filter.
+    
+    Returns
+    -------
+    filtered_string_list: list of str
+        The filtered list of strings.
+    """
+    
+    filtered_string_list = []
+    for s in string_list:
+        if '.' not in s:
+            filtered_string_list.append(s)
+    
+    return filtered_string_list
+
+#%%
+
 def sort_by_number(string_list, number_index=0):
 
     """Sorts list of strings by a variable number of recurrent position.
