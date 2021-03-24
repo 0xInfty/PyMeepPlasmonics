@@ -8,26 +8,39 @@ Created on Mon Oct 19 14:45:00 2020
 
 # Field of 120nm-diameter Au sphere given a visible monochromatic incident wave.
 
+from socket import gethostname
+if "Nano" in gethostname():
+    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+elif "vall" in gethostname():
+    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+else:
+    raise ValueError("Your PC must be registered at the top of this code")
+
+import sys
+sys.path.append(syshome)
+
 import imageio as mim
 import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import PyMieScatt as ps
 from scipy.signal import find_peaks
+import v_materials as vm
 import v_save as vs
 
 #%% PARAMETERS
 
 # Directories
 data_series = ["2020101703", "2020101702", "2020101801"]
-data_folder = "AuSphereFieldResults"
-home = "/home/vall/Documents/Thesis/ThesisPython/"
+data_folder = "AuMieSphere/AuSphereField"
+home = vs.get_home()
 
 n = len(data_series)
 
 # Saving directory
 series = "2020102001"
-folder = "AuSphereComparedResults"
+folder = "AuMieSphere/AuSphereField/AuSphereComparedResults"
 
 #%% FILES MANAGEMENT
 
@@ -45,6 +58,7 @@ g = [h5.File(data_file("Planes.h5", s), "r") for s in data_series]
 results_line = [fi["Ez"] for fi in f]
 results_plane = [gi["Ez"] for gi in g]
 
+from_um_factor = [rp.attrs["from_um_factor"] for rp in results_plane]
 resolution = [rp.attrs["resolution"] for rp in results_plane]
 r = [rp.attrs["r"] for rp in results_plane]
 cell_width = [rp.attrs["cell_width"] for rp in results_plane]
@@ -56,7 +70,83 @@ air_width = [cell_width[j]/2 - pml_width[j] - r[j] for j in range(n)]
 index_to_space = lambda i, j : i/resolution[j] - cell_width[j]/2
 space_to_index = lambda x, j : round(resolution[j] * (x + cell_width[j]/2))
 
-#%% CROP SIGNALS IN FASE
+#%% CROP SIGNALS TO JUST INSIDE THE BOX
+
+z_profile = [results_plane[j][:, space_to_index(0,j), :] for j in range(n)]
+
+in_results_line = []
+in_results_plane = []
+in_z_profile = []
+for j in range(n):
+    in_results_plane.append(results_plane[j][:,
+        space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j),
+        space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
+    in_results_line.append(results_line[j][:,
+        space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
+    in_z_profile.append(z_profile[j][:, 
+        space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
+
+in_index_to_space = lambda i, j : i/resolution[j] - (cell_width[j]-2*pml_width[j])/2
+in_space_to_index = lambda x, j : round(resolution[j] * (x + (cell_width[j]-2*pml_width[j])/2))
+
+#%% FIND MAXIMUM
+
+max_in_z_profile = []
+for j in range(n):
+    max_in_z_profile.append( np.argmax(in_z_profile[j][:, in_space_to_index(r[j], j)]) )
+
+plt.figure()
+plt.title("Máxima intensificación del campo eléctrico en dirección de la polarización")
+for j in range(n):
+    plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
+                         10*(cell_width[j]/2 - pml_width[j]),
+                         in_z_profile[j].shape[1]), 
+             in_z_profile[j][max_in_z_profile[j], :])
+plt.legend(["$\lambda$ = {} nm".format(wl*10) for wl in wlen])
+plt.xlabel("Distancia en z [nm])")
+plt.ylabel("Campo eléctrico Ez [u.a.]")
+plt.savefig(file("MaxFieldProfile.png"))
+
+# Animation base
+fig = plt.figure(figsize=(n*6.4, 6.4))
+axes = fig.subplots(ncols=n)
+lims = [np.min([in_results_plane[j][max_in_z_profile[j],:,:] for j in range(n)]),
+       np.max([in_results_plane[j][max_in_z_profile[j],:,:] for j in range(n)])]      
+lims = max([abs(l) for l in lims])
+lims = [-lims, lims]
+call_series = lambda j : in_results_plane[j][max_in_z_profile[j],:,:].T
+
+
+for j in range(n):
+    axes[j].imshow(call_series(j), 
+                   interpolation='spline36', cmap='RdBu', 
+                   vmin=lims[0], vmax=lims[1])
+    axes[j].set_xlabel("Distancia en y (u.a.)", fontsize=18)
+    axes[j].set_ylabel("Distancia en z (u.a.)", fontsize=18)
+    axes[j].set_title("$\lambda$={} nm".format(wlen[j]*10), fontsize=22)
+    plt.setp(axes[j].get_xticklabels(), fontsize=16)
+    plt.setp(axes[j].get_yticklabels(), fontsize=16)
+plt.savefig(file("MaxFieldPlane.png"))
+
+#%% THEORY SCATTERING
+
+medium = vm.import_medium("Au", from_um_factor[0])
+
+wlens = 10*np.linspace(min(wlen), max(wlen), 500)
+freqs = 1e3*from_um_factor[0]/wlens
+scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
+                            1e3*from_um_factor[0]/f,
+                            2*r[0]*1e3*from_um_factor[0],
+                            asDict=True)['Qsca'] 
+                    for f in freqs]
+
+plt.figure()
+plt.plot(wlens, scatt_eff_theory)
+
+wlen_max = wlens[np.argmax(scatt_eff_theory)]
+e_wlen_max = np.mean([wlens[i+1]-wlens[i] for i in range(499)])
+
+#%% PUT FULL SIGNALS IN FASE
 
 source_field = [results_line[j][:, space_to_index(-cell_width[j]/2 + pml_width[j], j)] 
                 for j in range(n)]
@@ -78,6 +168,17 @@ results_plane_in_fase = [rp[i:f,:,:] for rp, i, f in zip(results_plane,
                                                          init_index, 
                                                          end_index)]
 z_profile_in_fase = [results_plane[j][init_index[j]:end_index[j], space_to_index(0,j), :] for j in range(n)]
+
+#%% CROP FULL SIGNALS IN FASE
+
+in_results_plane_in_fase = []
+in_z_profile_in_fase = []
+for j in range(len(f)):
+    in_results_plane_in_fase.append(results_plane_in_fase[j][:,
+        space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j),
+        space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
+    in_z_profile_in_fase.append(z_profile_in_fase[j][:,
+        space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
 
 #%% SHOW SOURCE
 
@@ -218,6 +319,109 @@ def make_gif_line(gif_filename):
     os.remove('temp_pic.png')
     print('Saved gif')
 
-make_gif_line(file("AxisZ"))
+make_gif_line(file("AxisZ2"))
 plt.close(fig)
 # del fig, ax, lims, nframes_step, nframes, call_series, label_functio
+
+#%% CROPPPED PLANE IN FASE GIF
+
+# What should be parameters
+nframes_step = 1
+all_nframes = [int(rp.shape[0]/nframes_step) for rp in in_results_plane_in_fase]
+nframes = max(all_nframes)
+jmax = np.where(np.asarray(all_nframes)==nframes)[0][0]
+call_index = lambda i, j : int(i * all_nframes[j] / nframes)
+call_series = lambda i, j : in_results_plane_in_fase[j][i,:,:].T
+label_function = lambda i : 'Tiempo: {:.1f}'.format(i * period_plane[jmax] / wlen[jmax]) + ' T'
+
+# Animation base
+fig = plt.figure(figsize=(n*6.4, 6.4))
+axes = fig.subplots(ncols=n)
+lims = lambda j : (np.min(in_results_plane_in_fase[j]),
+                   np.max(in_results_plane_in_fase[j]))
+
+def make_pic_plane(i):
+    for j in range(n):
+        axes[j].clear()
+        axes[j].imshow(call_series(call_index(i, j), j), 
+                       interpolation='spline36', cmap='RdBu', 
+                       vmin=lims(j)[0], vmax=lims(j)[1])
+        axes[j].set_xlabel("Distancia en y (u.a.)")
+        axes[j].set_ylabel("Distancia en z (u.a.)")
+        axes[j].set_title("$\lambda$={} nm".format(wlen[j]*10))
+    axes[0].text(-.1, -.105, label_function(i), transform=axes[0].transAxes)
+    plt.show()
+    return axes
+
+def make_gif_plane(gif_filename):
+    pics = []
+    for i in range(nframes):
+        axes = make_pic_plane(i*nframes_step)
+        plt.savefig('temp_pic.png') 
+        pics.append(mim.imread('temp_pic.png')) 
+        print(str(i+1)+'/'+str(nframes))
+    mim.mimsave(gif_filename+'.gif', pics, fps=5)
+    os.remove('temp_pic.png')
+    print('Saved gif')
+
+make_gif_plane(file("CroppedPlaneX=0"))
+plt.close(fig)
+# del fig, ax, lims, nframes_step, nframes, call_series, label_function
+
+#%% CROPPED Z LINES GIF
+
+# What should be parameters
+nframes_step = 1
+all_nframes = [int(rp.shape[0]/nframes_step) for rp in in_results_plane_in_fase]
+nframes = max(all_nframes)
+jmax = np.where(np.asarray(all_nframes)==nframes)[0][0]
+call_index = lambda i, j : int(i * all_nframes[j] / nframes)
+call_series = lambda i, j : in_z_profile_in_fase[j][i,:]
+label_function = lambda i : 'Tiempo: {:.1f}'.format(i * period_plane[jmax] / wlen[jmax]) + ' T'
+
+# Animation base
+fig = plt.figure()
+ax = plt.subplot()
+lims_y = (min([np.min(zp) for zp in in_z_profile_in_fase]), 
+          max([np.max(zp) for zp in in_z_profile_in_fase]))
+shape = [call_series(0,i).shape[0] for i in range(n)]
+color = ['#1f77b4', '#ff7f0e', '#2ca02c']
+
+def make_pic_line(i, max_vals, max_index):
+    ax.clear()
+    for j in range(n):
+        data = call_series(call_index(i,j),j)
+        max_data = max(data)
+        if max_data>max_vals[j]:
+            max_index = j
+            max_vals[j] = max_data
+        plt.plot(np.linspace(-0.5, 0.5, shape[j]), 
+                 call_series(call_index(i,j),j))
+        plt.hlines(max_vals[j], -.5, .5, color=color[j], linewidth=.5)
+    ax.set_xlim(-.5, .5)
+    ax.set_ylim(*lims_y)
+    ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
+    plt.legend(["$\lambda$ = {} nm, $D$ = {:.0f} nm".format(wl*10, cw*10) for wl, cw in zip(wlen, cell_width)])
+    # plt.hlines(max_vals[max_index], -.5, .5, color=color[max_index], linewidth=.5)
+    plt.hlines(0, -.5, .5, color='k', linewidth=.5)
+    plt.xlabel("Distancia en z (D)")
+    plt.ylabel("Campo eléctrico Ez (u.a.)")
+    plt.show()
+    return ax, max_vals, max_index
+
+def make_gif_line(gif_filename):
+    max_vals = [0,0,0]
+    max_index = 0
+    pics = []
+    for i in range(nframes):
+        ax, max_vals, max_index = make_pic_line(i*nframes_step, 
+                                               max_vals, max_index)
+        plt.savefig('temp_pic.png') 
+        pics.append(mim.imread('temp_pic.png')) 
+        print(str(i+1)+'/'+str(nframes))
+    mim.mimsave(gif_filename+'.gif', pics, fps=8)
+    os.remove('temp_pic.png')
+    print('Saved gif')
+
+make_gif_line(file("CroppedAxisZ"))
+plt.close(fig)
