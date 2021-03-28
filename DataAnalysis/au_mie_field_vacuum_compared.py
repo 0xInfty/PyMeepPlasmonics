@@ -28,6 +28,7 @@ import PyMieScatt as ps
 from scipy.signal import find_peaks
 import v_materials as vm
 import v_save as vs
+import v_theory as vt
 
 #%% PARAMETERS
 
@@ -95,19 +96,53 @@ max_in_z_profile = []
 for j in range(n):
     max_in_z_profile.append( np.argmax(in_z_profile[j][:, in_space_to_index(r[j], j)]) )
 
+#%% GET THEORY (CLAUSSIUS-MOSOTTI)
+
+rvec = []
+for j in range(len(wlen)):
+    naux = len(in_z_profile[j][0, :])
+    aux = np.zeros((naux, 3))
+    aux[:,2] = np.linspace(-cell_width[j]/2 + pml_width[j], 
+                           -cell_width[j]/2 + pml_width[j], 
+                           naux)
+    rvec.append(aux)
+del aux, naux
+
+E0 = np.array([0,0,1])
+
+in_theory_line = []
+for j in range(len(wlen)):
+    medium = vm.import_medium("Au", from_um_factor[j])
+    epsilon = medium.epsilon(1/wlen[j])[0,0]
+    alpha = vt.alpha_Clausius_Mosotti(epsilon, r[j])
+    in_theory_line.append(np.real(
+        np.array([vt.E(epsilon, alpha, E0, rv, r[j]) for rv in rvec[j]])[:,-1]))
+
+#%% PLOT MAXIMUM INTESIFICATION PROFILE (LINES)
+
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+          '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
 plt.figure()
 plt.title("Máxima intensificación del campo eléctrico en dirección de la polarización")
 for j in range(n):
     plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
                          10*(cell_width[j]/2 - pml_width[j]),
+                         in_z_profile[j].shape[1], colors[j]), 
+             in_z_profile[j][max_in_z_profile[j], :], 
+             label=f"Meep $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")
+    plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
+                         10*(cell_width[j]/2 - pml_width[j]),
                          in_z_profile[j].shape[1]), 
-             in_z_profile[j][max_in_z_profile[j], :])
-plt.legend(["$\lambda$ = {} nm".format(wl*10) for wl in wlen])
+             in_theory_line[j], colors[j], linestyle='dashed',
+             label=f"Theory $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")
+plt.legend()
 plt.xlabel("Distancia en z [nm])")
 plt.ylabel("Campo eléctrico Ez [u.a.]")
 plt.savefig(file("MaxFieldProfile.png"))
 
-# Animation base
+#%% PLOT MAXIMUM INTENSIFCATION FIELD (PLANE)
+
 fig = plt.figure(figsize=(n*6.4, 6.4))
 axes = fig.subplots(ncols=n)
 lims = [np.min([in_results_plane[j][max_in_z_profile[j],:,:] for j in range(n)]),
