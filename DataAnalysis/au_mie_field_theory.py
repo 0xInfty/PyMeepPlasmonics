@@ -19,16 +19,19 @@ import matplotlib.pyplot as plt
 import os
 from scipy.interpolate import interp1d
 import v_materials as vm
+import v_theory as vt
 import v_save as vs
 
 #%% PARAMETERS
 
 from_um_factor = 10e-3
-r = 3
+r = 6
 wlen_range = np.array([35, 70])
+wlen_chosen = [40, 57, 75]
 epsilon_ext = 1 # Vacuum
 medium = vm.import_medium("Au", from_um_factor)
-E0 = lambda n : np.array([[0,0,1] for i in range(n)])
+# E0_func = lambda n : np.array([[0,0,1] for i in range(n)])
+E0 = np.array([0,0,1])
 
 npoints = 500
 
@@ -56,6 +59,7 @@ wlen_juli = data_juli[:,0] * 1e3 # Wavelength in nm
 n_juli = data_juli[:,1] + 1j * data_juli[:,2] # Refractive Index
 epsilon_juli = np.power(n_juli, 2) # Because permeability is mu = 1
 
+wlen_john = wlen_meep
 n_real_john = interp1d(wlen_juli, data_juli[:,1], kind="cubic")
 n_imag_john = interp1d(wlen_juli, data_juli[:,2], kind="cubic")
 n_func_john = lambda wl : n_real_john(wl) + 1j * n_imag_john(wl)
@@ -69,29 +73,25 @@ wlen = [*[wlen_meep * from_um_factor * 1e3]*2]
 
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
 
-def alpha_Clausius_Mosotti(epsilon, r):
-    """Returns Clausius-Mosotti polarizability alpha in units of cubic length"""
-    alpha = 4 * np.pi * (r**3)
-    alpha = alpha * ( epsilon - epsilon_ext ) / ( epsilon + 2 * epsilon_ext )
-    return alpha
-# In units of nm^3
-
-alpha_cm = [alpha_Clausius_Mosotti(e, r * from_um_factor * 1e3) for e in epsilon]   
+alpha_cm_meep = vt.alpha_Clausius_Mosotti(epsilon_meep, 
+                                          r * from_um_factor * 1e3,
+                                          epsilon_ext=epsilon_ext)
+alpha_cm_john = vt.alpha_Clausius_Mosotti(epsilon_john, 
+                                          r * from_um_factor * 1e3,
+                                          epsilon_ext=epsilon_ext)
+alpha_cm = [alpha_cm_meep, alpha_cm_john]
 
 #%% KUWATA: POLARIZABILITY
-
-def alpha_Kuwata(epsilon, wlen, r):
-    """Returns Kuwata polarizability alpha in units of nm³"""
-    aux_x = np.pi * r / wlen # Withouth units, so no need for from_um_factor * 1e3
-    aux_vol = 4 * np.pi * (r**3) / 3
-    alpha = aux_vol * ( 1 - ( (epsilon + epsilon_ext) * ( aux_x**2 ) / 10 ) )
-    aux_den = ( 1/3 ) + ( epsilon_ext / ( epsilon - epsilon_ext ) )
-    aux_den = aux_den - ( epsilon + 10 * epsilon_ext ) * ( aux_x**2 ) / 30
-    aux_den = aux_den - 4j * (np.pi**2) * (epsilon_ext**(3/2) ) * aux_vol / (3 * (wlen**3))
-    alpha = alpha / aux_den
-    return alpha
-    
-alpha_k = [alpha_Kuwata(eps, wl, r * from_um_factor * 1e3) for eps, wl in zip(epsilon, wlen)]
+   
+alpha_k_meep = vt.alpha_Kuwata(epsilon_meep, 
+                               wlen_meep * from_um_factor * 1e3, 
+                               r * from_um_factor * 1e3,
+                               epsilon_ext=epsilon_ext)
+alpha_k_john = vt.alpha_Kuwata(epsilon_john, 
+                               wlen_john * from_um_factor * 1e3, 
+                               r * from_um_factor * 1e3,
+                               epsilon_ext=epsilon_ext)
+alpha_k = [alpha_k_meep, alpha_k_john]
 
 #%% PLOT POLARIZABILITY
 
@@ -122,27 +122,88 @@ for ax in axes: ax.set_ylim([0, 1.1*max(max_value)])
     
 plt.savefig(plot_file("Polarizability.png"))
 
-#%% DIPOLAR APROXIMATION: INDUCED DIPOLE MOMENT 
+#%% DIPOLAR APROXIMATION: ELECTRIC FIELD EZ IN Z
 
-def p(epsilon, alpha, E0):
-    """Returns induced dipolar moment in units of cubic length"""
-    return epsilon * epsilon_ext * np.matmul(alpha, E0)
+rvec = np.zeros((npoints, 3))
+rvec[:,2] = np.linspace(-3*r, 3*r, npoints)
 
-# alpha_cm = [alpha_Clausius_Mosotti(e, r * from_um_factor * 1e3) for e in epsilon]   
+E_cm_meep_chosen = []
+E_k_meep_chosen = []
+E_cm_john_chosen = []
+E_k_john_chosen = []
+for wl in wlen_chosen:
+    e_meep_chosen = medium.epsilon(1/wl)[0,0]
+    a_cm_meep_chosen = vt.alpha_Clausius_Mosotti(e_meep_chosen, r, 
+                                                 epsilon_ext=epsilon_ext)
+    a_k_meep_chosen = vt.alpha_Kuwata(e_meep_chosen, wl*from_um_factor*1e3, r,
+                                      epsilon_ext=epsilon_ext)
+    e_john_chosen = epsilon_func_john(wl * from_um_factor * 1e3)
+    a_cm_john_chosen = vt.alpha_Clausius_Mosotti(e_john_chosen, r,
+                                                 epsilon_ext=epsilon_ext)
+    a_k_john_chosen = vt.alpha_Kuwata(e_john_chosen, wl*from_um_factor*1e3, r,
+                                      epsilon_ext=epsilon_ext)
+    E_cm_meep_chosen.append(
+        np.array([vt.E(e_meep_chosen, a_cm_meep_chosen, 
+                       E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
+    E_k_meep_chosen.append(
+        np.array([vt.E(e_meep_chosen, a_k_meep_chosen, 
+                       E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
+    E_cm_john_chosen.append(
+        np.array([vt.E(e_john_chosen, a_cm_john_chosen, 
+                       E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
+    E_k_john_chosen.append(
+        np.array([vt.E(e_john_chosen, a_k_john_chosen, 
+                       E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
 
-p_plane_cm = [p(epsilon_john, alpha, E0(npoints)) for alpha in [alpha_cm[1]]]
+E_chosen = [E_cm_meep_chosen, E_k_meep_chosen,
+            E_cm_john_chosen, E_k_john_chosen]
+E_labels = ["Meep + Claussius-Mosotti",
+            "Meep + Kuwata",
+            "Johnson + Claussius-Mossetti",
+            "Johnson + Kuwata"]
+# E_plane_cm_meep = np.array([E(epsilon_meep, alpha_cm_meep, E0, rv) for rv in rvec])
+# First index: position
+# Second index: wavelength
+# Third index: direction
 
-#%% DIPOLAR APROXIMATION: ELECTRIC FIELD
+#%%
 
-def E_in(epsilon, E0):
-    """Returns electric field inside the sphere in units of cubic length"""
-    return 3 * epsilon_ext * E0 / (epsilon + 2 * epsilon_ext)
+n = len(wlen_chosen)
+fig = plt.figure(figsize=(n*6.4, 6.4))
+axes = fig.subplots(ncols=n)
 
-def E_out(epsilon, E0, p, r):
-    """Returns electric field outside the sphere in units of cubic length"""
-    rmod = np.linalg.norm(r)
-    rver = r / rmod
-    aux = 3 * rver * np.dot(rver, p) - p
-    Eout = E0 + aux / (4 * np.pi * epsilon * epsilon_ext * (rmod**3))
-    return Eout
+E_max = []
+E_min = []
+for i in range(n):
+    axes[i].set_title(f'$\lambda$={wlen_chosen[i]*from_um_factor*1e3:1.0f} nm')
+    for j in range(len(E_labels)):
+        axes[i].plot(rvec[:,2], np.real(E_chosen[j][i][:,2]))
+        E_max.append(np.max(np.real(E_chosen[j][i][:,2])))
+        E_min.append(np.min(np.real(E_chosen[j][i][:,2])))
+    axes[i].set_xlabel("Distance in z [u.a.]")
+    axes[i].set_ylabel("Electric field Ez [u.a.]")
+    axes[i].legend(E_labels)
+lims = [min(E_min), max(E_max)]
+lims = [lims[0] - 0.1*(lims[1]-lims[0]), lims[1] + 0.1*(lims[1]-lims[0])]
+for ax in axes: ax.set_ylim(*lims)
 
+plt.savefig(plot_file("FieldProfile.png"))
+
+#%%
+
+# n = len(wlen_chosen)
+# fig = plt.figure(figsize=(n*6.4, 6.4))
+# axes = fig.subplots(ncols=n)
+# lims = [abs(np.min(np.real(E_cm_chosen))), abs(np.max(np.real(E_cm_chosen)))]
+# lims = [-max(lims), max(lims)]
+
+# for j in range(n):
+#     axes[j].imshow(np.real(E_cm_chosen[j]), 
+#                    interpolation='spline36', cmap='RdBu', 
+#                    vmin=lims[0], vmax=lims[1])
+#     axes[j].set_xlabel("Distancia en x (u.a.)", fontsize=18)
+#     axes[j].set_ylabel("Distancia en y (u.a.)", fontsize=18)
+#     axes[j].set_title("$\lambda$={} nm".format(wlen_chosen[j]*10), fontsize=22)
+#     plt.setp(axes[j].get_xticklabels(), fontsize=16)
+#     plt.setp(axes[j].get_yticklabels(), fontsize=16)
+# plt.savefig(file("MaxFieldPlane.png"))
