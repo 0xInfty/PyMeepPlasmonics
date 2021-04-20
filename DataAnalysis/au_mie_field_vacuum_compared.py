@@ -93,8 +93,17 @@ in_space_to_index = lambda x, j : round(resolution[j] * (x + (cell_width[j]-2*pm
 #%% FIND MAXIMUM
 
 max_in_z_profile = []
+is_max_in_z_profile = []
 for j in range(n):
-    max_in_z_profile.append( np.argmax(in_z_profile[j][:, in_space_to_index(r[j], j)]) )
+    this_max = np.argmax( in_z_profile[j][:, in_space_to_index(r[j], j)])
+    this_min = np.argmin( in_z_profile[j][:, in_space_to_index(r[j], j)])
+    this_abs_max = np.argmax( np.abs( in_z_profile[j][:, in_space_to_index(r[j], j)]) )
+    if this_abs_max == this_max:
+        is_max_in_z_profile.append( +1 )
+    else:
+        is_max_in_z_profile.append( -1 )
+    max_in_z_profile.append( this_abs_max )
+del this_max, this_min
 
 #%% GET THEORY (CLAUSSIUS-MOSOTTI)
 
@@ -103,42 +112,67 @@ for j in range(len(wlen)):
     naux = len(in_z_profile[j][0, :])
     aux = np.zeros((naux, 3))
     aux[:,2] = np.linspace(-cell_width[j]/2 + pml_width[j], 
-                           -cell_width[j]/2 + pml_width[j], 
+                           cell_width[j]/2 - pml_width[j], 
                            naux)
     rvec.append(aux)
 del aux, naux
 
 E0 = np.array([0,0,1])
 
-in_theory_line = []
+in_theory_cm_line = []
+in_theory_k_line = []
 for j in range(len(wlen)):
     medium = vm.import_medium("Au", from_um_factor[j])
     epsilon = medium.epsilon(1/wlen[j])[0,0]
-    alpha = vt.alpha_Clausius_Mosotti(epsilon, r[j])
-    in_theory_line.append(np.real(
-        np.array([vt.E(epsilon, alpha, E0, rv, r[j]) for rv in rvec[j]])[:,-1]))
+    alpha_cm = vt.alpha_Clausius_Mosotti(epsilon, r[j])
+    alpha_k = vt.alpha_Kuwata(epsilon, wlen[j], r[j])
+    in_theory_cm_line.append(
+        np.array([vt.E(epsilon, alpha_cm, E0, rv, r[j]) for rv in rvec[j]])[:,-1])
+    in_theory_k_line.append(
+        np.array([vt.E(epsilon, alpha_k, E0, rv, r[j]) for rv in rvec[j]])[:,-1])
 
 #%% PLOT MAXIMUM INTESIFICATION PROFILE (LINES)
 
 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
-plt.figure()
+l_meep = []
+l_cm = []
+l_k = []
+fig = plt.figure()
 plt.title("Máxima intensificación del campo eléctrico en dirección de la polarización")
 for j in range(n):
-    plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
+    l_meep.append(
+        plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
                          10*(cell_width[j]/2 - pml_width[j]),
                          in_z_profile[j].shape[1], colors[j]), 
-             in_z_profile[j][max_in_z_profile[j], :], 
-             label=f"Meep $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")
-    plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
+             is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], :]), 
+             label=f"Meep $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")[0])
+    l_cm.append(
+        plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
                          10*(cell_width[j]/2 - pml_width[j]),
                          in_z_profile[j].shape[1]), 
-             in_theory_line[j], colors[j], linestyle='dashed',
-             label=f"Theory $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")
-plt.legend()
+             np.real(in_theory_cm_line[j]), colors[j], linestyle='dashed',
+             label=f"Clausius-Mosotti Theory $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")[0])
+    l_k.append(
+        plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
+                         10*(cell_width[j]/2 - pml_width[j]),
+                         in_z_profile[j].shape[1]), 
+             np.real(in_theory_k_line[j]), colors[j], linestyle='dotted',
+             label=f"Kuwata Theory $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")[0])
+
+legend1 = plt.legend(
+    [l_meep[0], l_cm[0], l_k[0]],
+    ["Resultados de MEEP", "Teoría con Clausius-Mossotti", "Teoría con Kuwata"],
+    loc='upper left')
+plt.legend(l_meep, 
+           [f"$\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm" for j in range(n)],
+           loc='upper right')
+plt.gca().add_artist(legend1)
 plt.xlabel("Distancia en z [nm])")
 plt.ylabel("Campo eléctrico Ez [u.a.]")
+fig.set_size_inches([10.03,  4.8 ])
+
 plt.savefig(file("MaxFieldProfile.png"))
 
 #%% PLOT MAXIMUM INTENSIFCATION FIELD (PLANE)
