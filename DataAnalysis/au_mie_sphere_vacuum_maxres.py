@@ -108,16 +108,18 @@ def quartic_fit(X, A, b):
     return A * (X)**4 + b
 rsq, parameters = va.nonlinear_fit(np.array(resolution), 
                                    np.array(total_enlapsed_time), 
-                                   quartic_fit)
+                                   quartic_fit,
+                                   par_units=["","s"])
 
-plt.title("Enlapsed time for a simulation of an Au 103 nm sphere in vacuum")
+plt.title("Enlapsed time simulation of Au 103 nm sphere in vacuum")
 # plt.plot(resolution, total_enlapsed_time)
-plt.legend(["Data", "Fit"], loc="lower right")
+plt.legend(["Data", r"Fit $f(r)=a_0 r^4 + a_1$"], loc="lower right")
 plt.xlabel("Resolution")
 plt.ylabel("Enlapsed time [s]")
 vs.saveplot(plot_file("TotTime.png"), overwrite=True)
 
 plt.figure()
+plt.title("Enlapsed time for simulations of Au 103 nm sphere in vacuum")
 plt.plot(resolution, [et[1] for et in enlapsed_time], 'D-b', label="Sim I")
 plt.plot(resolution, [et[-1] for et in enlapsed_time], 's-b', label="Sim II")
 plt.xlabel("Resolution")
@@ -126,6 +128,7 @@ plt.legend()
 plt.savefig(plot_file("SimTime.png"), bbox_inches='tight')
 
 plt.figure()
+plt.title("Enlapsed time for building of Au 103 nm sphere in vacuum")
 plt.plot(resolution, [et[0] for et in enlapsed_time], 'D-r', label="Sim I")
 plt.plot(resolution, [et[2] for et in enlapsed_time], 's-r', label="Sim II")
 plt.xlabel("Resolution")
@@ -134,6 +137,7 @@ plt.legend()
 plt.savefig(plot_file("BuildTime.png"), bbox_inches='tight')
 
 plt.figure()
+plt.title("Enlapsed time for loading flux of Au 103 nm sphere in vacuum")
 plt.plot(resolution, [et[3] for et in enlapsed_time], 's-m')
 plt.xlabel("Resolution")
 plt.ylabel("Enlapsed time in loading flux [s]")
