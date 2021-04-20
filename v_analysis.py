@@ -457,6 +457,8 @@ def error_value(X, dX, error_digits=2, units='',
                   for st in string]
     elif used_string_scale:
         string = [st + ' ' + prefix + units for st in string]        
+    else:
+        string = [st + ' ' + units for st in string]
     aux = []
     for st in string:
         if st[-1]==' ':

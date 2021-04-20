@@ -91,10 +91,11 @@ def exponential_fit(X, A, b, C):
     return A * np.exp(-b*X) + C
 rsq, parameters = va.nonlinear_fit(np.array(resolution), 
                                    np.array(dif_max_wlen), 
-                                   exponential_fit)
+                                   exponential_fit,
+                                   par_units=["nm", "", "nm"])
 
-plt.title("Difference in scattering maximum's wavelength for Au 103 nm sphere")
-plt.legend(["Data", "Fit"])
+plt.title("Difference in scattering maximum for Au 103 nm sphere in vacuum")
+plt.legend(["Data", r"Fit $f(r)=a_0 e^{-a_1 r} + a_2$"])
 plt.xlabel("Resolution")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
