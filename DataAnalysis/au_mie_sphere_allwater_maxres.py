@@ -31,6 +31,7 @@ sorting_function = [lambda l : vu.sort_by_number(l, -1)]
 #         return ""
 series_label = [lambda s : f"Meep Resolution {vu.find_numbers(s)[-1]}"]
 series_must = [""] # leave "" per default
+series_mustnt = ["15"] # leave "" per default
 series_column = [1]
 
 # Scattering plot options
@@ -49,13 +50,14 @@ data = []
 params = []
 header = []
 
-for f, sf, sm in zip(folder, sorting_function, series_must):
+for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
 
     path.append( os.path.join(home, f) )
     file.append( lambda f, s : os.path.join(path[-1], f, s) )
     
     series.append( os.listdir(path[-1]) )
     series[-1] = vu.filter_by_string_must(series[-1], sm)
+    if smn!="": series[-1] = vu.filter_by_string_must(series[-1], smn, False)
     series[-1] = sf(series[-1])
     
     data.append( [] )
@@ -105,11 +107,11 @@ def exponential_fit(X, A, b, C):
     return A * np.exp(-b*X) + C
 
 # First value is wrong
-resolution = resolution[1:]
-dif_max_wlen = dif_max_wlen[1:]
+resolution_fit = resolution[1:]
+dif_max_wlen_fit = dif_max_wlen[1:]
 
-rsq, parameters = va.nonlinear_fit(np.array(resolution), 
-                                   np.array(dif_max_wlen), 
+rsq, parameters = va.nonlinear_fit(np.array(resolution_fit), 
+                                   np.array(dif_max_wlen_fit), 
                                    exponential_fit)
 
 plt.title("Difference in scattering maximum's wavelength for Au 103 nm sphere")
@@ -122,6 +124,45 @@ vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
 enlapsed_time = [params[0][i]["enlapsed"] for i in range(len(data[0]))]
 total_enlapsed_time = [sum(et) for et in enlapsed_time]
+
+def quartic_fit(X, A, b):
+    return A * (X)**4 + b
+rsq, parameters = va.nonlinear_fit(np.array(resolution), 
+                                   np.array(total_enlapsed_time), 
+                                   quartic_fit,
+                                   par_units=["","s"])
+
+plt.title("Enlapsed total time for simulation of Au 103 nm sphere in water")
+# plt.plot(resolution, total_enlapsed_time)
+plt.legend(["Data", r"Fit $f(r)=a_0 r^4 + a_1$"], loc="lower right")
+plt.xlabel("Resolution")
+plt.ylabel("Enlapsed time [s]")
+vs.saveplot(plot_file("TotTime.png"), overwrite=True)
+
+plt.figure()
+plt.title("Enlapsed time for simulations of Au 103 nm sphere in water")
+plt.plot(resolution, [et[1] for et in enlapsed_time], 'D-b', label="Sim I")
+plt.plot(resolution, [et[-1] for et in enlapsed_time], 's-b', label="Sim II")
+plt.xlabel("Resolution")
+plt.ylabel("Enlapsed time in simulations [s]")
+plt.legend()
+plt.savefig(plot_file("SimTime.png"), bbox_inches='tight')
+
+plt.figure()
+plt.title("Enlapsed time for building of Au 103 nm sphere in water")
+plt.plot(resolution, [et[0] for et in enlapsed_time], 'D-r', label="Sim I")
+plt.plot(resolution, [et[2] for et in enlapsed_time], 's-r', label="Sim II")
+plt.xlabel("Resolution")
+plt.ylabel("Enlapsed time in building [s]")
+plt.legend()
+plt.savefig(plot_file("BuildTime.png"), bbox_inches='tight')
+
+plt.figure()
+plt.title("Enlapsed time for loading flux of Au 103 nm sphere in water")
+plt.plot(resolution, [et[3] for et in enlapsed_time], 's-m')
+plt.xlabel("Resolution")
+plt.ylabel("Enlapsed time in loading flux [s]")
+plt.savefig(plot_file("LoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED
 

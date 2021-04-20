@@ -177,16 +177,20 @@ def find_numbers(string):
 
 #%%
 
-def filter_by_string_must(string_list, string_must):
+def filter_by_string_must(string_list, string_must, must=True):
 
-    """Filters list of strings by asking a required string to be always present.
+    """Filters list of str by a str required to be always present or absent.
     
     Parameters
     ----------
     string_list : list of str
         The list of strings to filter.
     string_must : str
-        The string that must always be present on each of the list elements.
+        The string that must always be present or always absent on each of the 
+        list elements.
+    must=True : bool
+        If true, then the string must always be present. If not, the string 
+        must always be absent.
     
     Returns
     -------
@@ -196,7 +200,9 @@ def filter_by_string_must(string_list, string_must):
     
     filtered_string_list = []
     for s in string_list:
-        if string_must in s:
+        if must and string_must in s:
+            filtered_string_list.append(s)
+        elif not must and string_must not in s:
             filtered_string_list.append(s)
     
     return filtered_string_list
