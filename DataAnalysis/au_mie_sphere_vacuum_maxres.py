@@ -191,3 +191,27 @@ if plot_make_big:
     mng.window.showMaximized()
 del mng
 vs.saveplot(plot_file("AllScattEff.png"), overwrite=True)
+
+#%% PLOT IN UNITS
+
+colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.figure()
+plt.title(plot_title)
+for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
+                                     series_label, colors, series_linestyles):
+
+    for ss, sd, sp, spc in zip(s, d, p, pc):
+        if ss!=series[0][0]:
+            plt.plot(sd[:,0], sd[:,sc] * np.pi * (sp['r'] * sp['from_um_factor'] * 1e3)**2,
+                     linestyle=pls, color=spc, label=psl(ss))
+            
+plt.xlabel("Wavelength [nm]")
+plt.ylabel(r"Scattering Cross Section [nm$^2$]")
+plt.legend()
+if plot_make_big:
+    mng = plt.get_current_fig_manager()
+    mng.window.showMaximized()
+del mng
+vs.saveplot(plot_file("AllScatt.png"), overwrite=True)

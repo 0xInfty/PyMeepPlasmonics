@@ -112,10 +112,11 @@ dif_max_wlen_fit = dif_max_wlen[1:]
 
 rsq, parameters = va.nonlinear_fit(np.array(resolution_fit), 
                                    np.array(dif_max_wlen_fit), 
-                                   exponential_fit)
+                                   exponential_fit,
+                                   par_units=["nm", "", "nm"])
 
-plt.title("Difference in scattering maximum's wavelength for Au 103 nm sphere")
-plt.legend(["Data", "Fit"])
+plt.title("Difference in scattering maximum for Au 103 nm sphere in water")
+plt.legend(["Data", r"Fit $f(r)=a_0 e^{-a_1 r} + a_2$"])
 plt.xlabel("Resolution")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
@@ -188,7 +189,7 @@ if plot_make_big:
     mng = plt.get_current_fig_manager()
     mng.window.showMaximized()
 del mng
-vs.saveplot(plot_file("AllScatt.png"), overwrite=True)
+vs.saveplot(plot_file("AllScattNorm.png"), overwrite=True)
 
 #%% PLOT EFFIENCIENCY
 
@@ -215,3 +216,27 @@ if plot_make_big:
     mng.window.showMaximized()
 del mng
 vs.saveplot(plot_file("AllScattEff.png"), overwrite=True)
+
+#%% PLOT IN UNITS
+
+colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.figure()
+plt.title(plot_title)
+for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
+                                     series_label, colors, series_linestyles):
+
+    for ss, sd, sp, spc in zip(s, d, p, pc):
+        if ss!=series[0][0]:
+            plt.plot(sd[:,0], sd[:,sc] * np.pi * (sp['r'] * sp['from_um_factor'] * 1e3)**2,
+                     linestyle=pls, color=spc, label=psl(ss))
+            
+plt.xlabel("Wavelength [nm]")
+plt.ylabel(r"Scattering Cross Section [nm$^2$]")
+plt.legend()
+if plot_make_big:
+    mng = plt.get_current_fig_manager()
+    mng.window.showMaximized()
+del mng
+vs.saveplot(plot_file("AllScatt.png"), overwrite=True)

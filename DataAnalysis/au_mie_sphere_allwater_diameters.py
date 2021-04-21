@@ -92,9 +92,7 @@ for di, ri, fi, resi, ii in zip(data, r, from_um_factor, resolution, index):
         wlenj = dj[:,0] # nm
         freqj = 1 / wlenj # 1/nm
         freqmeepj = (1e3 * fj) / wlenj # Meep units
-        # wlenj = 1e3*from_um_factor/freqmeepj
         mediumj = import_medium("Au", fj)
-        # wlenj = 1e3*from_um_factor/freqmeepj 
         theory[-1].append(np.array(
             [ps.MieQ(np.sqrt(mediumj.epsilon(fqm)[0,0]*mediumj.mu(fqm)[0,0]), 
                      wl, # Wavelength (nm)
@@ -112,6 +110,14 @@ for d, sc in zip(data, series_column):
 max_wlen_theory = []
 for t, d in zip(theory, data):
     max_wlen_theory.append( [d[i][np.argmax(t[i]), 0] for i in range(len(t))] )
+    
+e_max_wlen = []
+for d, sc in zip(data, series_column):
+    e_max_wlen.append( [ np.mean([
+        abs(d[i][np.argmax(d[i][:,sc])-1, 0] - d[i][np.argmax(t[i]), 0]),
+        abs(d[i][np.argmax(d[i][:,sc])+1, 0] - d[i][np.argmax(t[i]), 0])
+        ]) for i in range(len(d)) ] )
+dif_max_wlen = [max_wlen[0][i] - max_wlen_theory[0][i] for i in range(len(data[0]))]
 
 #%% PLOT NORMALIZED
 
