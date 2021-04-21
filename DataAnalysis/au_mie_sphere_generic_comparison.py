@@ -25,6 +25,7 @@ sorting_function = [vu.sort_by_number, vu.sort_by_number]
 series_label = [lambda s : f"Meep {vu.find_numbers(s)[0]} nm",
                 lambda s : f"Mie {vu.find_numbers(s)[0]} nm"]
 series_must = ["SC", "SC"] # leave "" per default
+series_mustnt = ["", ""] # leave "" per default
 series_column = [1, 2]
 
 # Scattering plot options
@@ -43,7 +44,7 @@ data = []
 params = []
 header = []
 
-for f, sf, sm in zip(folder, sorting_function, series_must):
+for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
 
     path.append( os.path.join(home, f) )
     file.append( lambda f, s : os.path.join(path[-1], f, s) )
@@ -51,6 +52,7 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
     series.append( os.listdir(path[-1]) )
     series[-1] = vu.filter_to_only_directories(series[-1])
     series[-1] = vu.filter_by_string_must(series[-1], sm)
+    if smn!="": series[-1] = vu.filter_by_string_must(series[-1], smn, False)
     series[-1] = sf(series[-1])
     
     data.append( [] )
