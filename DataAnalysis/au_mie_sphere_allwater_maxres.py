@@ -132,7 +132,7 @@ def quartic_fit(X, A, b):
 rsq, parameters = va.nonlinear_fit(np.array(resolution), 
                                    np.array(total_enlapsed_time), 
                                    quartic_fit,
-                                   par_units=["","s"])
+                                   par_units=["s","s"])
 
 plt.title("Enlapsed total time for simulation of Au 103 nm sphere in water")
 # plt.plot(resolution, total_enlapsed_time)
