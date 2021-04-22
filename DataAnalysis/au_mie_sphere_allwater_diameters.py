@@ -79,7 +79,7 @@ for p in params:
     index.append( [] )
     for p in params[-1]:
         try:
-            index[-1].append( p["index"] )
+            index[-1].append( p["submerged_index"] )
         except KeyError:
             index[-1].append( 1.333 )
 

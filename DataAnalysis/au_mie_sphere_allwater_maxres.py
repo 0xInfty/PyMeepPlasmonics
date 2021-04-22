@@ -19,7 +19,7 @@ import v_utilities as vu
 #%% PARAMETERS
 
 # Saving directories
-folder = ["AuMieMediums/AllWaterMaxRes/AllWaterMax103Res"]
+folder = ["AuMieMediums/AllWaterMaxRes/AllWaterMax80Res"]
 home = vs.get_home()
 
 # Sorting and labelling data series
@@ -39,7 +39,7 @@ plot_title = "Scattering for Au spheres in water with 103 nm diameter"
 series_colors = [plab.cm.Blues]
 series_linestyles = ["solid"]
 plot_make_big = True
-plot_file = lambda n : os.path.join(home, "DataAnalysis/AllWaterMax103FU20Res" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/AllWaterMax80FU20Res" + n)
 
 #%% LOAD DATA
 
@@ -91,6 +91,7 @@ scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]),
                             nMedium=index,
                             asDict=True)['Qsca'] 
                     for f in freqs]
+scatt_eff_theory = np.array(scatt_eff_theory)
 
 #%% GET MAX WAVELENGTH
 
@@ -229,9 +230,11 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
 
     for ss, sd, sp, spc in zip(s, d, p, pc):
         if ss!=series[0][0]:
-            plt.plot(sd[:,0], sd[:,sc] * np.pi * (sp['r'] * sp['from_um_factor'] * 1e3)**2,
+            plt.plot(sd[:,0], sd[:,sc] * np.pi * (r * from_um_factor * 1e3)**2,
                      linestyle=pls, color=spc, label=psl(ss))
             
+plt.plot(wlens, scatt_eff_theory  * np.pi * (r * from_um_factor * 1e3)**2,
+         linestyle="dashed", color='red', label="Mie Theory")
 plt.xlabel("Wavelength [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
 plt.legend()
