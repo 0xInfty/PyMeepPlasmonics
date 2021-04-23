@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
+import PyMieScatt as ps
+import v_materials as vm
 import v_save as vs
 import v_utilities as vu
 
@@ -98,6 +100,26 @@ marian_mie_data = []
 for s in marian_mie_series:
     marian_mie_data.append(np.loadtxt(marian_file(s)))
 
+#%% LOAD PYMIESCATT'S DATA
+
+diameters = [48, 64, 80, 103]
+from_um_factor = [wp["from_um_factor"] for wp in water_params]
+index = 1.333
+
+pms_mie_data = []
+for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
+    wlens = wd[:,0]
+    freqs = 1e3*fuf/wlens
+    medium = vm.import_medium("Au", fuf)
+    scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
+                                1e3*fuf/f,
+                                d,
+                                nMedium=index,
+                                asDict=True)['Qsca'] 
+                        for f in freqs]
+    scatt_eff_theory = np.array(scatt_eff_theory)
+    pms_mie_data.append(np.array([wlens, scatt_eff_theory]).T)
+
 #%% GET MAX WAVELENGTH
 
 vacuum_max = [vacuum_data[i][np.argmax(vacuum_data[i][:,1]), 0] for i in range(len(vacuum_data))]
@@ -106,10 +128,10 @@ glassnwater_max = [glassnwater_data[i][np.argmax(glassnwater_data[i][:,1]), 0] f
 
 marian_exp_max = [marian_exp_data[i][np.argmax(marian_exp_data[i][:,1]), 0] for i in range(len(marian_exp_data))]
 marian_mie_max = [marian_mie_data[i][np.argmax(marian_mie_data[i][:,1]), 0] for i in range(len(marian_mie_data))]
+pms_mie_max = [pms_mie_data[i][np.argmax(pms_mie_data[i][:,1]), 0] for i in range(len(pms_mie_data))]
 
-#%% PLOT
+#%% PLOT ALL
 
-diameters = [48, 64, 80, 103]
 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
 
 plt.figure()
@@ -133,7 +155,7 @@ plt.xlim([450, 650])
 plt.legend(ncol=4, framealpha=1)
 vs.saveplot(water_file("", "AllScatt.png"), overwrite=True)
 
-#%% PLOT 103 nm
+#%% PLOT 103 nm ALL
 
 colors = (c for c in plab.cm.Reds(np.linspace(0,1,2+5))[2:])
 
@@ -161,6 +183,7 @@ plt.legend(framealpha=1)
 vs.saveplot(water_file("", "Scatt103.png"), overwrite=True)
 
 #%% WATER VS THEORY 103 nm
+# This makes up the figure I used when posting on Meep's Github
 
 plt.figure()
 plt.title("Scattering of Au sphere with 103 nm diameter submerged in water")
@@ -177,4 +200,67 @@ plt.xlim([500, 650])
 plt.legend(framealpha=1)
 plt.grid()
 vs.saveplot(os.path.join(home, "DataAnalysis/AllWater103Comparison.png"), 
+            overwrite=True)
+
+#%% WATER VS 2 THEORIES 103 nm
+
+plt.figure()
+plt.title("Scattering of Au sphere with 103 nm diameter submerged in water")
+scatt = water_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
+plt.plot(water_data[-1][:,0], scatt/max(scatt),
+         linestyle="solid", color='#1f77b4', label="Meep")
+scatt = glassnwater_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
+plt.plot(marian_mie_data[-1][:,0], 
+         marian_mie_data[-1][:,1] / max(marian_mie_data[-1][:,1]), 
+         linestyle="dashed", color='#1f77b4', label="Marian's Mie")
+plt.plot(pms_mie_data[-1][:,0], 
+         pms_mie_data[-1][:,1] / max(pms_mie_data[-1][:,1]), 
+         linestyle="dotted", color='#1f77b4', label="PyMieScatt's Mie")
+plt.xlabel("Wavelength [nm]")
+plt.ylabel("Normalized Scattering Cross Section [a.u.]")
+# plt.xlim([400, 800])
+plt.legend(framealpha=1)
+plt.grid()
+vs.saveplot(os.path.join(home, "DataAnalysis/AllWater103Comparison2.png"), 
+            overwrite=True)
+
+#%% WATER VS THEORY 103 nm (NOT NORMALIZED)
+
+plt.figure()
+plt.title("Scattering of Au sphere with 103 nm diameter submerged in water")
+scatt = water_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
+plt.plot(water_data[-1][:,0], scatt,
+         linestyle="solid", color='#1f77b4', label="Meep")
+scatt = glassnwater_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
+plt.plot(marian_mie_data[-1][:,0], 
+         marian_mie_data[-1][:,1], 
+         linestyle="dashed", color='#1f77b4', label="Mie")
+plt.xlabel("Wavelength [nm]")
+plt.ylabel("Normalized Scattering Cross Section [a.u.]")
+plt.xlim([500, 650])
+plt.legend(framealpha=1)
+plt.grid()
+vs.saveplot(os.path.join(home, "DataAnalysis/AllWater103ComparisonEff.png"), 
+            overwrite=True)
+
+#%% WATER VS 2 THEORIES 103 nm (NOT NORMALIZED)
+
+plt.figure()
+plt.title("Scattering of Au sphere with 103 nm diameter submerged in water")
+scatt = water_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
+plt.plot(water_data[-1][:,0], scatt,
+         linestyle="solid", color='#1f77b4', label="Meep")
+scatt = glassnwater_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
+plt.plot(marian_mie_data[-1][:,0], 
+         marian_mie_data[-1][:,1] * np.pi * (diameters[-1]**2) / 4, 
+         linestyle="dashed", color='#1f77b4', label="Marian's Mie")
+plt.plot(pms_mie_data[-1][:,0], 
+         pms_mie_data[-1][:,1], 
+         linestyle="dotted", color='#1f77b4', label="PyMieScatt's Mie")
+plt.xlabel("Wavelength [nm]")
+plt.ylabel("Scattering Effienciency [a.u.]")
+# plt.xlim([400, 800])
+plt.legend(framealpha=1)
+plt.grid()
+vs.saveplot(os.path.join(home, "DataAnalysis/AllWater103ComparisonEff2.png"), 
             overwrite=True)
