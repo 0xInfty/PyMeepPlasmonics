@@ -314,11 +314,35 @@ def counting_sufix(number):
     
     if unit == 1:
         ans = 'st'
-    if unit == 2:
+    elif unit == 2:
         ans = 'nd'
-    if unit == 3:
+    elif unit == 3:
         ans = 'rd'
     else:
         ans = 'th'
     
     return ans
+
+#%%
+
+def enumerate_string(str_list, str_and="and"):
+    """Returns a one phrase enumeration from a list of strings.
+    
+    Parameters
+    ----------
+    str_list : list of str
+        The list of strings to join into a one phrase enumeration.
+    str_and="and" : str, optional
+        The final separator that isn't a comma. The default is "and".
+
+    Returns
+    -------
+    answer : str
+        The phrase enumeration as a unique string.
+
+    """
+    
+    answer = ", ".join(str_list[:-1])
+    answer += " " + str_and + " " + str_list[-1]
+
+    return answer

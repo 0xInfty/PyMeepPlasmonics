@@ -251,9 +251,9 @@ def verify_medium_stability(medium, resolution, Courant=0.5):
         answer += " All resonant frequencies are small enough for this resolution."
         print(answer)
     else:
-        answer = [str(i) + vu.counting_sufix(i)]
+        answer = [str(i) + vu.counting_sufix(i) for i in error]
         if len(error)>1: 
-            answer = ", ".join(answer)[:-2] + " frequencies are"
+            answer = vu.enumerate_string(answer) + " frequencies are"
         else:
             answer = answer + " frequency is"
         print(f"Medium is not stable: {answer} too large.")
