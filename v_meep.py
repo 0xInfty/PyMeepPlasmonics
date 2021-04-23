@@ -219,7 +219,7 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
 
 #%%
 
-def verify_medium_stability(medium, resolution, Courant=0.5):
+def verify_stability_freq_res(medium, resolution, courant=0.5):
     """Verifies stability via temporal resolution and resonant frequencies.
     
     Parameters
@@ -236,10 +236,11 @@ def verify_medium_stability(medium, resolution, Courant=0.5):
     Returns
     -------
     stable : bool
-        True if the medium turns out stable.        
+        True if the simulation turns out stable for that medium.        
     """
+    
     resonant_frequencies = [Es.frequency for Es in medium.E_susceptibilities]
-    dt = Courant/resolution
+    dt = courant/resolution
     stable = True
     error = []
     for i, f in enumerate(resonant_frequencies):
@@ -258,3 +259,107 @@ def verify_medium_stability(medium, resolution, Courant=0.5):
             answer = answer + " frequency is"
         print(f"Medium is not stable: {answer} too large.")
     return stable
+
+#%%
+
+def verify_stability_dim_index(medium, freq, 
+                               ndims=3, courant=0.5, method="abs"):
+    """Verifies stability via dimensions, refractive index and Courant factor.
+    
+    Parameters
+    ----------
+    medium : The mp.Medium instance of the material.
+        The mp.Medium instance of the material.
+    freq : float, array of floats
+        Frequency in Meep units.
+    ndims=3 : int, optional
+        Number of dimensions of simulation.
+    courant=0.5 : float, optional
+        Courant factor that defines temporal discretization from spatial 
+        discretization as dt = Courant * dx.
+    method="abs" : str, optional
+        Method applied to epsilon * mu product to obtain refractive index.
+
+    Returns
+    -------
+    stable : bool
+        True if the simulation turns out to be stable for that medium.
+    """
+    
+    try:
+        freq = [*freq]
+    except:
+        freq = [freq]
+    
+    index = np.array([ np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]) for f in freq ])
+    
+    if method not in ["abs", "real", "imag"]:
+        raise ValueError("Method should be 'abs', 'real' or 'imag'.")
+    method_function = eval(f"np.{method}")
+    min_index = np.min(method_function(index))
+    
+    stable = ( courant < min_index / np.sqrt(ndims) )
+    
+    return stable
+
+#%%
+
+def max_stable_courant_freq_res(medium, resolution):
+    """Maximum stable Courant via temporal resolution and resonant frequencies.
+    
+    Parameters
+    ----------
+    medium : mp.Medium
+        The mp.Medium instance of the material.
+    resolution : int
+        The resolution that defines spatial discretization dx = 1/resolution 
+        in Meep units.
+    
+    Returns
+    -------
+    max_courant : float
+        Maximum value of Courant factor for the FDTD method to be stable.
+    """
+    
+    resonant_frequencies = [Es.frequency for Es in medium.E_susceptibilities]
+    max_courant = resolution / (np.pi * np.max(resonant_frequencies))
+    
+    return max_courant
+
+#%%
+
+def max_stable_courant_dim_index(medium, freq, ndims=3, method="abs"):
+    """Maximum stable Courant via dimensions and refractive index condition.
+    
+    Parameters
+    ----------
+    medium : The mp.Medium instance of the material.
+        The mp.Medium instance of the material.
+    freq : float, array of floats
+        Frequency in Meep units.
+    ndims=3 : int, optional
+        Number of dimensions of simulation.
+    method="abs" : str, optional
+        Method applied to epsilon * mu product to obtain refractive index.
+
+    Returns
+    -------
+    max_courant : float
+        Maximum value of Courant factor for the FDTD method to be stable.
+    """
+    
+    try:
+        freq = [*freq]
+    except:
+        freq = [freq]
+    
+    index = np.array([ np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]) for f in freq ])
+    
+    if method not in ["abs", "real", "imag"]:
+        raise ValueError("Method should be 'abs', 'real' or 'imag'.")
+    method_function = eval(f"np.{method}")
+    min_index = np.min(method_function(index))
+    
+    max_courant = min_index / np.sqrt(ndims)
+    
+    return max_courant
