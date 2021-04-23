@@ -20,7 +20,7 @@ sys.path.append(syshome)
 import numpy as np
 import matplotlib.pyplot as plt
 import PyMieScatt as ps
-from v_materials import import_medium
+from v_meep import import_medium
 
 #%% PARAMETERS
 

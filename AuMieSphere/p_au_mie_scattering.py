@@ -26,7 +26,7 @@ from mpi4py import MPI
 import os
 from time import time
 import PyMieScatt as ps
-from v_materials import import_medium
+from v_meep import import_medium
 import v_class as vc
 import v_save as vs
 # from v_units import MeepUnitsManager

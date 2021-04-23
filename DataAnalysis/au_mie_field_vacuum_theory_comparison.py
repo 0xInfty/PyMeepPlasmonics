@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import os
 import PyMieScatt as ps
 from scipy.signal import find_peaks
-import v_materials as vm
+import v_meep as vm
 import v_save as vs
 import v_theory as vt
 

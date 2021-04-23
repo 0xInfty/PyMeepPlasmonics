@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from scipy.interpolate import interp1d
-import v_materials as vm
+import v_meep as vm
 import v_theory as vt
 import v_save as vs
 

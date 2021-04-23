@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
 import PyMieScatt as ps
-import v_materials as vm
+import v_meep as vm
 import v_save as vs
 import v_utilities as vu
 
