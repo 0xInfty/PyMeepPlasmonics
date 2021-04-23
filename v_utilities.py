@@ -281,3 +281,44 @@ def fix_params_dict(faulty_params):
     fixed_params = string_to_dict(fixed_params)
 
     return fixed_params
+
+#%%
+
+def counting_sufix(number):
+    
+    """Returns a number's suffix string to use for counting.
+    
+    Parameters
+    ----------
+    number: int, float
+        Any number, though it is designed to work with integers.
+    
+    Returns
+    -------
+    ans: str
+        A string representing the integer number plus a suffix.
+    
+    Examples
+    --------
+    >> counting_sufix(1)
+    '1st'
+    >> counting_sufix(22)
+    '22nd'
+    >> counting_sufix(1.56)
+    '2nd'
+    
+    """
+    
+    number = round(number)
+    unit = int(str(number)[-1])
+    
+    if unit == 1:
+        ans = 'st'
+    if unit == 2:
+        ans = 'nd'
+    if unit == 3:
+        ans = 'rd'
+    else:
+        ans = 'th'
+    
+    return ans

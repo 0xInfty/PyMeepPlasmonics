@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-he 'v_materials' module contains modified Meep Medium instances.
+The 'v_meep' module contains modified Meep Medium instances.
 
 It's widely based on Meep Materials Library.
 
@@ -9,8 +9,12 @@ It's widely based on Meep Materials Library.
 """
 
 import meep as mp
+import numpy as np
+import v_utilities as vu
 
-def import_medium(name, from_um_factor=1):
+#%%
+
+def import_medium(name, from_um_factor=1, source="Rakic"):
     
     """Returns Medium instance from string with specified length scale
     
@@ -21,6 +25,8 @@ def import_medium(name, from_um_factor=1):
     from_um_factor=1 : int, float, optional
         Factor to transform from SI μm to the chosen length unit. For example, 
         to work with 100 nm as 1 Meep unit, from_um_factor=.1 must be specified.
+    source="Rakic": str
+        Name of desired source for experimental input data of medium.
     
     Returns
     -------
@@ -33,61 +39,17 @@ def import_medium(name, from_um_factor=1):
         If no material is found whose name matches the string given.
     """
     
-    if name not in ["Ag", "Au"]:
+    if "Ag" not in name and "Au" not in name:
         raise SyntaxError("No media called {} is available".format(name))
         return
            
     # Default unit length is 1 um
     eV_from_um_factor = from_um_factor/1.23984193 # Conversion factor: eV to 1/um [=1/hc]
     # from_um_factor used to be um_scale (but that's a shady name)
-
-    if name=="Ag":
-        
-    #------------------------------------------------------------------
-    # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
-    # Wavelength range: 0.2 - 12.4 um
-    # Silver (Ag)
-        
-        metal_range = mp.FreqRange(min=from_um_factor/12.398, max=from_um_factor/.24797)      
-        
-        Ag_plasma_frq = 9.01*eV_from_um_factor
-        Ag_f0 = 0.845
-        Ag_frq0 = 1e-10
-        Ag_gam0 = 0.048*eV_from_um_factor
-        Ag_sig0 = Ag_f0*Ag_plasma_frq**2/Ag_frq0**2
-        Ag_f1 = 0.065
-        Ag_frq1 = 0.816*eV_from_um_factor      # 1.519 um
-        Ag_gam1 = 3.886*eV_from_um_factor
-        Ag_sig1 = Ag_f1*Ag_plasma_frq**2/Ag_frq1**2
-        Ag_f2 = 0.124
-        Ag_frq2 = 4.481*eV_from_um_factor      # 0.273 um
-        Ag_gam2 = 0.452*eV_from_um_factor
-        Ag_sig2 = Ag_f2*Ag_plasma_frq**2/Ag_frq2**2
-        Ag_f3 = 0.011
-        Ag_frq3 = 8.185*eV_from_um_factor      # 0.152 um
-        Ag_gam3 = 0.065*eV_from_um_factor
-        Ag_sig3 = Ag_f3*Ag_plasma_frq**2/Ag_frq3**2
-        Ag_f4 = 0.840
-        Ag_frq4 = 9.083*eV_from_um_factor      # 0.137 um
-        Ag_gam4 = 0.916*eV_from_um_factor
-        Ag_sig4 = Ag_f4*Ag_plasma_frq**2/Ag_frq4**2
-        Ag_f5 = 5.646
-        Ag_frq5 = 20.29*eV_from_um_factor      # 0.061 um
-        Ag_gam5 = 2.419*eV_from_um_factor
-        Ag_sig5 = Ag_f5*Ag_plasma_frq**2/Ag_frq5**2
-        
-        Ag_susc = [mp.DrudeSusceptibility(frequency=Ag_frq0, gamma=Ag_gam0, sigma=Ag_sig0),
-                   mp.LorentzianSusceptibility(frequency=Ag_frq1, gamma=Ag_gam1, sigma=Ag_sig1),
-                   mp.LorentzianSusceptibility(frequency=Ag_frq2, gamma=Ag_gam2, sigma=Ag_sig2),
-                   mp.LorentzianSusceptibility(frequency=Ag_frq3, gamma=Ag_gam3, sigma=Ag_sig3),
-                   mp.LorentzianSusceptibility(frequency=Ag_frq4, gamma=Ag_gam4, sigma=Ag_sig4),
-                   mp.LorentzianSusceptibility(frequency=Ag_frq5, gamma=Ag_gam5, sigma=Ag_sig5)]
-        
-        Ag = mp.Medium(epsilon=1.0, E_susceptibilities=Ag_susc, valid_freq_range=metal_range)
-        
-        return Ag
     
-    elif name=="Au":
+    ############ GOLD #################################################
+    
+    if name=="Au" and (source=="Rakic" or source=="R"):
         
     #------------------------------------------------------------------
     # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
@@ -133,7 +95,7 @@ def import_medium(name, from_um_factor=1):
         
         return Au
 
-    elif name=="Au_JC_visible":
+    elif name=="Au" and (source=="Johnson and Christy" or source=="JC"):
         
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -156,7 +118,7 @@ def import_medium(name, from_um_factor=1):
         
         return Au_JC_visible
 
-    elif name=="Au_visible":
+    elif name=="Au" and (source=="Palik" or source=="P"):
         
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -181,7 +143,55 @@ def import_medium(name, from_um_factor=1):
         
         return Au_visible
 
-    elif name=="Ag_visible":
+    ############ SILVER ###############################################
+
+    elif name=="Ag" and (source=="Rakic" or source=="R"):
+        
+    #------------------------------------------------------------------
+    # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
+    # Wavelength range: 0.2 - 12.4 um
+    # Silver (Ag)
+        
+        metal_range = mp.FreqRange(min=from_um_factor/12.398, max=from_um_factor/.24797)      
+        
+        Ag_plasma_frq = 9.01*eV_from_um_factor
+        Ag_f0 = 0.845
+        Ag_frq0 = 1e-10
+        Ag_gam0 = 0.048*eV_from_um_factor
+        Ag_sig0 = Ag_f0*Ag_plasma_frq**2/Ag_frq0**2
+        Ag_f1 = 0.065
+        Ag_frq1 = 0.816*eV_from_um_factor      # 1.519 um
+        Ag_gam1 = 3.886*eV_from_um_factor
+        Ag_sig1 = Ag_f1*Ag_plasma_frq**2/Ag_frq1**2
+        Ag_f2 = 0.124
+        Ag_frq2 = 4.481*eV_from_um_factor      # 0.273 um
+        Ag_gam2 = 0.452*eV_from_um_factor
+        Ag_sig2 = Ag_f2*Ag_plasma_frq**2/Ag_frq2**2
+        Ag_f3 = 0.011
+        Ag_frq3 = 8.185*eV_from_um_factor      # 0.152 um
+        Ag_gam3 = 0.065*eV_from_um_factor
+        Ag_sig3 = Ag_f3*Ag_plasma_frq**2/Ag_frq3**2
+        Ag_f4 = 0.840
+        Ag_frq4 = 9.083*eV_from_um_factor      # 0.137 um
+        Ag_gam4 = 0.916*eV_from_um_factor
+        Ag_sig4 = Ag_f4*Ag_plasma_frq**2/Ag_frq4**2
+        Ag_f5 = 5.646
+        Ag_frq5 = 20.29*eV_from_um_factor      # 0.061 um
+        Ag_gam5 = 2.419*eV_from_um_factor
+        Ag_sig5 = Ag_f5*Ag_plasma_frq**2/Ag_frq5**2
+        
+        Ag_susc = [mp.DrudeSusceptibility(frequency=Ag_frq0, gamma=Ag_gam0, sigma=Ag_sig0),
+                   mp.LorentzianSusceptibility(frequency=Ag_frq1, gamma=Ag_gam1, sigma=Ag_sig1),
+                   mp.LorentzianSusceptibility(frequency=Ag_frq2, gamma=Ag_gam2, sigma=Ag_sig2),
+                   mp.LorentzianSusceptibility(frequency=Ag_frq3, gamma=Ag_gam3, sigma=Ag_sig3),
+                   mp.LorentzianSusceptibility(frequency=Ag_frq4, gamma=Ag_gam4, sigma=Ag_sig4),
+                   mp.LorentzianSusceptibility(frequency=Ag_frq5, gamma=Ag_gam5, sigma=Ag_sig5)]
+        
+        Ag = mp.Medium(epsilon=1.0, E_susceptibilities=Ag_susc, valid_freq_range=metal_range)
+        
+        return Ag
+    
+    elif name=="Ag" and (source=="Palik" or source=="P"):
 
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -206,3 +216,45 @@ def import_medium(name, from_um_factor=1):
         Ag_visible = mp.Medium(epsilon=0.0067526, E_susceptibilities=Ag_visible_susc, valid_freq_range=metal_visible_range)
         
         return Ag_visible
+
+#%%
+
+def verify_medium_stability(medium, resolution, Courant=0.5):
+    """Verifies stability via temporal resolution and resonant frequencies.
+    
+    Parameters
+    ----------
+    medium : mp.Medium
+        The mp.Medium instance of the material.
+    resolution : int
+        The resolution that defines spatial discretization dx = 1/resolution 
+        in Meep units.
+    Courant=0.5 : float
+        The Courant factor that defines temporal discretization dt = Courant*dx 
+        in Meep units.
+    
+    Returns
+    -------
+    stable : bool
+        True if the medium turns out stable.        
+    """
+    resonant_frequencies = [Es.frequency for Es in medium.E_susceptibilities]
+    dt = Courant/resolution
+    stable = True
+    error = []
+    for i, f in enumerate(resonant_frequencies):
+        if f >= 1 / (np.pi * dt): 
+            stable = False
+            error.append(i)
+    if stable:
+        answer = "Medium is stable."
+        answer += " All resonant frequencies are small enough for this resolution."
+        print(answer)
+    else:
+        answer = [str(i) + vu.counting_sufix(i)]
+        if len(error)>1: 
+            answer = ", ".join(answer)[:-2] + " frequencies are"
+        else:
+            answer = answer + " frequency is"
+        print(f"Medium is not stable: {answer} too large.")
+    return stable
