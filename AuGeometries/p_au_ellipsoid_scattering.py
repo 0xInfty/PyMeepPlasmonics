@@ -47,13 +47,16 @@ import v_save as vs
             help="Diameter of ellipsoid expressed in multiples of 10 nm")
 @cli.option("--height", "-h", "h", default=12, type=float,
             help="Diameter of ellipsoid expressed in multiples of 10 nm")
+@cli.option("--source", "-sc", "source", type=str, default="R",
+            help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
 @cli.option("--nfreq", "-nf", "nfreq", type=int, default=100,
             help="Number of frequencies to discretize wavelength range")
 # 500-650 nm range from lowest to highest
-def main(series, folder, resolution, from_um_factor, d, h, wlen_range, nfreq):
+def main(series, folder, resolution, from_um_factor, d, h, 
+         source, wlen_range, nfreq):
     
     #%% PARAMETERS
     
@@ -63,7 +66,7 @@ def main(series, folder, resolution, from_um_factor, d, h, wlen_range, nfreq):
     from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
     
     # Au sphere
-    medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
+    medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
     
     # Frequency and wavelength
     nfreq = 100 # Number of frequencies to discretize range
@@ -270,6 +273,7 @@ def main(series, folder, resolution, from_um_factor, d, h, wlen_range, nfreq):
         resolution=resolution,
         d=d,
         h=h,
+        source=source,
         wlen_range=wlen_range,
         nfreq=nfreq,
         cutoff=cutoff,

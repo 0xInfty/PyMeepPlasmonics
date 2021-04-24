@@ -34,8 +34,9 @@ resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = 5.15 # Radius of sphere: 60 nm
+source = "Rakic"
 displacement = 0 # How much is the sphere and the glass overlapped: 20 nm
-medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
+medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
 submerged_index = 1.333 # Water refractive index
 surface_index = 1.54 # Glass refractive index
 
@@ -198,6 +199,7 @@ params = dict(
     from_um_factor=from_um_factor,
     resolution=resolution,
     r=r,
+    source=source,
     wlen_range=wlen_range,
     nfreq=nfreq,
     cutoff=cutoff,

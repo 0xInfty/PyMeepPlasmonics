@@ -46,18 +46,20 @@ import v_save as vs
             help="Conversion of 1 μm to my length unit (i.e. 10e-3=10nm/1μm)")
 @cli.option("--radius", "-r", "r", default=6, type=float,
             help="Radius of sphere expressed in multiples of 10 nm")
+@cli.option("--source", "-sc", "source", type=str, default="R",
+            help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
 # 500-650 nm range from lowest to highest
-def main(series, folder, resolution, from_um_factor, r, wlen_range):
+def main(series, folder, resolution, from_um_factor, r, source, wlen_range):
 
     #%% PARAMETERS    
 
     ### MEAN PARAMETERS
     
     # Au sphere
-    medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
+    medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
     
     # Frequency and wavelength
     nfreq = 100 # Number of frequencies to discretize range
@@ -215,6 +217,7 @@ def main(series, folder, resolution, from_um_factor, r, wlen_range):
         from_um_factor=from_um_factor,
         resolution=resolution,
         r=r,
+        source=source,
         wlen_range=wlen_range,
         nfreq=nfreq,
         cutoff=cutoff,

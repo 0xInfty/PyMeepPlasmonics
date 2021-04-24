@@ -34,7 +34,8 @@ resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = 5.15  # Radius of sphere: 60 nm
-medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
+source = "Rakic"
+medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
 submerged_index = 1.333 # Water refractive index
 
 # Frequency and wavelength
@@ -185,6 +186,7 @@ params = dict(
     from_um_factor=from_um_factor,
     resolution=resolution,
     r=r,
+    source=source,
     submerged_index=submerged_index,
     wlen_range=wlen_range,
     nfreq=nfreq,

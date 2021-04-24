@@ -43,6 +43,8 @@ import v_save as vs
             help="Radius of sphere expressed in multiples of 10 nm")
 @cli.option("--displacement", "-dis", "displacement", default=0, type=float,
             help="Overlap of sphere and surface in multiples of 10 nm")
+@cli.option("--source", "-sc", "source", type=str, default="R",
+            help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--submerged-index", "-sbi", "submerged_index", 
             type=float, default=1.333,
             help="Reflective index of sourrounding medium")
@@ -56,7 +58,7 @@ import v_save as vs
 @cli.option("--second-time-factor", "-sectime", "second_time_factor", 
             type=float, default=10,
             help="How much longer should the 2nd simulation be than the 1st")
-def main(series, folder, resolution, from_um_factor, r, displacement,
+def main(series, folder, resolution, from_um_factor, r, displacement, source,
          submerged_index, surface_index, wlen_range, second_time_factor):
 
     #%% PARAMETERS
@@ -67,7 +69,7 @@ def main(series, folder, resolution, from_um_factor, r, displacement,
     from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
     
     # Au sphere
-    medium = import_medium("Au", from_um_factor) # Medium of sphere: gold (Au)
+    medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
     
     # Frequency and wavelength
     nfreq = 100 # Number of frequencies to discretize range
@@ -226,6 +228,7 @@ def main(series, folder, resolution, from_um_factor, r, displacement,
         resolution=resolution,
         r=r,
         displacement=displacement,
+        source=source,
         submerged_index=submerged_index,
         surface_index=surface_index,
         wlen_range=wlen_range,

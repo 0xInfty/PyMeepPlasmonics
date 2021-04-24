@@ -33,6 +33,8 @@ import v_save as vs
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 @cli.option("--radius", "-r", "r", default=6, type=int,
             help="Radius of sphere expressed in multiples of 10 nm")
+@cli.option("--source", "-sc", "source", type=str, default="R",
+            help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
@@ -41,7 +43,7 @@ import v_save as vs
             help="Whether to calculate Meep flux while running or not")
 @cli.option("--H-field", "-Hf", "H_field", default=True, type=bool,
             help="Whether to analyse also magnetic field while running or not")
-def main(series, resolution, r, wlen_range, meep_flux, H_field):
+def main(series, resolution, r, source, wlen_range, meep_flux, H_field):
     
     #%% PARAMETERS
     
@@ -236,6 +238,7 @@ def main(series, resolution, r, wlen_range, meep_flux, H_field):
     #     from_um_factor=from_um_factor,
     #     resolution=resolution,
     #     r=r,
+    #     source=source,
     #     wlen_range=wlen_range,
     #     nfreq=nfreq,
     #     cutoff=cutoff,
