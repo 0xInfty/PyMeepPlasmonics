@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module contains electromagnetism's functions.
+This module contains electromagnetic theory and base EM data for materials.
 
 @author: Vall
 """
@@ -14,6 +14,151 @@ else:
     raise ValueError("Your PC must be registered at the top of this code")
 
 import numpy as np
+import os
+from scipy.interpolate import interp1d
+import v_meep as vm
+
+#%% EPSILON INTERPOLATION
+
+def epsilon_interpoler_from_n(wlen, complex_n):
+    """
+    Generates an interpolation function for epsilon from experimental N data.
+
+    Parameters
+    ----------
+    wlen : np.array, list
+        Wavelength in nm.
+    complex_n : np.array, list
+        Complex refractive index N = n + ik, dimensionless.
+
+    Returns
+    -------
+    epsilon_function : function
+        Epsilon interpoler that takes wavelength in nm as argument and returns 
+        complex dielectric constant or relative permitivitty 
+        epsilon = epsilon' + i epsilon'', dimensionless.
+    """
+
+    n_function = interp1d(wlen, np.real(complex_n), kind="cubic")
+    k_function = interp1d(wlen, np.imag(complex_n), kind="cubic")
+    N_function = lambda wl : n_function(wl) + 1j * k_function(wl)
+    epsilon_function = lambda wl : np.power(N_function(wl), 2)
+    
+    return epsilon_function
+
+def epsilon_interpoler_from_epsilon(wlen, complex_epsilon):
+    """
+    Generates an interpolation function for epsilon from experimental epsilon data.
+
+    Parameters
+    ----------
+    wlen : np.array, list
+        Wavelength in nm.
+    complex_epsilon : np.array, list
+        Complex dielectric constant or relative permitivitty 
+        epsilon = epsilon' + i epsilon'', dimensionless.
+
+    Returns
+    -------
+    epsilon_function : function
+        Epsilon interpoler that takes wavelength in nm as argument and returns 
+        complex dielectric constant or relative permitivitty 
+        epsilon = epsilon' + i epsilon'', dimensionless.
+    """
+
+    real_function = interp1d(wlen, np.real(complex_epsilon), kind="cubic")
+    imag_function = interp1d(wlen, np.imag(complex_epsilon), kind="cubic")
+    epsilon_function = lambda wl : real_function(wl) + 1j * imag_function(wl)
+    
+    return epsilon_function
+
+def epsilon_function_from_meep(material="Au", source="JC", from_ref="RIinfo",
+                               medium=None, from_um_factor=1):
+    
+    """
+    Generates a function for isotropic epsilon from Meep Drude-Lorentz fit data.
+    
+    Parameters
+    ----------
+    material="Au" : str
+        Material's chemical symbol. Available: 'Au' for gold.
+    source="JC" : str
+        Source of experimental data. Available: 'JC' for Johnson and Christy, 
+        'R' for Rakic.
+    from_ref="RIinfo" : str
+        Reference from which the data was extracted, for example a web page. 
+        Available: 'RIinfo' for 'www.refractiveindex.info'
+        
+    Returns
+    -------
+    epsilon_function : function
+        Epsilon function that takes wavelength in nm as argument and returns 
+        complex dielectric constant or relative permitivitty 
+        epsilon = epsilon' + i epsilon'', dimensionless.
+    """
+
+    
+    if medium==None:
+        medium = vm.import_medium(material, 
+                                  from_um_factor=from_um_factor, 
+                                  source=source)
+    
+    epsilon_function = lambda wlen : medium.epsilon(1e3*from_um_factor/wlen)[0,0]
+    
+    return epsilon_function
+
+def epsilon_function_from_file(material="Au", source="JC", from_ref="RIinfo"):
+    """
+    Generates an interpolation function for epsilon from experimental data.
+    
+    Parameters
+    ----------
+    material="Au" : str
+        Material's chemical symbol. Available: 'Au' for gold.
+    source="JC" : str
+        Source of experimental data. Available: 'JC' for Johnson and Christy, 
+        'R' for Rakic.
+    from_ref="RIinfo" : str
+        Reference from which the data was extracted, for example a web page. 
+        Available: 'RIinfo' for 'www.refractiveindex.info'
+        
+    Returns
+    -------
+    epsilon_function : function
+        Epsilon interpoler that takes wavelength in nm as argument and returns 
+        complex dielectric constant or relative permitivitty 
+        epsilon = epsilon' + i epsilon'', dimensionless.
+    """
+    
+    data_series = os.listdir(os.path.join(syshome, 'MaterialsData'))
+    
+    try:
+        data_files = []
+        for df in data_series:
+            if source in df and material in df and from_ref in df:
+                data_files.append( os.path.join(syshome, 'MaterialsData', df) )
+    except:
+        raise ValueError("Experimental data couldn't be found. Sorry!")
+    
+    if len(data_files)>1:
+        for df in data_files:
+            if "eps" in df.lower():
+                file = df
+                break
+            file = df
+    else:
+        file = data_files[0]
+    
+    data = np.loadtxt(file)
+    
+    if 'N' in file:
+        epsilon_function = epsilon_interpoler_from_n(
+            data[:,0], data[:,1] + 1j*data[:,2])
+    elif "eps" in file.lower:
+        epsilon_function = epsilon_interpoler_from_epsilon(
+            data[:,0], data[:,1] + 1j*data[:,2])
+            
+    return epsilon_function
 
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
 
