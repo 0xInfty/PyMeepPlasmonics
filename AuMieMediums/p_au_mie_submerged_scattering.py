@@ -51,12 +51,15 @@ import v_save as vs
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vc.NUMPY_ARRAY, default="np.array([50,65])",
             help="Wavelength range expressed in multiples of 10 nm")
+@cli.option("--courant", "-c", "courant", 
+            type=float, default=1.333,
+            help="Reflective index of sourrounding medium")
 @cli.option("--stime", "-st", "second_time_factor", 
             type=float, default=10,
             help="Second simulation total time expressed as multiples of 1st")
 # 500-650 nm range from lowest to highest
 def main(series, folder, resolution, from_um_factor, r, 
-         source, submerged_index, wlen_range, second_time_factor):
+         source, submerged_index, wlen_range, courant, second_time_factor):
 
     #%% PARAMETERS    
 
@@ -145,6 +148,7 @@ def main(series, folder, resolution, from_um_factor, r,
                         boundary_layers=pml_layers,
                         sources=sources,
                         k_point=mp.Vector3(),
+                        Courant=courant,
                         default_material=mp.Medium(index=submerged_index))
     # >> k_point zero specifies boundary conditions needed
     # for the source to be infinitely extended
@@ -273,6 +277,7 @@ def main(series, folder, resolution, from_um_factor, r,
                         boundary_layers=pml_layers,
                         sources=sources,
                         k_point=mp.Vector3(),
+                        Courant=courant,
                         default_material=mp.Medium(index=submerged_index),
                         geometry=geometry)
     
