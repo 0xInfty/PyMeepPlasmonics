@@ -34,6 +34,7 @@ import matplotlib.pyplot as plt
 #     LOADED_MPI4PY = False
 import numpy as np
 import os
+import re
 from socket import gethostname
 import v_utilities as vut
 
@@ -596,14 +597,24 @@ def retrieve_header(file, comment_marker='#'):
             first_line = line
             break
     
-    if first_line[0] == comment_marker:
+    if comment_marker in first_line:
         header = first_line.split(comment_marker + ' ')[-1]
         header = header.split('\n')[0]
         header = header.split('\t')
         if len(header) > 1:
             return header
         else:
-            return header[0]
+            split_header = re.split(r'  ', header[0])
+            new_header = []
+            for h in split_header:
+                new_header.append('')
+                for s in h:
+                    if s!=" ":
+                        new_header[-1] += s
+            if len(new_header) > 1:
+                return new_header
+            else:
+                return header[0]
         
     else:
         raise ValueError("No header found. Sorry!")
