@@ -1,0 +1,2 @@
+mpirun --use-hwthread-cpus -np 6 python p_au_mie_submerged_scattering.py -s "AllWater103Res6MSourJC" -f "AuMieMediums/AllWaterTest/MaterialSource/MaterialSource103" --from-um-factor 20e-3 -res 6 -r 2.575 --wlen-range "[25, 32.5]" -i 1.33 --source "JC"
+#mpirun --use-hwthread-cpus -np 6 python p_au_mie_submerged_scattering.py -s "AllWater103Res9MSourP" -f "AuMieMediums/AllWaterTest/MaterialSource/MaterialSource103" --from-um-factor 20e-3 -res 9 -r 2.575 --wlen-range "[25, 32.5]" -i 1.33 --source "P"

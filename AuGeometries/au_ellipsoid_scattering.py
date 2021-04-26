@@ -38,7 +38,7 @@ resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 # Au sphere
 d = 2.7  # Diameter of ellipsoid: 27 nm
 h = 12  # Height of ellipsoid: 120 nm
-source = "Rakic"
+source = "R"
 medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength

@@ -26,7 +26,7 @@ resolution = 4 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = 6  # Radius of sphere: 60 nm
-source = "Rakic"
+source = "R"
 medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
