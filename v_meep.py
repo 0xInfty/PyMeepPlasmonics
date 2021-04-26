@@ -24,7 +24,7 @@ import v_utilities as vu
 
 #%%
 
-def import_medium(name, from_um_factor=1, source="R"):
+def import_medium(name, from_um_factor=1, paper="R"):
     
     """Returns Medium instance from string with specified length scale
     
@@ -38,7 +38,7 @@ def import_medium(name, from_um_factor=1, source="R"):
     from_um_factor=1 : int, float, optional
         Factor to transform from SI μm to the chosen length unit. For example, 
         to work with 100 nm as 1 Meep unit, from_um_factor=.1 must be specified.
-    source="R": str
+    paper="R": str
         Name of desired source for experimental input data of medium.
     
     Returns
@@ -62,7 +62,7 @@ def import_medium(name, from_um_factor=1, source="R"):
     
     ############ GOLD #################################################
     
-    if name=="Au" and source=="R":
+    if name=="Au" and paper=="R":
         
     #------------------------------------------------------------------
     # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
@@ -109,7 +109,7 @@ def import_medium(name, from_um_factor=1, source="R"):
         
         return Au
 
-    elif name=="Au" and source=="JC":
+    elif name=="Au" and paper=="JC":
         
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -136,7 +136,7 @@ def import_medium(name, from_um_factor=1, source="R"):
         
         return Au_JC_visible
 
-    elif name=="Au" and source=="P":
+    elif name=="Au" and paper=="P":
         
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -167,7 +167,7 @@ def import_medium(name, from_um_factor=1, source="R"):
 
     ############ SILVER ###############################################
 
-    if name=="Ag" and source=="R":
+    if name=="Ag" and paper=="R":
         
     #------------------------------------------------------------------
     # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
@@ -214,7 +214,7 @@ def import_medium(name, from_um_factor=1, source="R"):
         
         return Ag
     
-    elif name=="Ag" and source=="P":
+    elif name=="Ag" and paper=="P":
 
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015

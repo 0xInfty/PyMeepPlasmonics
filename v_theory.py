@@ -15,8 +15,10 @@ else:
 
 import numpy as np
 import os
+import PyMieScatt as ps
 from scipy.interpolate import interp1d
 import v_meep as vm
+import v_utilities as vu
 
 #%% EPSILON INTERPOLATION
 
@@ -72,7 +74,7 @@ def epsilon_interpoler_from_epsilon(wlen, complex_epsilon):
     
     return epsilon_function
 
-def epsilon_function_from_meep(material="Au", source="JC", from_ref="RIinfo",
+def epsilon_function_from_meep(material="Au", paper="JC", 
                                medium=None, from_um_factor=1):
     
     """
@@ -82,12 +84,15 @@ def epsilon_function_from_meep(material="Au", source="JC", from_ref="RIinfo",
     ----------
     material="Au" : str
         Material's chemical symbol. Available: 'Au' for gold.
-    source="JC" : str
-        Source of experimental data. Available: 'JC' for Johnson and Christy, 
-        'R' for Rakic.
-    from_ref="RIinfo" : str
-        Reference from which the data was extracted, for example a web page. 
-        Available: 'RIinfo' for 'www.refractiveindex.info'
+    paper="JC" : str
+        Paper source of experimental data. Available: 'JC' for Johnson 
+        and Christy, 'R' for Rakic, 'P' for Palik.
+    medium=None : mp.Medium, optional
+        Meep medium instance. If none is specified, a new instance will be 
+        internally initialized.
+    from_um_factor=1 : float, optional
+        Meep factor of length scale implying 1 Meep length unit is 
+        from_um_factor length units in μm.
         
     Returns
     -------
@@ -95,19 +100,44 @@ def epsilon_function_from_meep(material="Au", source="JC", from_ref="RIinfo",
         Epsilon function that takes wavelength in nm as argument and returns 
         complex dielectric constant or relative permitivitty 
         epsilon = epsilon' + i epsilon'', dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Material should either be..."
+        When the desired material isn't available.
+    ValueError : "Reference paper should either be..."
+        When the desired paper reference of experimental data isn't available.
+    ValueError : "Data should either be from..."
+        When the desired data source isn't available.
+    ValueError : "Experimental data couldn't be found. Sorry!"
+        When the combination of parameters causes the data not to be found.
     """
 
     
+    available_materials = {"Au": "gold", "Ag": "silver"}
+    available_papers = {"JC": "Johnson & Christy", "R": "Rakic", "P": "Palik"}
+    
+    if material not in available_materials.keys():
+        error = "Data should either be from "
+        error += vu.enumerate_string(vu.join_strings_dict(available_materials), 
+                                     "or", True)
+        raise ValueError(error)
+    if paper not in available_papers.keys():
+        error = "Reference paper for experimental data should either be "
+        error += vu.enumerate_string(vu.join_strings_dict(available_papers), 
+                                     "or", True)
+        raise ValueError(error)
+        
     if medium==None:
         medium = vm.import_medium(material, 
                                   from_um_factor=from_um_factor, 
-                                  source=source)
+                                  paper=paper)
     
     epsilon_function = lambda wlen : medium.epsilon(1e3*from_um_factor/wlen)[0,0]
     
     return epsilon_function
 
-def epsilon_function_from_file(material="Au", source="JC", from_ref="RIinfo"):
+def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo"):
     """
     Generates an interpolation function for epsilon from experimental data.
     
@@ -115,10 +145,10 @@ def epsilon_function_from_file(material="Au", source="JC", from_ref="RIinfo"):
     ----------
     material="Au" : str
         Material's chemical symbol. Available: 'Au' for gold.
-    source="JC" : str
-        Source of experimental data. Available: 'JC' for Johnson and Christy, 
-        'R' for Rakic.
-    from_ref="RIinfo" : str
+    paper="JC" : str
+        Paper source of experimental data. Available: 'JC' for Johnson 
+        and Christy, 'R' for Rakic.
+    reference="RIinfo" : str
         Reference from which the data was extracted, for example a web page. 
         Available: 'RIinfo' for 'www.refractiveindex.info'
         
@@ -128,14 +158,45 @@ def epsilon_function_from_file(material="Au", source="JC", from_ref="RIinfo"):
         Epsilon interpoler that takes wavelength in nm as argument and returns 
         complex dielectric constant or relative permitivitty 
         epsilon = epsilon' + i epsilon'', dimensionless.
+    
+    Raises
+    ------
+    ValueError : "Material should either be..."
+        When the desired material isn't available.
+    ValueError : "Reference paper should either be..."
+        When the desired paper reference of experimental data isn't available.
+    ValueError : "Data should either be from..."
+        When the desired data source isn't available.
+    ValueError : "Experimental data couldn't be found. Sorry!"
+        When the combination of parameters causes the data not to be found.
     """
+    
+    available_materials = {"Au": "gold", "Ag": "silver"}
+    available_papers = {"JC": "Johnson & Christy"}
+    available_references = {"RIinfo": "www.refractiveindex.info"}
+    
+    if material not in available_materials.keys():
+        error = "Data should either be from "
+        error += vu.enumerate_string(vu.join_strings_dict(available_materials), 
+                                     "or", True)
+        raise ValueError(error)
+    if paper not in available_papers.keys():
+        error = "Reference paper for experimental data should either be "
+        error += vu.enumerate_string(vu.join_strings_dict(available_papers), 
+                                     "or", True)
+        raise ValueError(error)
+    if reference not in available_references.keys():
+        error = "Experimental data should either be extracted from "
+        error += vu.enumerate_string(vu.join_strings_dict(available_references), 
+                                     "or", True)
+        raise ValueError(error)
     
     data_series = os.listdir(os.path.join(syshome, 'MaterialsData'))
     
     try:
         data_files = []
         for df in data_series:
-            if source in df and material in df and from_ref in df:
+            if paper in df and material in df and reference in df:
                 data_files.append( os.path.join(syshome, 'MaterialsData', df) )
     except:
         raise ValueError("Experimental data couldn't be found. Sorry!")
@@ -158,6 +219,65 @@ def epsilon_function_from_file(material="Au", source="JC", from_ref="RIinfo"):
         epsilon_function = epsilon_interpoler_from_epsilon(
             data[:,0], data[:,1] + 1j*data[:,2])
             
+    return epsilon_function
+
+def epsilon_function(material="Au", paper="JC", reference="RIinfo",
+                     medium=None, from_um_factor=1):
+    """
+    Generates an interpolation function for epsilon from experimental data.
+    
+    Parameters
+    ----------
+    material="Au" : str
+        Material's chemical symbol. Available: 'Au' for gold.
+    paper="JC" : str
+        Reference paper of experimental data. Available: 'JC' for Johnson and 
+        Christy, 'R' for Rakic, 'P' for Palik.
+    reference="RIinfo" : str
+        Reference from which the data was extracted, for example a web page. 
+        Available: 'RIinfo' for 'www.refractiveindex.info' and 'Meep' for Meep 
+        materials library that uses a Drude-Lorentz model to fit data.
+    medium=None : mp.Medium, optional
+        Meep medium instance. If none is specified, a new instance will be 
+        internally initialized.
+    from_um_factor=1 : float, optional
+        Meep factor of length scale implying 1 Meep length unit is 
+        from_um_factor length units in μm.
+        
+    Returns
+    -------
+    epsilon_function : function
+        Epsilon interpoler that takes wavelength in nm as argument and returns 
+        complex dielectric constant or relative permitivitty 
+        epsilon = epsilon' + i epsilon'', dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Material should either be..."
+        When the desired material isn't available.
+    ValueError : "Reference paper should either be..."
+        When the desired paper reference of experimental data isn't available.
+    ValueError : "Data should either be from..."
+        When the desired data source isn't available.
+    ValueError : "Experimental data couldn't be found. Sorry!"
+        When the combination of parameters causes the data not to be found.
+    """
+    
+    available_references = {"RIinfo": "www.refractiveindex.info",
+                           "Meep": "Meep materials library & Drude-Lorentz fit"}
+    
+    if reference not in available_references.keys():
+        error = "Data should either be from"
+        error += vu.enumerate_string(vu.join_strings_dict(available_references), 
+                                     "or", True)
+        raise ValueError(error)
+    
+    if reference=="Meep":
+        epsilon_function = epsilon_function_from_meep(
+            material, paper, reference, medium, from_um_factor)
+    elif reference=="RIinfo":
+        epsilon_function = epsilon_function_from_file(material, paper, reference)
+    
     return epsilon_function
 
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
@@ -229,3 +349,202 @@ def E(epsilon, alpha, E0, rvec, r, epsilon_ext=1):
         return E_out(epsilon, alpha, E0, rvec)
 # First index: wavelength
 # Second index: direction
+
+#%% SCATTERING AND ABSORPTION CROSS SECTION
+
+def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
+    """
+    Calculates scattering cross section using Mie theory for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    wlen : float, list, np.array
+        Incident light wavelength. Measured in nm.
+    inner_N=1.458 : float, list, np.array
+        Spherical NP inner medium's complex refractive index. The default is 
+        1.458 for fused-silica.
+    surrounding_N=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEffiency : bool, optional
+        If false, scattering cross section sigma is returned, measured in nm^2. 
+        If true, scattering effienciency Q is returned, dimensionless and 
+        related to scattering cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    sigma_scatt : float, np.array
+        The scattering cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, scattering effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many inner refractive index values as..."
+        If the length of `wlen` and `inner_N` differ.
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    try:
+        wlen = np.array([*wlen])
+    except:
+        wlen = np.array([wlen])
+    
+    try:
+        if len(inner_N)==len(wlen):
+            inner_N = np.array([*inner_N])
+        else:
+            raise ValueError("Must have as many inner refractive index values as wavelength values")
+    except:
+        inner_N = [*[inner_N]*len(wlen)]
+    
+    try:
+        if len(inner_N)==len(wlen):
+            surrounding_N = np.array([*surrounding_N])
+        else:
+            raise ValueError("Must have as many surrounding refractive index values as wavelength values")
+    except:
+        surrounding_N = [*[surrounding_N]*len(wlen)]
+    
+    sigma_scatt = np.array([ps.MieQ(
+        iN, wl, 2*r, sN, asCrossSection=not(asEffiency))[1] 
+            for wl, iN, sN in zip(wlen, inner_N, surrounding_N)])
+    
+    if len(sigma_scatt)>1:
+        return sigma_scatt
+    else:
+        return sigma_scatt[0]
+    
+def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
+    """
+    Calculates absorption cross section using Mie theory for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    wlen : float, list, np.array
+        Incident light wavelength. Measured in nm.
+    inner_N=1.458 : float, list, np.array
+        Spherical NP inner medium's complex refractive index. The default is 
+        1.458 for fused-silica.
+    surrounding_N=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEffiency : bool, optional
+        If false, scattering cross section sigma is returned, measured in nm^2. 
+        If true, scattering effienciency Q is returned, dimensionless and 
+        related to scattering cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    sigma_abs : float, np.array
+        The scattering cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, scattering effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many inner refractive index values as..."
+        If the length of `wlen` and `inner_N` differ.
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+    """
+    
+    try:
+        wlen = np.array([*wlen])
+    except:
+        wlen = np.array([wlen])
+    
+    try:
+        if len(inner_N)==len(wlen):
+            inner_N = np.array([*inner_N])
+        else:
+            raise ValueError("Must have as many inner refractive index values as wavelength values")
+    except:
+        inner_N = [*[inner_N]*len(wlen)]
+    
+    try:
+        if len(inner_N)==len(wlen):
+            surrounding_N = np.array([*surrounding_N])
+        else:
+            raise ValueError("Must have as many surrounding refractive index values as wavelength values")
+    except:
+        surrounding_N = [*[surrounding_N]*len(wlen)]
+    
+    sigma_abs = np.array([ps.MieQ(
+        iN, wl, 2*r, sN, asCrossSection=not(asEffiency))[2] 
+            for wl, iN, sN in zip(wlen, inner_N, surrounding_N)])
+    
+    if len(sigma_scatt)>1:
+        return sigma_abs
+    else:
+        return sigma_abs[0]
+
+#%% TEMPERATURE
+
+def delta_T(P, sigma_abs, w0, r, kappa):
+    """
+    Surface temperature increasement caused by a focused Gaussian beam on a NP.
+
+    Parameters
+    ----------
+    P : float
+        Total power of the beam. Measured in mW.
+    sigma_abs : float
+        Absorption cross section of the nanoparticle NP. Measured in nm^2.
+    kappa : float
+        Thermal conductivity of the sourrounding medium where the NP is 
+        inmersed. Measured in W / K m.
+    r : float
+        Radius of the NP. Measured in nm.
+    w0 : float
+        Laser beam waist. Measured in nm.
+
+    Returns
+    -------
+    delta_T : float
+        Temperature increasement caused by the focused Gaussian beam on the 
+        surface of the NP. Measured in K or ºC.
+    """
+    
+    kappa = kappa * 1000 / (1e9) # From W/Km to mW/Knm
+    delta_T = sigma_abs * P / (2 * (np.pi**2) * kappa * r * (w0**2))
+    
+    return delta_T
+
+def P(delta_T, sigma_abs, w0, r, kappa):
+    """
+    Gaussian focused power that causes a surface temperature change on a NP.
+
+    Parameters
+    ----------
+    delta_T : float
+        Temperature increasement caused by the focused Gaussian beam on the 
+        surface of the NP. Measured in K or ºC.
+    sigma_abs : float
+        Absorption cross section of the nanoparticle NP. Measured in nm^2.
+    kappa : float
+        Thermal conductivity of the sourrounding medium where the NP is 
+        inmersed. Measured in W / K m.
+    r : float
+        Radius of the NP. Measured in nm.
+    w0 : float
+        Laser beam waist. Measured in nm.
+
+    Returns
+    -------
+    delta_T : float
+        Total power of the focused Gaussian beam. Measured in mW.
+    """
+    
+    kappa = kappa * 1000 / (1e9) # From W/Km to mW/Knm
+    P = 2 * (np.pi**2) * kappa * r * (w0**2) * delta_T / sigma_abs
+    
+    return P
