@@ -14,7 +14,7 @@ import v_utilities as vu
 
 #%%
 
-def import_medium(name, from_um_factor=1, source="Rakic"):
+def import_medium(name, from_um_factor=1, source="R"):
     
     """Returns Medium instance from string with specified length scale
     
@@ -25,7 +25,7 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
     from_um_factor=1 : int, float, optional
         Factor to transform from SI μm to the chosen length unit. For example, 
         to work with 100 nm as 1 Meep unit, from_um_factor=.1 must be specified.
-    source="Rakic": str
+    source="R": str
         Name of desired source for experimental input data of medium.
     
     Returns
@@ -49,7 +49,7 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
     
     ############ GOLD #################################################
     
-    if name=="Au" and (source=="Rakic" or source=="R"):
+    if name=="Au" and source=="R":
         
     #------------------------------------------------------------------
     # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
@@ -91,11 +91,12 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
                    mp.LorentzianSusceptibility(frequency=Au_frq4, gamma=Au_gam4, sigma=Au_sig4),
                    mp.LorentzianSusceptibility(frequency=Au_frq5, gamma=Au_gam5, sigma=Au_sig5)]
         
-        Au = mp.Medium(epsilon=1.0, E_susceptibilities=Au_susc, valid_freq_range=metal_range)
+        Au = mp.Medium(epsilon=1.0, E_susceptibilities=Au_susc, 
+                       valid_freq_range=metal_range)
         
         return Au
 
-    elif name=="Au" and (source=="Johnson and Christy" or source=="JC"):
+    elif name=="Au" and source=="JC":
         
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -103,6 +104,8 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
     # Gold (Au)
     # Fit to P.B. Johnson and R.W. Christy, Physical Review B, Vol. 6, pp. 4370-9, 1972
         
+        metal_visible_range = mp.FreqRange(min=from_um_factor/0.8, max=from_um_factor/0.4)
+    
         Au_JC_visible_frq0 = 1/(0.139779231751333*from_um_factor)
         Au_JC_visible_gam0 = 1/(26.1269913352870*from_um_factor)
         Au_JC_visible_sig0 = 1
@@ -114,11 +117,13 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
         Au_JC_visible_susc = [mp.DrudeSusceptibility(frequency=Au_JC_visible_frq0, gamma=Au_JC_visible_gam0, sigma=Au_JC_visible_sig0),
                               mp.LorentzianSusceptibility(frequency=Au_JC_visible_frq1, gamma=Au_JC_visible_gam1, sigma=Au_JC_visible_sig1)]
         
-        Au_JC_visible = mp.Medium(epsilon=6.1599, E_susceptibilities=Au_JC_visible_susc)
+        Au_JC_visible = mp.Medium(epsilon=6.1599, 
+                                  E_susceptibilities=Au_JC_visible_susc, 
+                                  valid_freq_range=metal_visible_range)
         
         return Au_JC_visible
 
-    elif name=="Au" and (source=="Palik" or source=="P"):
+    elif name=="Au" and source=="P":
         
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -139,13 +144,17 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
         Au_visible_susc = [mp.DrudeSusceptibility(frequency=Au_visible_frq0, gamma=Au_visible_gam0, sigma=Au_visible_sig0),
                            mp.LorentzianSusceptibility(frequency=Au_visible_frq1, gamma=Au_visible_gam1, sigma=Au_visible_sig1)]
         
-        Au_visible = mp.Medium(epsilon=0.6888, E_susceptibilities=Au_visible_susc, valid_freq_range=metal_visible_range)
+        Au_visible = mp.Medium(epsilon=0.6888, E_susceptibilities=Au_visible_susc, 
+                               valid_freq_range=metal_visible_range)
         
         return Au_visible
+    
+    elif name=="Au":
+        raise ValueError("No source found for Au with that name")
 
     ############ SILVER ###############################################
 
-    elif name=="Ag" and (source=="Rakic" or source=="R"):
+    if name=="Ag" and source=="R":
         
     #------------------------------------------------------------------
     # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
@@ -187,11 +196,12 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
                    mp.LorentzianSusceptibility(frequency=Ag_frq4, gamma=Ag_gam4, sigma=Ag_sig4),
                    mp.LorentzianSusceptibility(frequency=Ag_frq5, gamma=Ag_gam5, sigma=Ag_sig5)]
         
-        Ag = mp.Medium(epsilon=1.0, E_susceptibilities=Ag_susc, valid_freq_range=metal_range)
+        Ag = mp.Medium(epsilon=1.0, E_susceptibilities=Ag_susc, 
+                       valid_freq_range=metal_range)
         
         return Ag
     
-    elif name=="Ag" and (source=="Palik" or source=="P"):
+    elif name=="Ag" and source=="P":
 
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -213,9 +223,17 @@ def import_medium(name, from_um_factor=1, source="Rakic"):
         Ag_visible_susc = [mp.DrudeSusceptibility(frequency=Ag_visible_frq0, gamma=Ag_visible_gam0, sigma=Ag_visible_sig0),
                            mp.LorentzianSusceptibility(frequency=Ag_visible_frq1, gamma=Ag_visible_gam1, sigma=Ag_visible_sig1)]
         
-        Ag_visible = mp.Medium(epsilon=0.0067526, E_susceptibilities=Ag_visible_susc, valid_freq_range=metal_visible_range)
+        Ag_visible = mp.Medium(epsilon=0.0067526, 
+                               E_susceptibilities=Ag_visible_susc, 
+                               valid_freq_range=metal_visible_range)
         
         return Ag_visible
+
+    elif name=="Ag":    
+        raise ValueError("No source found for Ag with that name")
+    
+    else:
+        raise ValueError("No source found for that material")
 
 #%%
 
@@ -262,8 +280,7 @@ def verify_stability_freq_res(medium, resolution, courant=0.5):
 
 #%%
 
-def verify_stability_dim_index(medium, freq, 
-                               ndims=3, courant=0.5, method="abs"):
+def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5):
     """Verifies stability via dimensions, refractive index and Courant factor.
     
     Parameters
@@ -277,8 +294,6 @@ def verify_stability_dim_index(medium, freq,
     courant=0.5 : float, optional
         Courant factor that defines temporal discretization from spatial 
         discretization as dt = Courant * dx.
-    method="abs" : str, optional
-        Method applied to epsilon * mu product to obtain refractive index.
 
     Returns
     -------
@@ -293,10 +308,7 @@ def verify_stability_dim_index(medium, freq,
     
     index = np.array([ np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]) for f in freq ])
     
-    if method not in ["abs", "real", "imag"]:
-        raise ValueError("Method should be 'abs', 'real' or 'imag'.")
-    method_function = eval(f"np.{method}")
-    min_index = np.min(method_function(index))
+    min_index = np.min(np.real(index))
     
     stable = ( courant < min_index / np.sqrt(ndims) )
     
@@ -328,7 +340,7 @@ def max_stable_courant_freq_res(medium, resolution):
 
 #%%
 
-def max_stable_courant_dim_index(medium, freq, ndims=3, method="abs"):
+def max_stable_courant_dim_index(medium, freq, ndims=3):
     """Maximum stable Courant via dimensions and refractive index condition.
     
     Parameters
@@ -355,10 +367,7 @@ def max_stable_courant_dim_index(medium, freq, ndims=3, method="abs"):
     
     index = np.array([ np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]) for f in freq ])
     
-    if method not in ["abs", "real", "imag"]:
-        raise ValueError("Method should be 'abs', 'real' or 'imag'.")
-    method_function = eval(f"np.{method}")
-    min_index = np.min(method_function(index))
+    min_index = np.min(np.real(index))
     
     max_courant = min_index / np.sqrt(ndims)
     
