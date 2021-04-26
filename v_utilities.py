@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
-"""The 'v_utilities' module contains tools appliable to a veriaty of tasks.
+"""The `v_utilities` module contains tools appliable to a veriaty of tasks.
 
 It could be divided into 3 main sections:
 
     (1) transforming to and from string other classes 
-    ('nparray_to_string', 'dict_to_string', 'find_numbers', etc)
-    (2) treating lists of strings ('filter_by_string_must', 'sort_by_number')
+    (`nparray_to_string`, `dict_to_string`, `find_numbers`, etc)
+    (2) treating lists of strings (`filter_by_string_must`, `sort_by_number`)
     (3) fixing bugs in my thesis' data due to code mistakes
     
 Some of its most useful tools are...
 
 find_numbers : function
-
+    Returns a list of numbers found on a given string
 sort_by_number : function
     Sorts list of strings by a variable number of recurrent position.
 fix_params_dict : function
@@ -325,15 +325,42 @@ def counting_sufix(number):
 
 #%%
 
-def enumerate_string(str_list, str_and="and"):
+def join_strings_dict(str_dict, str_joiner="for"):
+    """
+    Returns a list of strings joining key and value from a strings dictionary.
+    
+    Parameters
+    ----------
+    str_dict : dict of str
+        Dictionary of strings. Both key and values must be strings.
+    str_joiner="for" : str
+        Joiner for formatting each pair of key-value as 'key str_joiner value'.
+    
+    Returns
+    -------
+    str_list : list of str
+        List of strings already formatted to join each pair of key-value.
+    """
+
+    str_list = []
+    for k, v in str_dict.items():
+        str_list.append( f"'{k}' for {v}")
+    return str_list
+
+#%%
+
+def enumerate_string(str_list, str_sep="and", str_sep_always=False):
     """Returns a one phrase enumeration from a list of strings.
     
     Parameters
     ----------
     str_list : list of str
         The list of strings to join into a one phrase enumeration.
-    str_and="and" : str, optional
+    str_sep="and" : str, optional
         The final separator that isn't a comma. The default is "and".
+    str_sep_always=False : bool, optional
+        If true, the string separator is used between all strings and not just 
+        the final two. The default is `False`.
 
     Returns
     -------
@@ -342,7 +369,10 @@ def enumerate_string(str_list, str_and="and"):
 
     """
     
-    answer = ", ".join(str_list[:-1])
-    answer += " " + str_and + " " + str_list[-1]
+    if str_sep_always:
+        answer = f" {str_sep} ".join(str_list)
+    else:
+        answer = ", ".join(str_list[:-1])
+        answer += f" {str_sep} " + str_list[-1]
 
     return answer

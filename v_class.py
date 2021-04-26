@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-The 'v_class' module contains customed classes.
+The `v_class` module contains custom-made classes.
 
 WrapperList : class
     A list subclass that applies methods to a list of instances.

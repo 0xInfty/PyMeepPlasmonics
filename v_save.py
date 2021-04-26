@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-"""The 'v_save' module saves data, dealing with overwriting.
+"""The `v_save` module saves and retrieves data, dealing with overwriting.
 
 It could be divided into 2 main sections:
     
     (1) making new directories and free files to avoid overwriting 
-    ('new_dir', 'free_file')
+    (`new_dir`, `free_file`)
     (2) saving data into files with the option of not overwriting 
-    ('saveplot', 'savetext', 'savewav')
+    (`saveplot`, `savetext`, `savewav`)
+    (3) loading or retrieving data saved with this module 
+    (`retrieve_header`, `retrieve_footer`)
     
 new_dir : function
     Makes and returns a new related directory to avoid overwriting.
