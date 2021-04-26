@@ -38,8 +38,8 @@ resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 # Au sphere
 d = 2.7  # Diameter of ellipsoid: 27 nm
 h = 12  # Height of ellipsoid: 120 nm
-source = "R"
-medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
+paper = "R"
+medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
 wlen_range = np.array([50,65]) # 500-650 nm range from lowest to highest
@@ -247,7 +247,7 @@ params = dict(
     resolution=resolution,
     d=d,
     h=h,
-    source=source,
+    paper=paper,
     wlen_range=wlen_range,
     nfreq=nfreq,
     cutoff=cutoff,

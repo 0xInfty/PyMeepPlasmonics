@@ -238,7 +238,7 @@ def main(series, resolution, r, source, wlen_range, meep_flux, H_field):
     #     from_um_factor=from_um_factor,
     #     resolution=resolution,
     #     r=r,
-    #     source=source,
+    #     paper=paper,
     #     wlen_range=wlen_range,
     #     nfreq=nfreq,
     #     cutoff=cutoff,

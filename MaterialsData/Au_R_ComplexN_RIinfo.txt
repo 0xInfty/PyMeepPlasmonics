@@ -199,4 +199,4 @@
 6.001900000000000013e+00	4.802699999999999747e+00	3.694400000000000261e+01
 6.099700000000000344e+00	4.947700000000000209e+00	3.752700000000000102e+01
 6.199200000000000266e+00	5.097400000000000375e+00	3.811800000000000210e+01
-# source="A. D. Rakić, A. B. Djurišic, J. M. Elazar, and M. L. Majewski. Optical properties of metallic films for vertical-cavity optoelectronic devices, Appl. Opt. 37, 5271-5283 (1998)", wlen_range=[248, 6200], material="Au", from="https://refractiveindex.info/?shelf=main&book=Au&page=Rakic-LD", 
+# paper="A. D. Rakić, A. B. Djurišic, J. M. Elazar, and M. L. Majewski. Optical properties of metallic films for vertical-cavity optoelectronic devices, Appl. Opt. 37, 5271-5283 (1998)", wlen_range=[248, 6200], material="Au", reference="https://refractiveindex.info/?shelf=main&book=Au&page=Rakic-LD", 

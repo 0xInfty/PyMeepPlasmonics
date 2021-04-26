@@ -66,7 +66,7 @@ def main(series, folder, resolution, from_um_factor, d, h,
     from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
     
     # Au sphere
-    medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
+    medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
     
     # Frequency and wavelength
     nfreq = 100 # Number of frequencies to discretize range
@@ -273,7 +273,7 @@ def main(series, folder, resolution, from_um_factor, d, h,
         resolution=resolution,
         d=d,
         h=h,
-        source=source,
+        paper=paper,
         wlen_range=wlen_range,
         nfreq=nfreq,
         cutoff=cutoff,

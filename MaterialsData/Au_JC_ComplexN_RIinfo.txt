@@ -48,4 +48,4 @@
 1.393000000000000000e+03	4.299999999999999933e-01	9.519000000000000128e+00
 1.610000000000000000e+03	5.600000000000000533e-01	1.121000000000000085e+01
 1.937000000000000000e+03	9.200000000000000400e-01	1.377999999999999936e+01
-# source="P. B. Johnson and R. W. Christy. Optical constants of the noble metals, Phys. Rev. B 6, 4370-4379 (1972)", wlen_range=[188, 1937], material="Au", from="https://refractiveindex.info/?shelf=main&book=Au&page=Johnson", 
+# paper="P. B. Johnson and R. W. Christy. Optical constants of the noble metals, Phys. Rev. B 6, 4370-4379 (1972)", wlen_range=[188, 1937], material="Au", reference="https://refractiveindex.info/?shelf=main&book=Au&page=Johnson", 

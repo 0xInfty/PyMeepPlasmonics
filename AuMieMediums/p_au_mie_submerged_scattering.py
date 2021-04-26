@@ -66,7 +66,7 @@ def main(series, folder, resolution, from_um_factor, r,
     ### MEAN PARAMETERS
     
     # Au sphere
-    medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
+    medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
     
     # Frequency and wavelength
     nfreq = 100 # Number of frequencies to discretize range
@@ -215,7 +215,7 @@ def main(series, folder, resolution, from_um_factor, r,
         from_um_factor=from_um_factor,
         resolution=resolution,
         r=r,
-        source=source,
+        paper=paper,
         submerged_index=submerged_index,
         wlen_range=wlen_range,
         nfreq=nfreq,

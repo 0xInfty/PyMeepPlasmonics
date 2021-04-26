@@ -30,8 +30,8 @@ resolution = 3 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
 r = [2.4, 3.2, 4, 5.15]  # Radius of sphere: diameters 40, 64, 80 and 103 nm
-source = "R"
-medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
+paper = "R"
+medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
 wlen_range = np.array([45, 60]) # 450 nm to 600 nm
 
 #%% MORE PARAMETERS

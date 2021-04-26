@@ -25,9 +25,9 @@ from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
 resolution = 4 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
-r = 6  # Radius of sphere: 60 nm
-source = "R"
-medium = import_medium("Au", from_um_factor, source) # Medium of sphere: gold (Au)
+r = 3  # Radius of sphere: 60 nm
+paper = "R"
+medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
 wlen = 75 # 570 nm
