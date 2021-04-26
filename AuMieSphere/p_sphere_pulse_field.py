@@ -29,21 +29,21 @@ import v_save as vs
 @cli.option("--series", "-s", type=str, 
             help="Series name used to create a folder and save files")
 @cli.option("--resolution", "-res", required=True, type=int,
-            help="Wavelength range expressed in multiples of 10 nm")
+            help="Spatial resolution. Number of divisions of each Meep unit")
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
-@cli.option("--radius", "-r", "r", default=6, type=int,
-            help="Radius of sphere expressed in multiples of 10 nm")
-@cli.option("--source", "-sc", "source", type=str, default="R",
+@cli.option("--radius", "-r", "r", default=60, type=int,
+            help="Radius of sphere expressed in nm")
+@cli.option("--paper", "-pp", "paper", type=str, default="R",
             help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
-            type=vc.NUMPY_ARRAY, default="np.array([50,65])",
-            help="Wavelength range expressed in multiples of 10 nm")
+            type=vc.NUMPY_ARRAY, default="np.array([500,650])",
+            help="Wavelength range expressed in nm")
 # 500-650 nm range from lowest to highest
 @cli.option("--meep-flux", "-mp", "meep_flux", default=True, type=bool,
             help="Whether to calculate Meep flux while running or not")
 @cli.option("--H-field", "-Hf", "H_field", default=True, type=bool,
             help="Whether to analyse also magnetic field while running or not")
-def main(series, resolution, r, source, wlen_range, meep_flux, H_field):
+def main(series, resolution, r, paper, wlen_range, meep_flux, H_field):
     
     #%% PARAMETERS
     
@@ -52,7 +52,11 @@ def main(series, resolution, r, source, wlen_range, meep_flux, H_field):
     # Units: 10 nm as length unit
     from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
     
+    # Sphere
+    r = r / ( from_um_factor * 1e3 ) # Now in Meep units
+    
     # Frequency and wavelength
+    wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Now in Meep units
     nfreq = 100 # Number of frequencies to discretize range
     cutoff = 3.2
     

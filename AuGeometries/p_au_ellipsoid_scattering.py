@@ -38,25 +38,25 @@ import v_save as vs
 @cli.option("--folder", "-f", type=str, default="AuGeometries/AuEllipsoid",
             help="Series folder used to save files")
 @cli.option("--resolution", "-res", required=True, type=int,
-            help="Wavelength range expressed in multiples of 10 nm")
+            help="Spatial resolution. Number of divisions of each Meep unit")
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 @cli.option("--from-um-factor", "-fum", "from_um_factor", 
             default=10e-3, type=float,
             help="Conversion of 1 μm to my length unit (i.e. 10e-3=10nm/1μm)")
-@cli.option("--diameter", "-d", "d", default=2.7, type=float,
-            help="Diameter of ellipsoid expressed in multiples of 10 nm")
-@cli.option("--height", "-h", "h", default=12, type=float,
-            help="Diameter of ellipsoid expressed in multiples of 10 nm")
-@cli.option("--source", "-sc", "source", type=str, default="R",
+@cli.option("--diameter", "-d", "d", default=27, type=float,
+            help="Diameter of ellipsoid expressed in nm")
+@cli.option("--height", "-h", "h", default=120, type=float,
+            help="Diameter of ellipsoid expressed in nm")
+@cli.option("--paper", "-pp", "paper", type=str, default="R",
             help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
-            type=vc.NUMPY_ARRAY, default="np.array([50,65])",
-            help="Wavelength range expressed in multiples of 10 nm")
+            type=vc.NUMPY_ARRAY, default="np.array([500,650])",
+            help="Wavelength range expressed in nm")
 @cli.option("--nfreq", "-nf", "nfreq", type=int, default=100,
             help="Number of frequencies to discretize wavelength range")
 # 500-650 nm range from lowest to highest
 def main(series, folder, resolution, from_um_factor, d, h, 
-         source, wlen_range, nfreq):
+         paper, wlen_range, nfreq):
     
     #%% PARAMETERS
     
@@ -67,8 +67,11 @@ def main(series, folder, resolution, from_um_factor, d, h,
     
     # Au sphere
     medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
+    d = d  / ( from_um_factor * 1e3 )  # Diameter is now in Meep units
+    h = h  / ( from_um_factor * 1e3 )  # Height is now in Meep units
     
     # Frequency and wavelength
+    wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Wavelength range now in Meep units
     nfreq = 100 # Number of frequencies to discretize range
     cutoff = 3.2
     
