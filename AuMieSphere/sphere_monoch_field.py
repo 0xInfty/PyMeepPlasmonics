@@ -25,12 +25,12 @@ from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
 resolution = 4 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
-r = 3  # Radius of sphere: 60 nm
+r = 3  # Radius of sphere: 30 nm
 paper = "R"
 medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
-wlen = 75 # 570 nm
+wlen = 64.2 # 570 nm
 
 # Space configuration
 pml_width = 0.5 * wlen
@@ -45,9 +45,9 @@ after_cell_run_time = 10*wlen
 enlapsed = []
 
 # Saving directories
-series = "2020101801"
-folder = "AuSphereFieldResults"
-home = "/home/vall/Documents/Thesis/ThesisPython/"
+series = f"AuSphereField{2*r*from_um_factor*1e3:.0f}WLen{wlen*from_um_factor*1e3:.0f}"
+folder = "AuMieSphere/AuSphereField"
+home = vs.get_home()
 
 #%% GENERAL GEOMETRY SETUP
 
@@ -81,7 +81,7 @@ geometry = [mp.Sphere(material=medium,
                       radius=r)]
 # Au sphere with frequency-dependant characteristics imported from Meep.
 
-path = os.path.join(home, folder, "{}Results".format(series))
+path = os.path.join(home, folder, series)
 if not os.path.isdir(path): vs.new_dir(path)
 file = lambda f : os.path.join(path, f)
 
