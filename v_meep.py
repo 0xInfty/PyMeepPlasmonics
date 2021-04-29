@@ -19,7 +19,6 @@ It's widely based on Meep Materials Library.
 
 import meep as mp
 import numpy as np
-from v_class import DottableWrapper
 import v_utilities as vu
 
 #%%
@@ -388,6 +387,38 @@ def max_stable_courant_dim_index(medium, freq, ndims=3):
 
 #%%
 
+class Line(mp.Volume):
+    
+    """A Meep Volume subclass that holds a line instead of a whole volume"""
+
+    def __init__(self, center=mp.Vector3(), size=mp.Vector3(), 
+                 is_cylindrical=False, vertices=[]):
+        
+        super().__init__(center=center, size=size, dims=1, 
+                         is_cylindrical=is_cylindrical, vertices=vertices)
+        
+        nvertices = len(self.get_vertices())
+        if nvertices>2:
+            raise TypeError(f"Must have 2 vertices and not {nvertices}")
+
+#%%
+
+class Plane(mp.Volume):
+    
+    """A Meep Volume subclass that holds a line instead of a whole volume"""
+
+    def __init__(self, center=mp.Vector3(), size=mp.Vector3(), 
+                 is_cylindrical=False, vertices=[]):
+        
+        super().__init__(center=center, size=size, dims=1, 
+                         is_cylindrical=is_cylindrical, vertices=vertices)
+        
+        nvertices = len(self.get_vertices())
+        if nvertices<3 or nvertices>4:
+            raise TypeError(f"Must have 3 or 4 vertices and not {nvertices}")
+
+#%%
+
 class MeepUnitsManager:
     """Depricated class to manage units in Meep"""
     
@@ -396,7 +427,7 @@ class MeepUnitsManager:
         self._from_um_factor = from_um_factor
         self._a = from_um_factor * 1e-6 # Meep length unit [m]
         
-        self.constants = DottableWrapper(**dict(
+        self.constants = vu.DottableWrapper(**dict(
             c = 299792458 , # Speed of light in vacuum c [m/s]
             e = 1.6021892 * 10e-19 , # Electron charge e [C]
             me = 9.109534 * 10e-31 , # Electron rest mass [kg]
@@ -410,9 +441,9 @@ class MeepUnitsManager:
             mu0 = 4*np.pi * 10e-7 
             ))
         
-        self.Meep_to_SI = DottableWrapper()
+        self.Meep_to_SI = vu.DottableWrapper()
         
-        self.SI_to_Meep = DottableWrapper()
+        self.SI_to_Meep = vu.DottableWrapper()
     
     @property
     def from_um_factor(self):
