@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-"""The `v_utilities` module contains tools appliable to a veriaty of tasks.
+"""
+This module contains miscellaneous tools appliable to a variaty of tasks.
 
 It could be divided into 3 main sections:
 
     (1) transforming to and from string other classes 
     (`nparray_to_string`, `dict_to_string`, `find_numbers`, etc)
-    (2) treating lists of strings (`filter_by_string_must`, `sort_by_number`)
+    (2) treating lists of strings (`filter_by_string_must`, `sort_by_number`) 
+    and dicts of strings (`join_strings_dict`)
     (3) fixing bugs in my thesis' data due to code mistakes
     
 Some of its most useful tools are...
@@ -177,6 +179,47 @@ def find_numbers(string):
 
 #%%
 
+def counting_sufix(number):
+    
+    """Returns a number's suffix string to use for counting.
+    
+    Parameters
+    ----------
+    number: int, float
+        Any number, though it is designed to work with integers.
+    
+    Returns
+    -------
+    ans: str
+        A string representing the integer number plus a suffix.
+    
+    Examples
+    --------
+    >> counting_sufix(1)
+    '1st'
+    >> counting_sufix(22)
+    '22nd'
+    >> counting_sufix(1.56)
+    '2nd'
+    
+    """
+    
+    number = round(number)
+    unit = int(str(number)[-1])
+    
+    if unit == 1:
+        ans = 'st'
+    elif unit == 2:
+        ans = 'nd'
+    elif unit == 3:
+        ans = 'rd'
+    else:
+        ans = 'th'
+    
+    return ans
+
+#%%
+
 def filter_by_string_must(string_list, string_must, must=True):
 
     """Filters list of str by a str required to be always present or absent.
@@ -257,96 +300,6 @@ def sort_by_number(string_list, number_index=0):
     
     return sorted_string_list
 
-
-#%%
-
-def fix_params_dict(faulty_params):
-
-    """Fixes the faulty params dict caused by wlen_range np.array on vs.savetxt
-    
-    Parameters
-    ----------
-    faulty_params : str
-        The faulty params dict wrongly expressed as a string.
-    
-    Returns
-    -------
-    fixed_params : dict
-        The fixed params dict correctly expressed as a dict.
-    """
-    
-    problem = faulty_params.split("wlen_range=")[1].split(", nfreq")[0]
-    solved = str(find_numbers(problem))
-    fixed_params = solved.join(faulty_params.split(problem))
-    fixed_params = string_to_dict(fixed_params)
-
-    return fixed_params
-
-#%%
-
-def counting_sufix(number):
-    
-    """Returns a number's suffix string to use for counting.
-    
-    Parameters
-    ----------
-    number: int, float
-        Any number, though it is designed to work with integers.
-    
-    Returns
-    -------
-    ans: str
-        A string representing the integer number plus a suffix.
-    
-    Examples
-    --------
-    >> counting_sufix(1)
-    '1st'
-    >> counting_sufix(22)
-    '22nd'
-    >> counting_sufix(1.56)
-    '2nd'
-    
-    """
-    
-    number = round(number)
-    unit = int(str(number)[-1])
-    
-    if unit == 1:
-        ans = 'st'
-    elif unit == 2:
-        ans = 'nd'
-    elif unit == 3:
-        ans = 'rd'
-    else:
-        ans = 'th'
-    
-    return ans
-
-#%%
-
-def join_strings_dict(str_dict, str_joiner="for"):
-    """
-    Returns a list of strings joining key and value from a strings dictionary.
-    
-    Parameters
-    ----------
-    str_dict : dict of str
-        Dictionary of strings. Both key and values must be strings.
-    str_joiner="for" : str
-        Joiner for formatting each pair of key-value as 'key str_joiner value'.
-    
-    Returns
-    -------
-    str_list : list of str
-        List of strings already formatted to join each pair of key-value.
-    """
-
-    str_list = []
-    for k, v in str_dict.items():
-        str_list.append( f"'{k}' for {v}")
-    return str_list
-
 #%%
 
 def enumerate_string(str_list, str_sep="and", str_sep_always=False):
@@ -376,3 +329,50 @@ def enumerate_string(str_list, str_sep="and", str_sep_always=False):
         answer += f" {str_sep} " + str_list[-1]
 
     return answer
+
+#%%
+
+def join_strings_dict(str_dict, str_joiner="for"):
+    """
+    Returns a list of strings joining key and value from a strings dictionary.
+    
+    Parameters
+    ----------
+    str_dict : dict of str
+        Dictionary of strings. Both key and values must be strings.
+    str_joiner="for" : str
+        Joiner for formatting each pair of key-value as 'key str_joiner value'.
+    
+    Returns
+    -------
+    str_list : list of str
+        List of strings already formatted to join each pair of key-value.
+    """
+
+    str_list = []
+    for k, v in str_dict.items():
+        str_list.append( f"'{k}' for {v}")
+    return str_list
+
+#%%
+
+def fix_params_dict(faulty_params):
+    """Fixes the faulty params dict caused by wlen_range np.array on vs.savetxt
+    
+    Parameters
+    ----------
+    faulty_params : str
+        The faulty params dict wrongly expressed as a string.
+    
+    Returns
+    -------
+    fixed_params : dict
+        The fixed params dict correctly expressed as a dict.
+    """
+    
+    problem = faulty_params.split("wlen_range=")[1].split(", nfreq")[0]
+    solved = str(find_numbers(problem))
+    fixed_params = solved.join(faulty_params.split(problem))
+    fixed_params = string_to_dict(fixed_params)
+
+    return fixed_params

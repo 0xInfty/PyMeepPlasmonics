@@ -10,7 +10,7 @@ import_module : function
 verify_stability_dim_index : function
     Verifies stability via dimensions, refractive index and Courant factor.
 MeepUnitsManager : class
-
+    Incomplete class to manage units in Meep.
 
 It's widely based on Meep Materials Library.
 

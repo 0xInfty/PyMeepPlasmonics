@@ -1,6 +1,41 @@
 # -*- coding: utf-8 -*-
 """
-This module contains electromagnetic theory and base EM data for materials.
+This module contains electromagnetic theory and basic data for materials.
+
+It could be divided into two sections:
+    
+    1. Complex dielectric constant epsilon and complex refractive index N tools.
+        These functions create interpolers from experimental data that can 
+        either be retrieved from a file downloaded from any web site or from 
+        Meep's materials library that applies a Drude-Lorentz model fit.
+        
+    2. Polarizability, induced dipolar moment, field, scattering, absorption, 
+    power and temperature tools.
+        This functions compute physical magnitudes by applying different 
+        electromagnetic models and aproximations. Cuasistatic dipolar 
+        approximation, Clausius-Mosotti and Kuwata models, Mie theory and 
+        Gaussian beam expressions are used.
+
+Some of its most useful tools are...
+
+epsilon_function : function
+    Generates an interpolation function for epsilon from experimental data.
+alpha_Clausius_Mosotti : function
+    Returns Clausius-Mosotti polarizability alpha for a sphere in units of volume.
+alpha_Kuwata : function
+    Returns Kuwata polarizability alpha for a sphere in units of volume.
+p_induced : function
+    Returns induced dipolar moment for a sphere in units of volume times field.
+E : function
+    Returns electric field for a sphere for all positions in units of field.
+sigma_scatt : function
+    Calculates scattering cross section using Mie theory for a spherical NP.
+sigma_abs : function
+    Calculates absorption cross section using Mie theory for a spherical NP.
+delta_T : function
+    Surface temperature increasement caused by a focused Gaussian beam on a NP.
+P : function
+    Gaussian focused power that causes a surface temperature change on a NP.
 
 @author: Vall
 """
@@ -15,9 +50,15 @@ else:
 
 import numpy as np
 import os
-import PyMieScatt as ps
+try:
+    import PyMieScatt as ps
+except:
+    raise OSError("Must install PyMieScatt module using, for example, `pip install PyMieScatt`")
 from scipy.interpolate import interp1d
-import v_meep as vm
+try:
+    import v_meep as vm
+except:
+    print("Meep functions not available. Don't worry! You can still use everything else")
 import v_utilities as vu
 
 #%% EPSILON INTERPOLATION
@@ -283,7 +324,7 @@ def epsilon_function(material="Au", paper="JC", reference="RIinfo",
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
 
 def alpha_Clausius_Mosotti(epsilon, r, epsilon_ext=1):
-    """Returns Clausius-Mosotti polarizability alpha in units of cubic length"""
+    """Returns Clausius-Mosotti polarizability alpha in units of volume"""
     alpha = 4 * np.pi * (r**3)
     alpha = alpha * ( epsilon - epsilon_ext ) / ( epsilon + 2 * epsilon_ext )
     return alpha
@@ -292,7 +333,7 @@ def alpha_Clausius_Mosotti(epsilon, r, epsilon_ext=1):
 #%% KUWATA: POLARIZABILITY
 
 def alpha_Kuwata(epsilon, wlen, r, epsilon_ext=1):
-    """Returns Kuwata polarizability alpha in units of nm³"""
+    """Returns Kuwata polarizability alpha in units of volume"""
     aux_x = np.pi * r / wlen # Withouth units, so no need for from_um_factor * 1e3
     aux_vol = 4 * np.pi * (r**3) / 3
     alpha = aux_vol * ( 1 - ( (epsilon + epsilon_ext) * ( aux_x**2 ) / 10 ) )
@@ -305,7 +346,10 @@ def alpha_Kuwata(epsilon, wlen, r, epsilon_ext=1):
 #%% DIPOLAR APROXIMATION: INDUCED DIPOLE MOMENT 
 
 def p_induced(epsilon, alpha, E0, epsilon_ext=1):
-    """Returns induced dipolar moment in units of cubic length"""
+    """Returns induced dipolar moment in units of volume times field.
+    
+    Units asume vacuum permitivity epsilon_0 = 1.
+    """
     if isinstance(epsilon, np.ndarray):
         aux = np.array([e * epsilon_ext * a for e, a in zip(epsilon, alpha)])
         p = np.array([E0 * a for a in aux])
@@ -316,7 +360,10 @@ def p_induced(epsilon, alpha, E0, epsilon_ext=1):
 #%% DIPOLAR APROXIMATION: ELECTRIC FIELD
 
 def E_in(epsilon, E0, epsilon_ext=1):
-    """Returns electric field inside the sphere in units of cubic length"""
+    """Returns electric field inside the sphere in units of field.
+    
+    Units asume vacuum permitivity epsilon_0 = 1.
+    """
     aux = 3 * epsilon_ext / (epsilon + 2 * epsilon_ext)
     if isinstance(aux, np.ndarray):
         E_in = np.array([E0 * a for a in aux])
@@ -325,7 +372,10 @@ def E_in(epsilon, E0, epsilon_ext=1):
     return E_in
 
 def E_out(epsilon, alpha, E0, rvec, epsilon_ext=1):
-    """Returns electric field outside the sphere in units of cubic length"""
+    """Returns electric field outside the sphere in units of field.
+    
+    Units asume vacuum permitivity epsilon_0 = 1.
+    """
     rmod = np.linalg.norm(rvec)
     rver = rvec / rmod
     p = p_induced(epsilon, alpha, E0)
@@ -341,7 +391,10 @@ def E_out(epsilon, alpha, E0, rvec, epsilon_ext=1):
     return Eout
 
 def E(epsilon, alpha, E0, rvec, r, epsilon_ext=1):
-    """Returns electric field"""
+    """Returns electric field for a sphere for all positions in units of field.
+    
+    Units asume vacuum permitivity epsilon_0 = 1.
+    """
     rmod = np.linalg.norm(rvec)
     if rmod <= r:
         return E_in(epsilon, E0)

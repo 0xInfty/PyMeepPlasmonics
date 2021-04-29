@@ -3,6 +3,19 @@
 """
 Created on Mon Apr 26 17:05:09 2021
 
+Script to work with surface temperature and Gaussian beam power on spherical NP.
+
+It treats surface temperature increasements due to a focused Gaussian beam 
+power on a spherical nanoparticle submerged in an isotropic medium.
+
+- Calculates surface temperature increasement for a given Gaussian beam power 
+  with known central wavelength and beam waist.
+- Computes Gaussian beam power for a given surface temperature increasement 
+  with known central wavelength and beam waist
+- Returns other laser's required power to produce the same surface temperature 
+  increasement as a reference Gaussian beam when all central wavelengths and 
+  beam waists are known.
+
 @author: vall
 """
 
