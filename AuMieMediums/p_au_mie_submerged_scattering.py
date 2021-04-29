@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 import os
 from time import time
 from v_meep import import_medium
-import v_class as vc
 import v_save as vs
 # from v_units import MeepUnitsManager
 
@@ -49,7 +48,7 @@ import v_save as vs
             type=float, default=1.33,
             help="Reflective index of sourrounding medium")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
-            type=vc.NUMPY_ARRAY, default="np.array([500,650])",
+            type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
 @cli.option("--courant", "-c", "courant", 
             type=float, default=1.33,

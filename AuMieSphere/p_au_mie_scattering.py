@@ -27,7 +27,6 @@ import os
 from time import time
 import PyMieScatt as ps
 from v_meep import import_medium
-import v_class as vc
 import v_save as vs
 # from v_units import MeepUnitsManager
 
@@ -49,7 +48,7 @@ import v_save as vs
 @cli.option("--paper", "-pp", "paper", type=str, default="R",
             help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
-            type=vc.NUMPY_ARRAY, default="np.array([500,650])",
+            type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
 # 500-650 nm range from lowest to highest
 def main(series, folder, resolution, from_um_factor, r, paper, wlen_range):

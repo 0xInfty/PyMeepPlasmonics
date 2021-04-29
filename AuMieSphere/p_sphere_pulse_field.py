@@ -20,7 +20,6 @@ import os
 # from scipy.stats import norm
 # from scipy.integrate import dblquad
 from time import time
-import v_class as vc
 import v_save as vs
     
 #%% COMMAND LINE FORMATTER
@@ -36,7 +35,7 @@ import v_save as vs
 @cli.option("--paper", "-pp", "paper", type=str, default="R",
             help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
-            type=vc.NUMPY_ARRAY, default="np.array([500,650])",
+            type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
 # 500-650 nm range from lowest to highest
 @cli.option("--meep-flux", "-mp", "meep_flux", default=True, type=bool,
