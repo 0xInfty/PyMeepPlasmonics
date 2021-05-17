@@ -22,7 +22,6 @@ import os
 from time import time
 from v_meep import import_medium
 import v_save as vs
-# from v_units import MeepUnitsManager
 
 #%% PARAMETERS
 
@@ -33,15 +32,25 @@ from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
 resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
-r = 5.15 # Radius of sphere: 60 nm
+r = 51.5 # Radius of sphere in nm
 paper = "R"
-displacement = 0 # How much is the sphere and the glass overlapped: 20 nm
-medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
-submerged_index = 1.333 # Water refractive index
-surface_index = 1.54 # Glass refractive index
+medium = "Au"
+displacement = 0 # How much is the sphere and the glass overlapped in nm
+submerged_index = 1.33 # External medium's refractive index: water is 1.33
+surface_index = 1.54 # Surface medium's refractive index: glass is 1.54
 
 # Frequency and wavelength
-wlen_range = np.array([50,65]) # 500-650 nm range from lowest to highest
+wlen_range = np.array([500,650]) # Wavelength range in nm
+
+### INNER PARAMETERS
+
+# Au Sphere
+r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
+medium = import_medium(medium, from_um_factor, paper=paper) # Medium of sphere
+displacement = displacement  / ( from_um_factor * 1e3 )  # Now in Meep units
+
+# Frequency and wavelength
+wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Wavelength now in Meep units
 nfreq = 100 # Number of frequencies to discretize range
 cutoff = 3.2
 
@@ -57,9 +66,6 @@ folder = "AuMieMediums/TestSubSurface"
 home = vs.get_home()
 
 ### OTHER PARAMETERS
-
-# Units
-# uman = MeepUnitsManager(from_um_factor=from_um_factor)
 
 # Frequency and wavelength
 freq_range = 1/wlen_range # Hz range in Meep units from highest to lowest

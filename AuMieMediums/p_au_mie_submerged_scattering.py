@@ -62,7 +62,7 @@ def main(series, folder, resolution, from_um_factor, r,
 
     #%% PARAMETERS    
 
-    ### MEAN PARAMETERS
+    ### INNER PARAMETERS
     
     # Au sphere
     r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units

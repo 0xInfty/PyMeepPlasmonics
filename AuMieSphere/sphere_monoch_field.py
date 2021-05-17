@@ -20,17 +20,29 @@ import v_save as vs
 
 #%% PARAMETERS
 
+### MEAN PARAMETERS
+
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
 resolution = 4 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
-r = 3  # Radius of sphere: 30 nm
+r = 30  # Radius in nm
 paper = "R"
-medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
+medium = "Au" # Medium of sphere: gold (Au)
 
 # Frequency and wavelength
-wlen = 64.2 # 570 nm
+wlen = 642 # Wavelength in nm
+
+### INNER PARAMETERS
+
+# Au Sphere
+r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
+medium = import_medium(medium, from_um_factor, paper=paper) # Medium of sphere
+
+# Frequency and wavelength
+wlen = wlen / ( from_um_factor * 1e3 ) # Wavelength now in Meep units
+cutoff = 3.2
 
 # Space configuration
 pml_width = 0.5 * wlen
@@ -39,15 +51,21 @@ air_width = 2*r
 # Field Measurements
 period_line = 1
 period_plane = 1
-after_cell_run_time = 10*wlen
 
 # Computation time
 enlapsed = []
+after_cell_run_time = 10*wlen
 
 # Saving directories
 series = f"AuSphereField{2*r*from_um_factor*1e3:.0f}WLen{wlen*from_um_factor*1e3:.0f}"
 folder = "AuMieSphere/AuSphereField"
 home = vs.get_home()
+
+### OTHER PARAMETERS
+
+# Space configuration
+pml_width = 0.38 * wlen # 0.5 * wlen
+air_width = r/2 # 2 * r
 
 #%% GENERAL GEOMETRY SETUP
 

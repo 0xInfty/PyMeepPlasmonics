@@ -27,6 +27,7 @@ import os
 from scipy.stats import norm
 # from scipy.integrate import dblquad
 from time import time
+# from v_meep import import_medium
 import v_save as vs
 
 #%% PARAMETERS
@@ -35,13 +36,25 @@ import v_save as vs
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 
 # Au sphere
-r = 6  # Radius of sphere: 60 nm
+r = 60  # Radius of sphere in nm
+paper = "R"
+# medium = "Au"
+submerged_index = 1.33 # External medium's refractive index: water is 1.33
 
 # Frequency and wavelength
-wlen_range = np.array([50,65]) # 500-650 nm range from lowest to highest
+wlen_range = np.array([500,650]) # Wavelength range in nm
+
+### INNER PARAMETERS
+
+# Au Sphere
+r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
+# medium = import_medium(medium, from_um_factor, paper=paper) # Medium of sphere
+
+# Frequency and wavelength
+wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Wavelength now in Meep units
 nfreq = 100 # Number of frequencies to discretize range
 cutoff = 3.2
 
