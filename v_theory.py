@@ -1,25 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-This module contains electromagnetic theory and basic data for materials.
+This module contains electromagnetic theory.
 
-It could be divided into two sections:
+It holds tools to work with...
+
+    - Polarizability
+    - Induced dipolar moment
+    - Electric field
+    - Scattering and absorption
+    - Power and temperature
     
-    1. Complex dielectric constant epsilon and complex refractive index N tools.
-        These functions create interpolers from experimental data that can 
-        either be retrieved from a file downloaded from any web site or from 
-        Meep's materials library that applies a Drude-Lorentz model fit.
-        
-    2. Polarizability, induced dipolar moment, field, scattering, absorption, 
-    power and temperature tools.
-        This functions compute physical magnitudes by applying different 
-        electromagnetic models and aproximations. Cuasistatic dipolar 
-        approximation, Clausius-Mosotti and Kuwata models, Mie theory and 
-        Gaussian beam expressions are used.
+These functions compute physical magnitudes by applying different 
+electromagnetic models and aproximations. Cuasistatic dipolar 
+approximation, Clausius-Mosotti and Kuwata models, Mie theory and 
+Gaussian beam expressions are used.
 
 Some of its most useful tools are...
 
-epsilon_function : function
-    Generates an interpolation function for epsilon from experimental data.
 alpha_Clausius_Mosotti : function
     Returns Clausius-Mosotti polarizability alpha for a sphere in units of volume.
 alpha_Kuwata : function
@@ -49,267 +46,10 @@ else:
     raise ValueError("Your PC must be registered at the top of this code")
 
 import numpy as np
-import os
 try:
     import PyMieScatt as ps
 except:
     raise OSError("Must install PyMieScatt module using, for example, `pip install PyMieScatt`")
-from scipy.interpolate import interp1d
-try:
-    import v_meep as vm
-except:
-    print("Meep functions not available. Don't worry! You can still use everything else")
-import v_utilities as vu
-
-#%% EPSILON INTERPOLATION
-
-def epsilon_interpoler_from_n(wlen, complex_n):
-    """
-    Generates an interpolation function for epsilon from experimental N data.
-
-    Parameters
-    ----------
-    wlen : np.array, list
-        Wavelength in nm.
-    complex_n : np.array, list
-        Complex refractive index N = n + ik, dimensionless.
-
-    Returns
-    -------
-    epsilon_function : function
-        Epsilon interpoler that takes wavelength in nm as argument and returns 
-        complex dielectric constant or relative permitivitty 
-        epsilon = epsilon' + i epsilon'', dimensionless.
-    """
-
-    n_function = interp1d(wlen, np.real(complex_n), kind="cubic")
-    k_function = interp1d(wlen, np.imag(complex_n), kind="cubic")
-    N_function = lambda wl : n_function(wl) + 1j * k_function(wl)
-    epsilon_function = lambda wl : np.power(N_function(wl), 2)
-    
-    return epsilon_function
-
-def epsilon_interpoler_from_epsilon(wlen, complex_epsilon):
-    """
-    Generates an interpolation function for epsilon from experimental epsilon data.
-
-    Parameters
-    ----------
-    wlen : np.array, list
-        Wavelength in nm.
-    complex_epsilon : np.array, list
-        Complex dielectric constant or relative permitivitty 
-        epsilon = epsilon' + i epsilon'', dimensionless.
-
-    Returns
-    -------
-    epsilon_function : function
-        Epsilon interpoler that takes wavelength in nm as argument and returns 
-        complex dielectric constant or relative permitivitty 
-        epsilon = epsilon' + i epsilon'', dimensionless.
-    """
-
-    real_function = interp1d(wlen, np.real(complex_epsilon), kind="cubic")
-    imag_function = interp1d(wlen, np.imag(complex_epsilon), kind="cubic")
-    epsilon_function = lambda wl : real_function(wl) + 1j * imag_function(wl)
-    
-    return epsilon_function
-
-def epsilon_function_from_meep(material="Au", paper="JC", from_um_factor=1e-3):
-    
-    """
-    Generates a function for isotropic epsilon from Meep Drude-Lorentz fit data.
-    
-    Parameters
-    ----------
-    material="Au" : str
-        Material's chemical symbol. Available: 'Au' for gold.
-    paper="JC" : str
-        Paper source of experimental data. Available: 'JC' for Johnson 
-        and Christy, 'R' for Rakic, 'P' for Palik.
-    from_um_factor=1e-3 : float, optional
-        Meep factor of length scale implying 1 Meep length unit is 
-        from_um_factor length units in μm. If provided, the function takes 
-        wavelength in Meep units instead of nm.
-        
-    Returns
-    -------
-    epsilon_function : function
-        Epsilon function that takes wavelength in nm or Meep units as argument 
-        and returns complex dielectric constant or relative permitivitty 
-        epsilon = epsilon' + i epsilon'', dimensionless.
-        
-    Raises
-    ------
-    ValueError : "Material should either be..."
-        When the desired material isn't available.
-    ValueError : "Reference paper should either be..."
-        When the desired paper reference of experimental data isn't available.
-    ValueError : "Data should either be from..."
-        When the desired data source isn't available.
-    ValueError : "Experimental data couldn't be found. Sorry!"
-        When the combination of parameters causes the data not to be found.
-    """
-
-    
-    available_materials = {"Au": "gold", "Ag": "silver"}
-    available_papers = {"JC": "Johnson & Christy", "R": "Rakic", "P": "Palik"}
-    
-    if material not in available_materials.keys():
-        error = "Data should either be from "
-        error += vu.enumerate_string(vu.join_strings_dict(available_materials), 
-                                     "or", True)
-        raise ValueError(error)
-    if paper not in available_papers.keys():
-        error = "Reference paper for experimental data should either be "
-        error += vu.enumerate_string(vu.join_strings_dict(available_papers), 
-                                     "or", True)
-        raise ValueError(error)
-        
-    medium = vm.import_medium(material, 
-                              paper=paper) # This one has from_um_factor=1
-    
-    print(f"Data loaded using Meep and '{paper}'")
-    epsilon_function = lambda wlen : medium.epsilon(1/(wlen*from_um_factor))[0,0]
-    # To pass it to the medium, I transform wavelength from nm (or Meep units) to um
-    
-    return epsilon_function
-
-def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo"):
-    """
-    Generates an interpolation function for epsilon from experimental data.
-    
-    Parameters
-    ----------
-    material="Au" : str
-        Material's chemical symbol. Available: 'Au' for gold.
-    paper="JC" : str
-        Paper source of experimental data. Available: 'JC' for Johnson 
-        and Christy, 'R' for Rakic.
-    reference="RIinfo" : str
-        Reference from which the data was extracted, for example a web page. 
-        Available: 'RIinfo' for 'www.refractiveindex.info'
-        
-    Returns
-    -------
-    epsilon_function : function
-        Epsilon interpoler that takes wavelength in nm as argument and returns 
-        complex dielectric constant or relative permitivitty 
-        epsilon = epsilon' + i epsilon'', dimensionless.
-    
-    Raises
-    ------
-    ValueError : "Material should either be..."
-        When the desired material isn't available.
-    ValueError : "Reference paper should either be..."
-        When the desired paper reference of experimental data isn't available.
-    ValueError : "Data should either be from..."
-        When the desired data source isn't available.
-    ValueError : "Experimental data couldn't be found. Sorry!"
-        When the combination of parameters causes the data not to be found.
-    """
-    
-    available_materials = {"Au": "gold", "Ag": "silver"}
-    available_papers = {"JC": "Johnson & Christy",
-                        "R": "Rakic"}
-    available_references = {"RIinfo": "www.refractiveindex.info"}
-    
-    if material not in available_materials.keys():
-        error = "Data should either be from "
-        error += vu.enumerate_string(vu.join_strings_dict(available_materials), 
-                                     "or", True)
-        raise ValueError(error)
-    if paper not in available_papers.keys():
-        error = "Reference paper for experimental data should either be "
-        error += vu.enumerate_string(vu.join_strings_dict(available_papers), 
-                                     "or", True)
-        raise ValueError(error)
-    if reference not in available_references.keys():
-        error = "Experimental data should either be extracted from "
-        error += vu.enumerate_string(vu.join_strings_dict(available_references), 
-                                     "or", True)
-        raise ValueError(error)
-    
-    data_series = os.listdir(os.path.join(syshome, 'MaterialsData'))
-    
-    try:
-        data_files = []
-        for df in data_series:
-            if (f"_{paper}_") in df and material in df and reference in df:
-                data_files.append( os.path.join(syshome, 'MaterialsData', df) )
-    except:
-        raise ValueError("Experimental data couldn't be found. Sorry!")
-    
-    file = data_files[0]
-    print(f"Data loaded from '{file}'")
-    data = np.loadtxt(file)
-    
-    if 'N' in file:
-        epsilon_function = epsilon_interpoler_from_n(
-            data[:,0], data[:,1] + 1j*data[:,2])
-    elif "eps" in file.lower:
-        epsilon_function = epsilon_interpoler_from_epsilon(
-            data[:,0], data[:,1] + 1j*data[:,2])
-            
-    return epsilon_function
-
-def epsilon_function(material="Au", paper="JC", reference="RIinfo",
-                     from_um_factor=1e-3):
-    """
-    Generates an interpolation function for epsilon from experimental data.
-    
-    Parameters
-    ----------
-    material="Au" : str
-        Material's chemical symbol. Available: 'Au' for gold.
-    paper="JC" : str
-        Reference paper of experimental data. Available: 'JC' for Johnson and 
-        Christy, 'R' for Rakic, 'P' for Palik.
-    reference="RIinfo" : str
-        Reference from which the data was extracted, for example a web page. 
-        Available: 'RIinfo' for 'www.refractiveindex.info' and 'Meep' for Meep 
-        materials library that uses a Drude-Lorentz model to fit data.
-    from_um_factor=1e-3 : float, optional
-        Meep factor of length scale implying 1 Meep length unit is 
-        from_um_factor length units in μm. If provided, the function takes 
-        wavelength in Meep units instead of nm.
-        
-    Returns
-    -------
-    epsilon_function : function
-        Epsilon function that takes wavelength in nm or Meep units as argument 
-        and returns complex dielectric constant or relative permitivitty 
-        epsilon = epsilon' + i epsilon'', dimensionless.
-        
-    Raises
-    ------
-    ValueError : "Material should either be..."
-        When the desired material isn't available.
-    ValueError : "Reference paper should either be..."
-        When the desired paper reference of experimental data isn't available.
-    ValueError : "Data should either be from..."
-        When the desired data source isn't available.
-    ValueError : "Experimental data couldn't be found. Sorry!"
-        When the combination of parameters causes the data not to be found.
-    """
-    
-    available_references = {"RIinfo": "www.refractiveindex.info",
-                           "Meep": "Meep materials library & Drude-Lorentz fit"}
-    
-    if reference not in available_references.keys():
-        error = "Data should either be from"
-        error += vu.enumerate_string(vu.join_strings_dict(available_references), 
-                                     "or", True)
-        raise ValueError(error)
-    
-    if reference=="Meep":
-        epsilon_function = epsilon_function_from_meep(material, paper, 
-                                                      from_um_factor)
-    elif reference=="RIinfo":
-        epsilon_function = epsilon_function_from_file(material, paper, 
-                                                      reference)
-    
-    return epsilon_function
 
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
 
