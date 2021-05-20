@@ -49,8 +49,8 @@ import v_save as vs
             help="Reflective index of sourrounding medium")
 @cli.option("--wlen", "-wl", "wlen", default=532, type=float,
             help="Wavelength expressed in nm")
-def main(series, folder, resolution, from_um_factor, 
-         r, paper, submerged_index, wlen):
+def main(series, folder, resolution, from_um_factor, #paper,
+         r, submerged_index, wlen):
     #%% PARAMETERS
     
     # Au sphere
