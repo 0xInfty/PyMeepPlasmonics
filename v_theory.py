@@ -254,7 +254,7 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo"):
     return epsilon_function
 
 def epsilon_function(material="Au", paper="JC", reference="RIinfo",
-                     medium=None, from_um_factor=1e-3):
+                     from_um_factor=1e-3):
     """
     Generates an interpolation function for epsilon from experimental data.
     
@@ -269,18 +269,16 @@ def epsilon_function(material="Au", paper="JC", reference="RIinfo",
         Reference from which the data was extracted, for example a web page. 
         Available: 'RIinfo' for 'www.refractiveindex.info' and 'Meep' for Meep 
         materials library that uses a Drude-Lorentz model to fit data.
-    medium=None : mp.Medium, optional
-        Meep medium instance. If none is specified, a new instance will be 
-        internally initialized.
-    from_um_factor=1 : float, optional
+    from_um_factor=1e-3 : float, optional
         Meep factor of length scale implying 1 Meep length unit is 
-        from_um_factor length units in μm.
+        from_um_factor length units in μm. If provided, the function takes 
+        wavelength in Meep units instead of nm.
         
     Returns
     -------
     epsilon_function : function
-        Epsilon interpoler that takes wavelength in nm as argument and returns 
-        complex dielectric constant or relative permitivitty 
+        Epsilon function that takes wavelength in nm or Meep units as argument 
+        and returns complex dielectric constant or relative permitivitty 
         epsilon = epsilon' + i epsilon'', dimensionless.
         
     Raises
