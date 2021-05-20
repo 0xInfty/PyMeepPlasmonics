@@ -31,7 +31,7 @@ E0 = np.array([0,0,1])
 
 npoints = 500
 
-folder = "AllWaterField"
+folder = "AllWaterField2"
 
 #%% SAVING CONFIGURATION
 
@@ -46,10 +46,6 @@ plot_file = lambda n : os.path.join(
 #%% INNER MEDIUM EPSILON
 
 wlen = np.linspace(*wlen_range, npoints)
-
-# freq_meep = 1/wlen_meep
-# epsilon_meep = np.array([medium.epsilon(f) for f in freq_meep]) # Tensor
-# epsilon_meep = np.array([et[0,0] for et in epsilon_meep]) # Isotropic
 
 epsilon_func_meep_jc = vt.epsilon_function(material="Au", 
                                            paper="JC", 
