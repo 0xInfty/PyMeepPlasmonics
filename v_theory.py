@@ -174,6 +174,7 @@ def epsilon_function_from_meep(material="Au", paper="JC",
                                   from_um_factor=from_um_factor, 
                                   paper=paper)
     
+    print(f"Data loaded using Meep and '{paper}'")
     epsilon_function = lambda wlen : medium.epsilon(1e3*from_um_factor/wlen)[0,0]
     
     return epsilon_function
@@ -213,7 +214,8 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo"):
     """
     
     available_materials = {"Au": "gold", "Ag": "silver"}
-    available_papers = {"JC": "Johnson & Christy"}
+    available_papers = {"JC": "Johnson & Christy",
+                        "R": "Rakic"}
     available_references = {"RIinfo": "www.refractiveindex.info"}
     
     if material not in available_materials.keys():
@@ -237,20 +239,13 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo"):
     try:
         data_files = []
         for df in data_series:
-            if paper in df and material in df and reference in df:
+            if (f"_{paper}_") in df and material in df and reference in df:
                 data_files.append( os.path.join(syshome, 'MaterialsData', df) )
     except:
         raise ValueError("Experimental data couldn't be found. Sorry!")
     
-    if len(data_files)>1:
-        for df in data_files:
-            if "eps" in df.lower():
-                file = df
-                break
-            file = df
-    else:
-        file = data_files[0]
-    
+    file = data_files[0]
+    print(f"Data loaded from '{file}'")
     data = np.loadtxt(file)
     
     if 'N' in file:
@@ -315,7 +310,7 @@ def epsilon_function(material="Au", paper="JC", reference="RIinfo",
     
     if reference=="Meep":
         epsilon_function = epsilon_function_from_meep(
-            material, paper, reference, medium, from_um_factor)
+            material, paper, medium, from_um_factor)
     elif reference=="RIinfo":
         epsilon_function = epsilon_function_from_file(material, paper, reference)
     
