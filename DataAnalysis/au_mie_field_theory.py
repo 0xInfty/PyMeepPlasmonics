@@ -23,7 +23,7 @@ import v_save as vs
 #%% PARAMETERS
 
 r = 30 # nm
-wlen_range = np.array([400, 700]) # nm
+wlen_range = np.array([400, 800]) # nm
 wlen_chosen = [405, 532, 642]
 epsilon_ext = (1.33)**2 # Water
 # E0_func = lambda n : np.array([[0,0,1] for i in range(n)])
@@ -31,10 +31,12 @@ E0 = np.array([0,0,1])
 
 npoints = 500
 
-plot_folder = f"DataAnalysis/AllWaterField/AllWaterField{2*r:1.0f}"
+folder = "AllWaterField"
 
 #%% SAVING CONFIGURATION
 
+series = f"{folder}{2*r:1.0f}"
+plot_folder = f"DataAnalysis/{folder}/{series}"
 home = vs.get_home()
 if not os.path.isdir(os.path.join(home, plot_folder)): 
     vs.new_dir(os.path.join(home, plot_folder))
@@ -83,6 +85,8 @@ nplots = len(functions)
 fig = plt.figure(figsize=(nplots*6.4, 6.4))
 axes = fig.subplots(ncols=nplots)
 
+max_value = []
+min_value = []
 for ax, f, t, y in zip(axes, functions, titles, ylabels):
     for wl, eps, l in zip(wlen_long, epsilon, labels):
         ax.set_title(t)
@@ -92,6 +96,11 @@ for ax, f, t, y in zip(axes, functions, titles, ylabels):
         ax.yaxis.set_label_text(y)
         ax.legend()
         ax.set_xlim(*wlen_range)
+        max_value.append(max(f(eps)))
+        min_value.append(min(f(eps)))
+        
+for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)), 
+                             max(max_value)+.1*(max(max_value)-min(min_value))])
     
 plt.savefig(plot_file("Epsilon.png"))
 
@@ -129,6 +138,8 @@ nplots = len(functions)
 fig = plt.figure(figsize=(nplots*6.4, 6.4))
 axes = fig.subplots(ncols=nplots)
 
+max_value = []
+min_value = []
 for ax, f, t, y in zip(axes, functions, titles, ylabels):
     for wl, al, l in zip(wlen_alpha, alpha, labels):
         ax.set_title(t)
@@ -138,6 +149,11 @@ for ax, f, t, y in zip(axes, functions, titles, ylabels):
         ax.yaxis.set_label_text(y)
         ax.legend()
         ax.set_xlim(*wlen_range)
+        max_value.append(max(f(al)))
+        min_value.append(min(f(al)))
+        
+for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)), 
+                             max(max_value)+.1*(max(max_value)-min(min_value))])
     
 plt.savefig(plot_file("Polarizability.png"))
 
