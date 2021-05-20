@@ -24,7 +24,7 @@ import h5py as h5
 import meep as mp
 import os
 from time import time
-# from v_meep import import_medium
+# from v_materials import import_medium
 import v_save as vs
 
 #%% COMMAND LINE FORMATTER
