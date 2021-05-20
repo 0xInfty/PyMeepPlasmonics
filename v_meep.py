@@ -120,12 +120,12 @@ def import_medium(name, from_um_factor=1, paper="R"):
         metal_visible_range = mp.FreqRange(min=from_um_factor*1e3/800, 
                                            max=from_um_factor*1e3/400)
     
-        Au_JC_visible_frq0 = 1*from_um_factor/(0.139779231751333)
-        Au_JC_visible_gam0 = 1*from_um_factor/(26.1269913352870)
+        Au_JC_visible_frq0 = 1*from_um_factor/0.139779231751333
+        Au_JC_visible_gam0 = 1*from_um_factor/26.1269913352870
         Au_JC_visible_sig0 = 1
         
-        Au_JC_visible_frq1 = 1*from_um_factor/(0.404064525036786)
-        Au_JC_visible_gam1 = 1*from_um_factor/(1.12834046202759)
+        Au_JC_visible_frq1 = 1*from_um_factor/0.404064525036786
+        Au_JC_visible_gam1 = 1*from_um_factor/1.12834046202759
         Au_JC_visible_sig1 = 2.07118534879440
         
         Au_JC_visible_susc = [mp.DrudeSusceptibility(frequency=Au_JC_visible_frq0, gamma=Au_JC_visible_gam0, sigma=Au_JC_visible_sig0),
@@ -148,12 +148,12 @@ def import_medium(name, from_um_factor=1, paper="R"):
         metal_visible_range = mp.FreqRange(min=from_um_factor*1e3/800, 
                                            max=from_um_factor*1e3/400)
         
-        Au_visible_frq0 = 1/(0.0473629248511456*from_um_factor)
-        Au_visible_gam0 = 1/(0.255476199605166*from_um_factor)
+        Au_visible_frq0 = 1*from_um_factor/0.0473629248511456
+        Au_visible_gam0 = 1*from_um_factor/0.255476199605166
         Au_visible_sig0 = 1
         
-        Au_visible_frq1 = 1/(0.800619321082804*from_um_factor)
-        Au_visible_gam1 = 1/(0.381870287531951*from_um_factor)
+        Au_visible_frq1 = 1*from_um_factor/0.800619321082804
+        Au_visible_gam1 = 1*from_um_factor/0.381870287531951
         Au_visible_sig1 = -169.060953137985
         
         Au_visible_susc = [mp.DrudeSusceptibility(frequency=Au_visible_frq0, gamma=Au_visible_gam0, sigma=Au_visible_sig0),
@@ -229,12 +229,12 @@ def import_medium(name, from_um_factor=1, paper="R"):
         metal_visible_range = mp.FreqRange(min=from_um_factor*1e3/800, 
                                            max=from_um_factor*1e3/400)
         
-        Ag_visible_frq0 = 1*from_um_factor/(0.142050162130618)
-        Ag_visible_gam0 = 1*from_um_factor/(18.0357292925015)
+        Ag_visible_frq0 = 1*from_um_factor/0.142050162130618
+        Ag_visible_gam0 = 1*from_um_factor/18.0357292925015
         Ag_visible_sig0 = 1
         
-        Ag_visible_frq1 = 1*from_um_factor/(0.115692151792108)
-        Ag_visible_gam1 = 1*from_um_factor/(0.257794324096575)
+        Ag_visible_frq1 = 1*from_um_factor/0.115692151792108
+        Ag_visible_gam1 = 1*from_um_factor/0.257794324096575
         Ag_visible_sig1 = 3.74465275944019
         
         Ag_visible_susc = [mp.DrudeSusceptibility(frequency=Ag_visible_frq0, gamma=Ag_visible_gam0, sigma=Ag_visible_sig0),
