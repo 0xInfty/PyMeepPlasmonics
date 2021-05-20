@@ -184,6 +184,31 @@ fig.set_size_inches([10.03,  4.8 ])
 
 plt.savefig(file("MaxFieldProfile.png"))
 
+#%% PLOT MAXIMUM INTESIFICATION PROFILE (LINES, JUST THE RESULTS)
+
+# colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+#           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+colors = ['#1f77b4', '#2ca02c', '#d62728']
+
+l_meep = []
+fig = plt.figure()
+plt.title("Máxima intensificación del campo en agua en dirección de la polarización")
+for j in range(n):
+    plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
+                         10*(cell_width[j]/2 - pml_width[j]),
+                         in_z_profile[j].shape[1]), 
+             is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], :]),
+             colors[j],
+             label=f"Meep $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")[0]
+plt.legend([f"$\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm" for j in range(n)],
+           loc='upper right')
+plt.xlabel("Distancia en z [nm])")
+plt.ylabel("Campo eléctrico Ez [u.a.]")
+# fig.set_size_inches([10.03,  4.8 ])
+
+plt.savefig(file("MaxFieldProfileResults.png"))
+
+
 #%% PLOT MAXIMUM INTENSIFCATION FIELD (PLANE)
 
 fig = plt.figure(figsize=(n*6.4, 6.4))
@@ -215,11 +240,9 @@ freqs = 1e3*from_um_factor[0]/wlens
 scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
                             1e3*from_um_factor[0]/f,
                             2*r[0]*1e3*from_um_factor[0],
+                            nMedium=index[0], # Refraction Index of Medium
                             asDict=True)['Qsca'] 
                     for f in freqs]
-
-plt.figure()
-plt.plot(wlens, scatt_eff_theory)
 
 wlen_max = wlens[np.argmax(scatt_eff_theory)]
 e_wlen_max = np.mean([wlens[i+1]-wlens[i] for i in range(499)])
@@ -260,12 +283,16 @@ for j in range(len(f)):
 
 #%% SHOW SOURCE
 
+# colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+#           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+colors = ['#1f77b4', '#2ca02c', '#d62728']
+
 plt.figure()
-for sfs in source_field_in_fase:
-    plt.plot(np.linspace(0,10,len(sfs)), sfs)
+for sfs, c in zip(source_field_in_fase, colors):
+    plt.plot(np.linspace(0,10,len(sfs)), sfs, c)
     plt.xlabel("Tiempo ($T=\lambda/c$)")
     plt.ylabel("Campo eléctrico Ez (u.Meep)")
-plt.legend(["$\lambda$ = {} nm".format(wl*10) for wl in wlen])
+plt.legend(["$\lambda$ = {:.0f} nm".format(wl*10) for wl in wlen])
 
 plt.savefig(file("Source.png"))
 
@@ -426,7 +453,7 @@ def make_pic_plane(i):
                        vmin=lims(j)[0], vmax=lims(j)[1])
         axes[j].set_xlabel("Distancia en y (u.a.)")
         axes[j].set_ylabel("Distancia en z (u.a.)")
-        axes[j].set_title("$\lambda$={} nm".format(wlen[j]*10))
+        axes[j].set_title("$\lambda$={:.0f} nm".format(wlen[j]*10))
     axes[0].text(-.1, -.105, label_function(i), transform=axes[0].transAxes)
     plt.show()
     return axes
