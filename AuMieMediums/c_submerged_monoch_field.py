@@ -61,7 +61,7 @@ def main(series, folder, resolution, from_um_factor, #paper,
     wlen = wlen / ( from_um_factor * 1e3 ) # Wavelength now in Meep units
     
     # Space configuration
-    pml_width = 0.38 * wlen # 0.5 * wlen
+    pml_width = 0.5 * wlen # 0.5 * wlen
     air_width = r/2 # 2 * r
     
     # Field Measurements
