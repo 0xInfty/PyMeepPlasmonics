@@ -584,16 +584,15 @@ def epsilon_function(material="Au", paper="JC", reference="RIinfo",
     
     return epsilon_function
 
+#%% MEEP MEDIUM THAT TAKES FUNCTION
 
-#%% MEEP MEDIUM WITH INTERPOLATION
-
-class MediumInterpoler(mp.Medium):
+class MediumFromFunction(mp.Medium):
     
-    """A Meep Medium subclass that loads experimental data and interpoles"""
+    """A Meep Medium with isotropic complex epsilon and mu as functions of wavelength in nm"""
     
-    def __init__(self, material,
-                 paper="JC",
-                 reference="RIinfo",
+    def __init__(self, 
+                 epsilon_function=lambda wlen:1,
+                 mu_function=lambda wlen:1,
                  from_um_factor=1,
                  epsilon_diag=mp.Vector3(1, 1, 1),
                  epsilon_offdiag=mp.Vector3(),
@@ -649,14 +648,54 @@ class MediumInterpoler(mp.Medium):
                  H_chi3=H_chi3,
                  valid_freq_range=valid_freq_range)
         
-        self.material = material
-        self.paper = paper
-        self.reference = reference
-        self.from_um_factor = from_um_factor
+        self.epsilon_function = epsilon_function
+        self.mu_function = mu_function
         
+        self.from_um_factor = from_um_factor
+                
         if len(E_susceptibilities)>0 or len(H_susceptibilities)>0:
             raise ValueError("This class doesn't take susceptibilities!")
+
+        try:
+            eps_wlen_range = epsilon_function._wlen_range_
+        except:
+            eps_wlen_range = np.array([-mp.inf, mp.inf])
+
+        try:
+            mu_wlen_range = mu_function._wlen_range_
+        except:
+            mu_wlen_range = np.array([-mp.inf, mp.inf])
+            
+        if self.valid_freq_range.min == -mp.inf:
+            max_current_wlen = np.inf
+        else:
+            max_current_wlen = 1/self.valid_freq_range.min
+        if self.valid_freq_range.max == mp.inf:
+            min_current_wlen = -np.inf
+        else:
+            min_current_wlen = 1/self.valid_freq_range.max
         
+        self.valid_wlen_range = np.array([max([eps_wlen_range[0],
+                                               mu_wlen_range[0],
+                                               min_current_wlen]),
+                                          min([eps_wlen_range[1],
+                                               mu_wlen_range[1],
+                                               max_current_wlen])])
+        
+        if self.valid_wlen_range[1] == np.inf:
+            min_freq = -mp.inf
+        elif 1/self.valid_wlen_range[1] < mp.inf:
+            min_freq = 1/self.valid_wlen_range[1]
+        else:
+            min_freq = -mp.inf
+        if self.valid_wlen_range[0] == -np.inf:
+            max_freq = mp.inf
+        elif 1/self.valid_wlen_range[0] > -mp.inf:
+            max_freq = 1/self.valid_wlen_range[0]
+        else:
+            max_freq = -mp.inf
+        
+        self.valid_freq_range = mp.FreqRange(min_freq, max_freq)
         
     def epsilon(self,freq):
         """
@@ -683,10 +722,6 @@ class MediumInterpoler(mp.Medium):
             freqs = np.squeeze(freq)
             freqs = freqs[:, np.newaxis, np.newaxis]
 
-        epsilon_function = epsilon_function_from_file(self.material,
-                                                      self.paper,
-                                                      self.reference)
-
         # Check for values outside of allowed ranges
         if np.min(np.squeeze(freqs)) < self.valid_freq_range.min:
             raise ValueError('User specified frequency {} is below the Medium\'s limit, {}.'.format(np.min(np.squeeze(freqs)),self.valid_freq_range.min))
@@ -695,10 +730,12 @@ class MediumInterpoler(mp.Medium):
 
         # Initialize with instantaneous dielectric tensor
         epsmu = np.expand_dims(mp.Matrix(diag=diag,offdiag=offdiag),axis=0)
-
-        # Iterate through susceptibilities
-        for i_sus in range(len(susceptibilities)):
-            epsmu = epsmu + susceptibilities[i_sus].eval_susceptibility(freqs)
+        
+        # Use function for epsilon
+        if freq==0:
+            epsmu = epsmu * self.epsilon_function(mp.inf)
+        else:
+            epsmu = epsmu * self.epsilon_function(1/freq)
 
         # Account for conductivity term (only multiply if nonzero to avoid unnecessary complex numbers)
         conductivity = np.expand_dims(mp.Matrix(diag=conductivity_diag,offdiag=conductivity_offdiag),axis=0)
@@ -717,8 +754,20 @@ class MediumInterpoler(mp.Medium):
             freqs = np.squeeze(freq)
             freqs = freqs[:, np.newaxis, np.newaxis]
 
+        # Check for values outside of allowed ranges
+        if np.min(np.squeeze(freqs)) < self.valid_freq_range.min:
+            raise ValueError('User specified frequency {} is below the Medium\'s limit, {}.'.format(np.min(np.squeeze(freqs)),self.valid_freq_range.min))
+        if np.max(np.squeeze(freqs)) > self.valid_freq_range.max:
+            raise ValueError('User specified frequency {} is above the Medium\'s limit, {}.'.format(np.max(np.squeeze(freqs)),self.valid_freq_range.max))
+
         # Initialize with instantaneous dielectric tensor
         epsmu = np.expand_dims(mp.Matrix(diag=diag,offdiag=offdiag),axis=0)
+        
+        # Use function for mu
+        if freq==0:
+            epsmu = epsmu * self.mu_function(mp.inf)
+        else:
+            epsmu = epsmu * self.mu_function(1/freq)
 
         # Account for conductivity term (only multiply if nonzero to avoid unnecessary complex numbers)
         conductivity = np.expand_dims(mp.Matrix(diag=conductivity_diag,offdiag=conductivity_offdiag),axis=0)
@@ -727,3 +776,146 @@ class MediumInterpoler(mp.Medium):
 
         # Convert list matrix to 3D numpy array size [freqs,3,3]
         return np.squeeze(epsmu)
+    
+# #%% MEEP MEDIUM WITH INTERPOLER
+
+# class MediumInterpoler(MediumFromFunction):
+    
+#     """A Meep Medium subclass that loads experimental data and interpoles"""
+    
+#     def __init__(self, material,
+#                   paper="JC",
+#                   reference="RIinfo",
+#                   from_um_factor=1,
+#                   epsilon_diag=mp.Vector3(1, 1, 1),
+#                   epsilon_offdiag=mp.Vector3(),
+#                   mu_diag=mp.Vector3(1, 1, 1),
+#                   mu_offdiag=mp.Vector3(),
+#                   E_susceptibilities=[],
+#                   H_susceptibilities=[],
+#                   E_chi2_diag=mp.Vector3(),
+#                   E_chi3_diag=mp.Vector3(),
+#                   H_chi2_diag=mp.Vector3(),
+#                   H_chi3_diag=mp.Vector3(),
+#                   D_conductivity_diag=mp.Vector3(),
+#                   D_conductivity_offdiag=mp.Vector3(),
+#                   B_conductivity_diag=mp.Vector3(),
+#                   B_conductivity_offdiag=mp.Vector3(),
+#                   epsilon=None,
+#                   index=None,
+#                   mu=None,
+#                   chi2=None,
+#                   chi3=None,
+#                   D_conductivity=None,
+#                   B_conductivity=None,
+#                   E_chi2=None,
+#                   E_chi3=None,
+#                   H_chi2=None,
+#                   H_chi3=None,
+#                   valid_freq_range=mp.FreqRange(min=-mp.inf, max=mp.inf)):
+        
+#         super().__init__(epsilon_diag=epsilon_diag,
+#                   epsilon_offdiag=epsilon_offdiag,
+#                   mu_diag=mu_diag,
+#                   mu_offdiag=mu_offdiag,
+#                   E_susceptibilities=[],
+#                   H_susceptibilities=[],
+#                   E_chi2_diag=E_chi2_diag,
+#                   E_chi3_diag=E_chi3_diag,
+#                   H_chi2_diag=H_chi2_diag,
+#                   H_chi3_diag=H_chi3_diag,
+#                   D_conductivity_diag=D_conductivity_diag,
+#                   D_conductivity_offdiag=D_conductivity_offdiag,
+#                   B_conductivity_diag=B_conductivity_diag,
+#                   B_conductivity_offdiag=B_conductivity_offdiag,
+#                   epsilon=epsilon,
+#                   index=index,
+#                   mu=mu,
+#                   chi2=chi2,
+#                   chi3=chi3,
+#                   D_conductivity=D_conductivity,
+#                   B_conductivity=B_conductivity,
+#                   E_chi2=E_chi2,
+#                   E_chi3=E_chi3,
+#                   H_chi2=H_chi2,
+#                   H_chi3=H_chi3,
+#                   valid_freq_range=valid_freq_range)
+        
+#         self.material = material
+#         self.paper = paper
+#         self.reference = reference
+#         self.from_um_factor = from_um_factor
+        
+#         if len(E_susceptibilities)>0 or len(H_susceptibilities)>0:
+#             raise ValueError("This class doesn't take susceptibilities!")
+        
+        
+#     def epsilon(self,freq):
+#         """
+#         Returns the medium's permittivity tensor as a 3x3 Numpy array at the specified
+#         frequency `freq` which can be either a scalar, list, or Numpy array. In the case
+#         of a list/array of N frequency points, a Numpy array of size Nx3x3 is returned.
+#         """
+#         return self._get_eps(self.epsilon_diag, self.epsilon_offdiag, self.E_susceptibilities, self.D_conductivity_diag, self.D_conductivity_offdiag, freq)
+
+#     def mu(self,freq):
+#         """
+#         Returns the medium's permeability tensor as a 3x3 Numpy array at the specified
+#         frequency `freq` which can be either a scalar, list, or Numpy array. In the case
+#         of a list/array of N frequency points, a Numpy array of size Nx3x3 is returned.
+#         """
+#         return self._get_mu(self.mu_diag, self.mu_offdiag, self.H_susceptibilities, self.B_conductivity_diag, self.B_conductivity_offdiag, freq)
+ 
+#     def _get_eps(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq):
+        
+#         # Clean the input
+#         if np.isscalar(freq):
+#             freqs = np.array(freq)[np.newaxis, np.newaxis, np.newaxis]
+#         else:
+#             freqs = np.squeeze(freq)
+#             freqs = freqs[:, np.newaxis, np.newaxis]
+
+#         epsilon_function = epsilon_function_from_file(self.material,
+#                                                       self.paper,
+#                                                       self.reference)
+
+#         # Check for values outside of allowed ranges
+#         if np.min(np.squeeze(freqs)) < self.valid_freq_range.min:
+#             raise ValueError('User specified frequency {} is below the Medium\'s limit, {}.'.format(np.min(np.squeeze(freqs)),self.valid_freq_range.min))
+#         if np.max(np.squeeze(freqs)) > self.valid_freq_range.max:
+#             raise ValueError('User specified frequency {} is above the Medium\'s limit, {}.'.format(np.max(np.squeeze(freqs)),self.valid_freq_range.max))
+
+#         # Initialize with instantaneous dielectric tensor
+#         epsmu = np.expand_dims(mp.Matrix(diag=diag,offdiag=offdiag),axis=0)
+
+#         # Iterate through susceptibilities
+#         for i_sus in range(len(susceptibilities)):
+#             epsmu = epsmu + susceptibilities[i_sus].eval_susceptibility(freqs)
+
+#         # Account for conductivity term (only multiply if nonzero to avoid unnecessary complex numbers)
+#         conductivity = np.expand_dims(mp.Matrix(diag=conductivity_diag,offdiag=conductivity_offdiag),axis=0)
+#         if np.count_nonzero(conductivity) > 0:
+#             epsmu = (1 + 1j/freqs * conductivity) * epsmu
+
+#         # Convert list matrix to 3D numpy array size [freqs,3,3]
+#         return np.squeeze(epsmu)
+    
+#     def _get_mu(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq):
+ 
+#         # Clean the input
+#         if np.isscalar(freq):
+#             freqs = np.array(freq)[np.newaxis, np.newaxis, np.newaxis]
+#         else:
+#             freqs = np.squeeze(freq)
+#             freqs = freqs[:, np.newaxis, np.newaxis]
+
+#         # Initialize with instantaneous dielectric tensor
+#         epsmu = np.expand_dims(mp.Matrix(diag=diag,offdiag=offdiag),axis=0)
+
+#         # Account for conductivity term (only multiply if nonzero to avoid unnecessary complex numbers)
+#         conductivity = np.expand_dims(mp.Matrix(diag=conductivity_diag,offdiag=conductivity_offdiag),axis=0)
+#         if np.count_nonzero(conductivity) > 0:
+#             epsmu = (1 + 1j/freqs * conductivity) * epsmu
+
+#         # Convert list matrix to 3D numpy array size [freqs,3,3]
+#         return np.squeeze(epsmu)
