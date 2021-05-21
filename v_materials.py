@@ -386,9 +386,14 @@ def epsilon_function_from_meep(material="Au", paper="JC", from_um_factor=1e-3):
     epsilon_function = lambda wlen : medium.epsilon(1/(wlen*from_um_factor))[0,0]
     # To pass it to the medium, I transform wavelength from nm (or Meep units) to um
     
+    wlen_range = 1/(np.flip(np.array([*medium.valid_freq_range]))*from_um_factor)
+    epsilon_function._wlen_range_ = wlen_range
+    epsilon_function._from_um_factor_ = from_um_factor
+    
     return epsilon_function
 
-def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo", plot=False):
+def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo", 
+                               from_um_factor=1e-3, plot=False):
     """
     Generates an interpolation function for epsilon from experimental data.
     
@@ -402,14 +407,18 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo", pl
     reference="RIinfo" : str
         Reference from which the data was extracted, for example a web page. 
         Available: 'RIinfo' for 'www.refractiveindex.info'
+    from_um_factor=1e-3 : float, optional
+        Meep factor of length scale implying 1 Meep length unit is 
+        from_um_factor length units in μm. If provided, the function takes 
+        wavelength in Meep units instead of nm.
     plot=False : bool
         Parameter that enables a plot of the interpolation and the data used.
         
     Returns
     -------
     epsilon_function : function
-        Epsilon interpoler that takes wavelength in nm as argument and returns 
-        complex dielectric constant or relative permitivitty 
+        Epsilon function that takes wavelength in nm or Meep units as argument 
+        and returns complex dielectric constant or relative permitivitty 
         epsilon = epsilon' + i epsilon'', dimensionless.
     
     Raises
@@ -459,14 +468,22 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo", pl
     print(f"Data loaded from '{file}'")
     data = np.loadtxt(file)
     
+    meep_wlen = data[:,0] / (1e3 * from_um_factor)
+    # Change wavelength units if necessary
+    # Going from nm to Meep units
+    
     if 'N' in file:
         epsilon_function = epsilon_interpoler_from_n(
-            data[:,0], data[:,1] + 1j*data[:,2])
+            meep_wlen, data[:,1] + 1j*data[:,2])
     elif "eps" in file.lower():
         epsilon_function = epsilon_interpoler_from_epsilon(
-            data[:,0], data[:,1] + 1j*data[:,2])
+            meep_wlen, data[:,1] + 1j*data[:,2])
     else:
         raise ValueError("Experimental data couldn't be recognized. Sorry!")
+    
+    meep_wlen_range = [min(meep_wlen), max(meep_wlen)]
+    epsilon_function._wlen_range_ = np.array(meep_wlen_range)
+    epsilon_function._from_um_factor_ = from_um_factor
             
     if plot:
         wlen = data[:,0]
@@ -559,9 +576,11 @@ def epsilon_function(material="Au", paper="JC", reference="RIinfo",
     if reference=="Meep":
         epsilon_function = epsilon_function_from_meep(material, paper, 
                                                       from_um_factor)
-    elif reference=="RIinfo":
+    else:
         epsilon_function = epsilon_function_from_file(material, paper, 
-                                                      reference)
+                                                      reference,
+                                                      from_um_factor)
+        
     
     return epsilon_function
 
@@ -570,11 +589,74 @@ def epsilon_function(material="Au", paper="JC", reference="RIinfo",
 
 class MediumInterpoler(mp.Medium):
     
-    """A Meep Medium subclass that holds a line instead of a whole volume"""
+    """A Meep Medium subclass that loads experimental data and interpoles"""
     
-    def __init__(self):
+    def __init__(self, material,
+                 paper="JC",
+                 reference="RIinfo",
+                 from_um_factor=1,
+                 epsilon_diag=mp.Vector3(1, 1, 1),
+                 epsilon_offdiag=mp.Vector3(),
+                 mu_diag=mp.Vector3(1, 1, 1),
+                 mu_offdiag=mp.Vector3(),
+                 E_susceptibilities=[],
+                 H_susceptibilities=[],
+                 E_chi2_diag=mp.Vector3(),
+                 E_chi3_diag=mp.Vector3(),
+                 H_chi2_diag=mp.Vector3(),
+                 H_chi3_diag=mp.Vector3(),
+                 D_conductivity_diag=mp.Vector3(),
+                 D_conductivity_offdiag=mp.Vector3(),
+                 B_conductivity_diag=mp.Vector3(),
+                 B_conductivity_offdiag=mp.Vector3(),
+                 epsilon=None,
+                 index=None,
+                 mu=None,
+                 chi2=None,
+                 chi3=None,
+                 D_conductivity=None,
+                 B_conductivity=None,
+                 E_chi2=None,
+                 E_chi3=None,
+                 H_chi2=None,
+                 H_chi3=None,
+                 valid_freq_range=mp.FreqRange(min=-mp.inf, max=mp.inf)):
         
-        super().__init__()
+        super().__init__(epsilon_diag=epsilon_diag,
+                 epsilon_offdiag=epsilon_offdiag,
+                 mu_diag=mu_diag,
+                 mu_offdiag=mu_offdiag,
+                 E_susceptibilities=[],
+                 H_susceptibilities=[],
+                 E_chi2_diag=E_chi2_diag,
+                 E_chi3_diag=E_chi3_diag,
+                 H_chi2_diag=H_chi2_diag,
+                 H_chi3_diag=H_chi3_diag,
+                 D_conductivity_diag=D_conductivity_diag,
+                 D_conductivity_offdiag=D_conductivity_offdiag,
+                 B_conductivity_diag=B_conductivity_diag,
+                 B_conductivity_offdiag=B_conductivity_offdiag,
+                 epsilon=epsilon,
+                 index=index,
+                 mu=mu,
+                 chi2=chi2,
+                 chi3=chi3,
+                 D_conductivity=D_conductivity,
+                 B_conductivity=B_conductivity,
+                 E_chi2=E_chi2,
+                 E_chi3=E_chi3,
+                 H_chi2=H_chi2,
+                 H_chi3=H_chi3,
+                 valid_freq_range=valid_freq_range)
+        
+        self.material = material
+        self.paper = paper
+        self.reference = reference
+        self.from_um_factor = from_um_factor
+        
+        if len(E_susceptibilities)>0 or len(H_susceptibilities)>0:
+            raise ValueError("This class doesn't take susceptibilities!")
+        
         
     def epsilon(self,freq):
         """
@@ -591,15 +673,19 @@ class MediumInterpoler(mp.Medium):
         of a list/array of N frequency points, a Numpy array of size Nx3x3 is returned.
         """
         return self._get_mu(self.mu_diag, self.mu_offdiag, self.H_susceptibilities, self.B_conductivity_diag, self.B_conductivity_offdiag, freq)
-
  
     def _get_eps(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq):
+        
         # Clean the input
         if np.isscalar(freq):
             freqs = np.array(freq)[np.newaxis, np.newaxis, np.newaxis]
         else:
             freqs = np.squeeze(freq)
             freqs = freqs[:, np.newaxis, np.newaxis]
+
+        epsilon_function = epsilon_function_from_file(self.material,
+                                                      self.paper,
+                                                      self.reference)
 
         # Check for values outside of allowed ranges
         if np.min(np.squeeze(freqs)) < self.valid_freq_range.min:
@@ -623,6 +709,7 @@ class MediumInterpoler(mp.Medium):
         return np.squeeze(epsmu)
     
     def _get_mu(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq):
+ 
         # Clean the input
         if np.isscalar(freq):
             freqs = np.array(freq)[np.newaxis, np.newaxis, np.newaxis]
@@ -630,18 +717,8 @@ class MediumInterpoler(mp.Medium):
             freqs = np.squeeze(freq)
             freqs = freqs[:, np.newaxis, np.newaxis]
 
-        # Check for values outside of allowed ranges
-        if np.min(np.squeeze(freqs)) < self.valid_freq_range.min:
-            raise ValueError('User specified frequency {} is below the Medium\'s limit, {}.'.format(np.min(np.squeeze(freqs)),self.valid_freq_range.min))
-        if np.max(np.squeeze(freqs)) > self.valid_freq_range.max:
-            raise ValueError('User specified frequency {} is above the Medium\'s limit, {}.'.format(np.max(np.squeeze(freqs)),self.valid_freq_range.max))
-
         # Initialize with instantaneous dielectric tensor
         epsmu = np.expand_dims(mp.Matrix(diag=diag,offdiag=offdiag),axis=0)
-
-        # Iterate through susceptibilities
-        for i_sus in range(len(susceptibilities)):
-            epsmu = epsmu + susceptibilities[i_sus].eval_susceptibility(freqs)
 
         # Account for conductivity term (only multiply if nonzero to avoid unnecessary complex numbers)
         conductivity = np.expand_dims(mp.Matrix(diag=conductivity_diag,offdiag=conductivity_offdiag),axis=0)
