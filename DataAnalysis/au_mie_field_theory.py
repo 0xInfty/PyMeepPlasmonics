@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import os
 import v_theory as vt
 import v_save as vs
+import v_materials as vmt
 
 #%% PARAMETERS
 
@@ -47,16 +48,16 @@ plot_file = lambda n : os.path.join(
 
 wlen = np.linspace(*wlen_range, npoints)
 
-epsilon_func_meep_jc = vt.epsilon_function(material="Au", 
+epsilon_func_meep_jc = vmt.epsilon_function(material="Au", 
                                            paper="JC", 
                                            reference="Meep")
-epsilon_func_meep_r = vt.epsilon_function(material="Au", 
+epsilon_func_meep_r = vmt.epsilon_function(material="Au", 
                                           paper="R", 
                                           reference="Meep")
-epsilon_func_exp_jc = vt.epsilon_function(material="Au", 
+epsilon_func_exp_jc = vmt.epsilon_function(material="Au", 
                                           paper="JC", 
                                           reference="RIinfo")
-epsilon_func_exp_r = vt.epsilon_function(material="Au", 
+epsilon_func_exp_r = vmt.epsilon_function(material="Au", 
                                           paper="R", 
                                           reference="RIinfo")
 

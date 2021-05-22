@@ -23,8 +23,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from time import time
-from v_meep import import_medium
+from v_materials import import_medium
 import v_save as vs
+import v_utilities as vu
 # from v_units import MeepUnitsManager
 
 #%% COMMAND LINE FORMATTER
@@ -51,8 +52,8 @@ import v_save as vs
             type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
 @cli.option("--courant", "-c", "courant", 
-            type=float, default=1.33,
-            help="Reflective index of sourrounding medium")
+            type=float, default=0.5,
+            help="Courant factor: time discretization from space discretization")
 @cli.option("--stime", "-st", "second_time_factor", 
             type=float, default=10,
             help="Second simulation total time expressed as multiples of 1st")
@@ -215,6 +216,7 @@ def main(series, folder, resolution, from_um_factor, r,
     params = dict(
         from_um_factor=from_um_factor,
         resolution=resolution,
+        courant=courant,
         r=r,
         paper=paper,
         submerged_index=submerged_index,
