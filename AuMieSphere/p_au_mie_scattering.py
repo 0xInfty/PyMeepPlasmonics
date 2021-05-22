@@ -26,7 +26,7 @@ from mpi4py import MPI
 import os
 from time import time
 import PyMieScatt as ps
-from v_materials import import_medium
+import v_materials as vmt
 import v_save as vs
 import v_utilities as vu
 # from v_units import MeepUnitsManager
@@ -48,19 +48,26 @@ import v_utilities as vu
             help="Radius of sphere expressed in nm")
 @cli.option("--paper", "-pp", "paper", type=str, default="R",
             help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
+@cli.option("--reference", "-ref", "reference", type=str, default="Meep",
+            help="Reference from which the data was extracted. Options: 'Meep'/'RIinfo'")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
 # 500-650 nm range from lowest to highest
-def main(series, folder, resolution, from_um_factor, r, paper, wlen_range):
+def main(series, folder, resolution, from_um_factor, r, paper, reference, wlen_range):
 
     #%% PARAMETERS    
 
     ### MEAN PARAMETERS
     
-    # Au sphere
+    # Au medium
     r = r / ( from_um_factor * 1e3 ) # Now in Meep units
-    medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
+    if reference=="Meep":
+        medium = vmt.import_medium("Au", from_um_factor, paper=paper)
+    elif reference=="RIinfo":
+        medium = vmt.MediumFromFile("Au", paper=paper, reference=reference, from_um_factor=from_um_factor)
+    else:
+        raise ValueError("Reference for medium not recognized. Sorry :/")
     
     # Frequency and wavelength
     wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Now in Meep units
@@ -220,6 +227,7 @@ def main(series, folder, resolution, from_um_factor, r, paper, wlen_range):
         resolution=resolution,
         r=r,
         paper=paper,
+        reference=reference,
         wlen_range=wlen_range,
         nfreq=nfreq,
         cutoff=cutoff,
