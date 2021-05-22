@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-The `v_meep` module contains functions used to complement Meep.
+The `v_meep` module contains tools used to complement Meep.
 
 Some of its most useful tools are...
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module contains electromagnetic theory.
+This module contains functions with electromagnetic theory.
 
 It holds tools to work with...
 
@@ -36,14 +36,6 @@ P : function
 
 @author: Vall
 """
-
-from socket import gethostname
-if "Nano" in gethostname():
-    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
-elif "vall" in gethostname():
-    syshome = "/home/vall/Documents/Thesis/ThesisPython"
-else:
-    raise ValueError("Your PC must be registered at the top of this code")
 
 import numpy as np
 try:

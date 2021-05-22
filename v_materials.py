@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-The `v_materials` module contains tools to work with materials and sources.
+The `v_materials` module contains tools for materials from different sources.
 
 It holds tools to work with...
     
