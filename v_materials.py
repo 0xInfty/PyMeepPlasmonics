@@ -593,6 +593,7 @@ class MediumFromFunction(mp.Medium):
     def __init__(self, 
                  epsilon_function=lambda wlen:1,
                  mu_function=lambda wlen:1,
+                 have_logger=False,
                  epsilon_diag=mp.Vector3(1, 1, 1),
                  epsilon_offdiag=mp.Vector3(),
                  mu_diag=mp.Vector3(1, 1, 1),
@@ -694,12 +695,27 @@ class MediumFromFunction(mp.Medium):
         
         self.valid_freq_range = mp.FreqRange(min_freq, max_freq)
         
+        self._logger_list = []
+        self._have_logger = have_logger
+        
+        # self.__class__ = mp.Medium
+    
+    def _log_string(self, string):
+        
+        if self._have_logger and not string in self._logger_list: self._logger_list.append(string)
+    
+    def _log_print(self):
+        
+        print(self._logger_list)
+        
     def epsilon(self,freq):
         """
         Returns the medium's permittivity tensor as a 3x3 Numpy array at the specified
         frequency `freq` which can be either a scalar, list, or Numpy array. In the case
         of a list/array of N frequency points, a Numpy array of size Nx3x3 is returned.
         """
+        self._log_string("Outside eps")
+
         return self._get_eps(self.epsilon_diag, self.epsilon_offdiag, self.E_susceptibilities, self.D_conductivity_diag, self.D_conductivity_offdiag, freq)
 
     def mu(self,freq):
@@ -708,9 +724,19 @@ class MediumFromFunction(mp.Medium):
         frequency `freq` which can be either a scalar, list, or Numpy array. In the case
         of a list/array of N frequency points, a Numpy array of size Nx3x3 is returned.
         """
+        self._log_string("Outside mu")
+        
         return self._get_mu(self.mu_diag, self.mu_offdiag, self.H_susceptibilities, self.B_conductivity_diag, self.B_conductivity_offdiag, freq)
  
+    def _get_epsmu(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq):
+        
+        self._log_string("Inside epsmu")
+        
+        return self._get_eps(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq)
+ 
     def _get_eps(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq):
+        
+        self._log_string("Inside eps")
         
         # Clean the input
         if np.isscalar(freq):
@@ -744,6 +770,8 @@ class MediumFromFunction(mp.Medium):
     
     def _get_mu(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq):
  
+        self._log_string("Inside mu")
+        
         # Clean the input
         if np.isscalar(freq):
             freqs = np.array(freq)[np.newaxis, np.newaxis, np.newaxis]
@@ -783,7 +811,8 @@ class MediumFromFile(MediumFromFunction):
     def __init__(self, material,
                   paper="JC",
                   reference="RIinfo",
-                  from_um_factor=1,
+                  from_um_factor=1e-3,
+                  have_logger=False,
                   epsilon_diag=mp.Vector3(1, 1, 1),
                   epsilon_offdiag=mp.Vector3(),
                   mu_diag=mp.Vector3(1, 1, 1),
@@ -824,6 +853,7 @@ class MediumFromFile(MediumFromFunction):
         super().__init__(
                   epsilon_function=epsilon_function,
                   mu_function=lambda wlen:1,
+                  have_logger=have_logger,
                   epsilon_diag=epsilon_diag,
                   epsilon_offdiag=epsilon_offdiag,
                   mu_diag=mu_diag,
@@ -853,4 +883,6 @@ class MediumFromFile(MediumFromFunction):
         
         if len(E_susceptibilities)>0 or len(H_susceptibilities)>0:
             raise ValueError("This class doesn't take susceptibilities!")
+        
+        # self.__class__ = mp.Medium
         
