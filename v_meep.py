@@ -158,6 +158,18 @@ def max_stable_courant_dim_index(medium, freq, ndims=3):
     max_courant = min_index / np.sqrt(ndims)
     
     return max_courant
+    
+#%%
+
+def parallel_assign(process_number, process_total_number, parallel=True):
+    
+    if parallel and process_total_number > 1:
+        if process_number == 0:
+            return mp.am_master()
+        else:
+            return mp.my_rank() == 1
+    else:
+        return True
 
 #%%
 
