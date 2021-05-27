@@ -38,6 +38,9 @@ import v_utilities as vu
 @cli.option("--resolution", "-res", required=True, type=int,
             help="Spatial resolution. Number of divisions of each Meep unit")
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+@cli.option("--courant", "-c", "courant", 
+            type=float, default=0.5,
+            help="Courant factor: time discretization from space discretization")
 @cli.option("--from-um-factor", "-fum", "from_um_factor", 
             default=10e-3, type=float,
             help="Conversion of 1 μm to my length unit (i.e. 10e-3=10nm/1μm)")
@@ -51,9 +54,6 @@ import v_utilities as vu
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
-@cli.option("--courant", "-c", "courant", 
-            type=float, default=0.5,
-            help="Courant factor: time discretization from space discretization")
 @cli.option("--stime", "-st", "second_time_factor", 
             type=float, default=10,
             help="Second simulation total time expressed as multiples of 1st")

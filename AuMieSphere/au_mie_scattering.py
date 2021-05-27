@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import os
 from time import time
 import PyMieScatt as ps
-from v_materials import import_medium
+import v_materials as vmt
 import v_save as vs
 
 #%% PARAMETERS
@@ -31,21 +31,33 @@ import v_save as vs
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 3 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+courant = 0.5
 
 # Au sphere
 r = 60  # Radius of sphere in nm
 paper = "R"
 medium = "Au"
+reference = "Meep"
 
 # Frequency and wavelength
 wlen_range = np.array([500,650]) # Wavelength range in nm
+
+# Saving directories
+series = "TestPaperFileLogger"
+folder = "AuMieSphere/AuMie/13)TestPaper"
 
 ### INNER PARAMETERS
 
 # Au Sphere
 r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
-medium = import_medium(medium, from_um_factor, paper=paper) # Medium of sphere
+if reference=="Meep":
+    medium = vmt.import_medium("Au", from_um_factor, paper=paper)
+elif reference=="RIinfo":
+    medium = vmt.MediumFromFile("Au", paper=paper, reference=reference, from_um_factor=from_um_factor,
+                                have_logger=True)
+else:
+    raise ValueError("Reference for medium not recognized. Sorry :/")
 
 # Frequency and wavelength
 wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Wavelength now in Meep units
@@ -59,8 +71,6 @@ until_after_sources = False
 second_time_factor = 10
 
 # Saving directories
-series = "NoSymmetryRes3"
-folder = "AuMieSphere/AuMie"
 home = vs.get_home()
 
 ### OTHER PARAMETERS
@@ -130,7 +140,8 @@ sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
                     boundary_layers=pml_layers,
                     sources=sources,
-                    k_point=mp.Vector3())#,
+                    k_point=mp.Vector3(),
+                    Courant=courant)#,
                     # symmetries=symmetries)
 # >> k_point zero specifies boundary conditions needed
 # for the source to be infinitely extended
@@ -233,6 +244,13 @@ box_y2_flux0 = np.asarray(mp.get_fluxes(box_y2))
 box_z1_flux0 = np.asarray(mp.get_fluxes(box_z1))
 box_z2_flux0 = np.asarray(mp.get_fluxes(box_z2))
 
+sim.save_flux("MidFluxX1", box_x1)
+sim.save_flux("MidFluxX2", box_x2)
+sim.save_flux("MidFluxY1", box_y1)
+sim.save_flux("MidFluxY2", box_y2)
+sim.save_flux("MidFluxZ1", box_z1)
+sim.save_flux("MidFluxZ2", box_z2)
+
 field = sim.get_array(center=mp.Vector3(), 
                       size=(cell_width, cell_width, cell_width), 
                       component=mp.Ez)
@@ -245,11 +263,14 @@ params = dict(
     from_um_factor=from_um_factor,
     resolution=resolution,
     r=r,
+    paper=paper,
+    reference=reference,
     wlen_range=wlen_range,
     nfreq=nfreq,
     cutoff=cutoff,
     pml_width=pml_width,
     air_width=air_width,
+    cell_width=cell_width,
     source_center=source_center,
     enlapsed=enlapsed,
     series=series,
@@ -335,6 +356,7 @@ sim = mp.Simulation(resolution=resolution,
                     boundary_layers=pml_layers,
                     sources=sources,
                     k_point=mp.Vector3(),
+                    Courant=courant,
                     # symmetries=symmetries,
                     geometry=geometry)
 
@@ -441,7 +463,7 @@ scatt_cross_section = np.divide(scatt_flux, intensity)
 scatt_eff_meep = -1 * scatt_cross_section / (np.pi*r**2)
 # Scattering efficiency =
 # = scattering cross section / cross sectional area of the sphere
-
+mp.Medium
 freqs = np.array(freqs)
 scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
                             1e3*from_um_factor/f,
