@@ -4,17 +4,6 @@
 
 # Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
 
-from socket import gethostname
-if "Nano" in gethostname():
-    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
-elif "vall" in gethostname():
-    syshome = "/home/vall/Documents/Thesis/ThesisPython"
-else:
-    raise ValueError("Your PC must be registered at the top of this code")
-
-import sys
-sys.path.append(syshome)
-
 import h5py as h5
 import meep as mp
 import numpy as np
@@ -23,7 +12,18 @@ import os
 from time import time
 import PyMieScatt as ps
 import v_materials as vmt
+import v_meep as vm
 import v_save as vs
+
+syshome = vs.get_sys_home()
+sysname = vs.get_sys_name()
+home = vs.get_home()
+
+os.chdir(syshome)
+
+parallel = False
+n_processes = 1
+script = "au_mie_sphere_scattering"
 
 #%% PARAMETERS
 
@@ -44,8 +44,8 @@ reference = "Meep"
 wlen_range = np.array([500,650]) # Wavelength range in nm
 
 # Saving directories
-series = "TestPaperFileLogger"
-folder = "AuMieSphere/AuMie/13)TestPaper"
+series = "TestSaveFlux2SerialRes1"
+folder = "AuMieSphere/AuMie/14)SaveFlux"
 
 ### INNER PARAMETERS
 
@@ -70,8 +70,14 @@ time_factor_cell = 1.2
 until_after_sources = False
 second_time_factor = 10
 
-# Saving directories
-home = vs.get_home()
+# Saving data
+params_list = ["from_um_factor", "resolution", "courant",
+               "r", "paper", "reference", 
+               "wlen_range", "nfreq", "cutoff",
+               "cell_width", "pml_width", "air_width", "source_center",
+               "until_after_sources", "time_factor_cell", "second_time_factor",
+               "enlapsed", "parallel", "n_processes", "script", "sysname", "path"]
+
 
 ### OTHER PARAMETERS
 
@@ -134,220 +140,211 @@ path = os.path.join(home, folder, f"{series}")
 if not os.path.isdir(path): vs.new_dir(path)
 file = lambda f : os.path.join(path, f)
 
-#%% FIRST RUN: SET UP
+#%% FIRST RUN
 
-sim = mp.Simulation(resolution=resolution,
-                    cell_size=cell_size,
-                    boundary_layers=pml_layers,
-                    sources=sources,
-                    k_point=mp.Vector3(),
-                    Courant=courant)#,
-                    # symmetries=symmetries)
-# >> k_point zero specifies boundary conditions needed
-# for the source to be infinitely extended
+params = {}
+params["submerged_index"] = 1
+params["surface_index"] = 1
+params["displacement"] = 0
+for p in params_list: params[p] = eval(p)
 
-# Scattered power --> Computed by surrounding it with closed DFT flux box 
-# (its size and orientation are irrelevant because of Poynting's theorem) 
-box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                      mp.FluxRegion(center=mp.Vector3(x=-r),
-                                    size=mp.Vector3(0,2*r,2*r)))
-box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                      mp.FluxRegion(center=mp.Vector3(x=+r),
-                                    size=mp.Vector3(0,2*r,2*r)))
-box_y1 = sim.add_flux(freq_center, freq_width, nfreq,
-                      mp.FluxRegion(center=mp.Vector3(y=-r),
-                                    size=mp.Vector3(2*r,0,2*r)))
-box_y2 = sim.add_flux(freq_center, freq_width, nfreq,
-                      mp.FluxRegion(center=mp.Vector3(y=+r),
-                                    size=mp.Vector3(2*r,0,2*r)))
-box_z1 = sim.add_flux(freq_center, freq_width, nfreq,
-                      mp.FluxRegion(center=mp.Vector3(z=-r),
-                                    size=mp.Vector3(2*r,2*r,0)))
-box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
-                      mp.FluxRegion(center=mp.Vector3(z=+r),
-                                    size=mp.Vector3(2*r,2*r,0)))
-# Funny you can encase the sphere (r radius) so closely (2r-sided box)
+flux_path = vm.check_midflux(params)
 
-#%% FIRST RUN: INITIALIZE
-
-temp = time()
-sim.init_sim()
-enlapsed.append( time() - temp )
-
-"""
-112x112x112 with resolution 4
-(48 cells inside diameter)
-==> 30 s to build
-
-112x112x112 with resolution 2
-(24 cells inside diameter)
-==> 4.26 s to build
-
-116x116x116 with resolution 2
-(24 cells inside diameter)
-==> 5.63 s
-
-98 x 98 x 98 with resolution 3
-(36 cells inside diameter)
-==> 9.57 s
-
-172x172x172 with resolution 2
-(24 cells inside diameter)
-==> 17.47 s
-
-67 x 67 x 67 with resolution 4
-(48 cells inside diameter)
-==> 7.06 s
-
-67,375 x 67,375 x 67,375 with resolution 8
-(100 cells inside diameter)
-==> 56.14 s
-"""
-
-#%% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
-
-temp = time()
-sim.run(until_after_sources=until_after_sources)
-    #     mp.stop_when_fields_decayed(
-    # np.mean(wlen_range), # dT = mean period of source
-    # mp.Ez, # Component of field to check
-    # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
-    # 1e-3)) # Factor to decay
-enlapsed.append( time() - temp )
-
-"""
-112x112x112 with resolution 2
-(24 cells inside diameter)
-==> 135.95 s to complete 1st run
-
-116x116x116 with resolution 2
-(24 cells inside diameter)
-==> 208 s to complete 1st run
-
-67 x 67 x 67 with resolution 4
-(48 cells inside diameter)
-==> 2000 s = 33 min to complete 1st run
-"""
-
-freqs = np.asarray(mp.get_flux_freqs(box_x1))
-box_x1_data = sim.get_flux_data(box_x1)
-box_x2_data = sim.get_flux_data(box_x2)
-box_y1_data = sim.get_flux_data(box_y1)
-box_y2_data = sim.get_flux_data(box_y2)
-box_z1_data = sim.get_flux_data(box_z1)
-box_z2_data = sim.get_flux_data(box_z2)
-
-box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
-box_x2_flux0 = np.asarray(mp.get_fluxes(box_x2))
-box_y1_flux0 = np.asarray(mp.get_fluxes(box_y1))
-box_y2_flux0 = np.asarray(mp.get_fluxes(box_y2))
-box_z1_flux0 = np.asarray(mp.get_fluxes(box_z1))
-box_z2_flux0 = np.asarray(mp.get_fluxes(box_z2))
-
-sim.save_flux("MidFluxX1", box_x1)
-sim.save_flux("MidFluxX2", box_x2)
-sim.save_flux("MidFluxY1", box_y1)
-sim.save_flux("MidFluxY2", box_y2)
-sim.save_flux("MidFluxZ1", box_z1)
-sim.save_flux("MidFluxZ2", box_z2)
-
-field = sim.get_array(center=mp.Vector3(), 
-                      size=(cell_width, cell_width, cell_width), 
-                      component=mp.Ez)
-
-sim.reset_meep()
-
-#%% SAVE MID DATA
-
-params = dict(
-    from_um_factor=from_um_factor,
-    resolution=resolution,
-    r=r,
-    paper=paper,
-    reference=reference,
-    wlen_range=wlen_range,
-    nfreq=nfreq,
-    cutoff=cutoff,
-    pml_width=pml_width,
-    air_width=air_width,
-    cell_width=cell_width,
-    source_center=source_center,
-    enlapsed=enlapsed,
-    series=series,
-    folder=folder,
-    home=home,
-    until_after_sources=until_after_sources,
-    time_factor_cell=time_factor_cell,
-    second_time_factor=second_time_factor,
-    )
-
-f = h5.File(file("MidField.h5"), "w")
-f.create_dataset("Ez", data=field)
-for a in params: f["Ez"].attrs[a] = params[a]
-f.close()
-del f
-
-data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
-                     box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
-
-header_mid = ["Longitud de onda [nm]", 
-              "Flujo X10 [u.a.]",
-              "Flujo X20 [u.a]",
-              "Flujo Y10 [u.a]",
-              "Flujo Y20 [u.a]",
-              "Flujo Z10 [u.a]",
-              "Flujo Z20 [u.a]"]
-
-vs.savetxt(file("MidFlux.txt"), data_mid, header=header_mid, footer=params)
-
-#%% PLOT FLUX FOURIER MID DATA
-
-ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
-ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
-         ylims[1]+.1*(ylims[1]-ylims[0]))
-
-fig, ax = plt.subplots(3, 2, sharex=True)
-fig.subplots_adjust(hspace=0, wspace=.05)
-for a in ax[:,1]:
-    a.yaxis.tick_right()
-    a.yaxis.set_label_position("right")
-for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
-    a.set_ylabel(h)
-
-for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
-    a.plot(1e3*from_um_factor/freqs, d)
-    a.set_ylim(*ylims)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
-
-plt.savefig(file("MidFlux.png"))
-
-#%% PLOT FLUX WALLS FIELD
-
-index_to_space = lambda i : i/resolution - cell_width/2
-space_to_index = lambda x : round(resolution * (x + cell_width/2))
-
-field_walls = [field[space_to_index(-r),:,:],
-               field[space_to_index(r),:,:],
-               field[:,space_to_index(-r),:],
-               field[:,space_to_index(r),:],
-               field[:,:,space_to_index(-r)],
-               field[:,:,space_to_index(r)]]
-
-zlims = (np.min([np.min(f) for f in field_walls]), 
-         np.max([np.max(f) for f in field_walls]))
-
-fig, ax = plt.subplots(3, 2)
-fig.subplots_adjust(hspace=0.25)
-for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
-    a.set_title(h.split(" ")[1].split("0")[0])
-
-for f, a in zip(field_walls, np.reshape(ax, 6)):
-    a.imshow(f.T, interpolation='spline36', cmap='RdBu', 
-             vmin=zlims[0], vmax=zlims[1])
-    a.axis("off")
-
-plt.savefig(file("MidField.png"))
+if flux_path == None:
+    
+    #% FIRST RUN: SET UP
+    
+    sim = mp.Simulation(resolution=resolution,
+                        cell_size=cell_size,
+                        boundary_layers=pml_layers,
+                        sources=sources,
+                        k_point=mp.Vector3(),
+                        Courant=courant)#,
+                        # symmetries=symmetries)
+    # >> k_point zero specifies boundary conditions needed
+    # for the source to be infinitely extended
+    
+    # Scattered power --> Computed by surrounding it with closed DFT flux box 
+    # (its size and orientation are irrelevant because of Poynting's theorem) 
+    box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(x=-r),
+                                        size=mp.Vector3(0,2*r,2*r)))
+    box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(x=+r),
+                                        size=mp.Vector3(0,2*r,2*r)))
+    box_y1 = sim.add_flux(freq_center, freq_width, nfreq,
+                          mp.FluxRegion(center=mp.Vector3(y=-r),
+                                        size=mp.Vector3(2*r,0,2*r)))
+    box_y2 = sim.add_flux(freq_center, freq_width, nfreq,
+                          mp.FluxRegion(center=mp.Vector3(y=+r),
+                                        size=mp.Vector3(2*r,0,2*r)))
+    box_z1 = sim.add_flux(freq_center, freq_width, nfreq,
+                          mp.FluxRegion(center=mp.Vector3(z=-r),
+                                        size=mp.Vector3(2*r,2*r,0)))
+    box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
+                          mp.FluxRegion(center=mp.Vector3(z=+r),
+                                        size=mp.Vector3(2*r,2*r,0)))
+    # Funny you can encase the sphere (r radius) so closely (2r-sided box)
+    
+    #% FIRST RUN: INITIALIZE
+    
+    temp = time()
+    sim.init_sim()
+    enlapsed.append( time() - temp )
+    
+    """
+    112x112x112 with resolution 4
+    (48 cells inside diameter)
+    ==> 30 s to build
+    
+    112x112x112 with resolution 2
+    (24 cells inside diameter)
+    ==> 4.26 s to build
+    
+    116x116x116 with resolution 2
+    (24 cells inside diameter)
+    ==> 5.63 s
+    
+    98 x 98 x 98 with resolution 3
+    (36 cells inside diameter)
+    ==> 9.57 s
+    
+    172x172x172 with resolution 2
+    (24 cells inside diameter)
+    ==> 17.47 s
+    
+    67 x 67 x 67 with resolution 4
+    (48 cells inside diameter)
+    ==> 7.06 s
+    
+    67,375 x 67,375 x 67,375 with resolution 8
+    (100 cells inside diameter)
+    ==> 56.14 s
+    """
+    
+    #% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
+    
+    temp = time()
+    sim.run(until_after_sources=until_after_sources)
+        #     mp.stop_when_fields_decayed(
+        # np.mean(wlen_range), # dT = mean period of source
+        # mp.Ez, # Component of field to check
+        # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
+        # 1e-3)) # Factor to decay
+    enlapsed.append( time() - temp )
+    
+    """
+    112x112x112 with resolution 2
+    (24 cells inside diameter)
+    ==> 135.95 s to complete 1st run
+    
+    116x116x116 with resolution 2
+    (24 cells inside diameter)
+    ==> 208 s to complete 1st run
+    
+    67 x 67 x 67 with resolution 4
+    (48 cells inside diameter)
+    ==> 2000 s = 33 min to complete 1st run
+    """
+    
+    #% SAVE MID DATA
+    
+    for p in params_list: params[p] = eval(p)
+    
+    field = sim.get_array(center=mp.Vector3(), 
+                          size=(cell_width, cell_width, cell_width), 
+                          component=mp.Ez)
+    
+    f = h5.File(file("MidField.h5"), "w")
+    f.create_dataset("Ez", data=field)
+    for a in params: f["Ez"].attrs[a] = params[a]
+    f.close()
+    del f
+    
+    """
+    os.chdir(path)
+    sim.save_flux("MidFluxX1", box_x1)
+    sim.save_flux("MidFluxX2", box_x2)
+    sim.save_flux("MidFluxY1", box_y1)
+    sim.save_flux("MidFluxY2", box_y2)
+    sim.save_flux("MidFluxZ1", box_z1)
+    sim.save_flux("MidFluxZ2", box_z2)
+    os.chdir(syshome)
+    """
+    flux_path = vm.save_midflux(sim, box_x1, box_x2, box_y1, 
+                                box_y2, box_z1, box_z2, params, path)
+    
+    freqs = np.asarray(mp.get_flux_freqs(box_x1))
+    box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
+    box_x2_flux0 = np.asarray(mp.get_fluxes(box_x2))
+    box_y1_flux0 = np.asarray(mp.get_fluxes(box_y1))
+    box_y2_flux0 = np.asarray(mp.get_fluxes(box_y2))
+    box_z1_flux0 = np.asarray(mp.get_fluxes(box_z1))
+    box_z2_flux0 = np.asarray(mp.get_fluxes(box_z2))
+    
+    data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
+                         box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
+    
+    header_mid = ["Longitud de onda [nm]", 
+                  "Flujo X10 [u.a.]",
+                  "Flujo X20 [u.a]",
+                  "Flujo Y10 [u.a]",
+                  "Flujo Y20 [u.a]",
+                  "Flujo Z10 [u.a]",
+                  "Flujo Z20 [u.a]"]
+    
+    vs.savetxt(file("MidFlux.txt"), data_mid, header=header_mid, footer=params)
+    
+    sim.reset_meep()
+    
+    #% PLOT FLUX FOURIER MID DATA
+    
+    ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
+    ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
+             ylims[1]+.1*(ylims[1]-ylims[0]))
+    
+    fig, ax = plt.subplots(3, 2, sharex=True)
+    fig.subplots_adjust(hspace=0, wspace=.05)
+    for a in ax[:,1]:
+        a.yaxis.tick_right()
+        a.yaxis.set_label_position("right")
+    for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+        a.set_ylabel(h)
+    
+    for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
+        a.plot(1e3*from_um_factor/freqs, d)
+        a.set_ylim(*ylims)
+    ax[-1,0].set_xlabel("Wavelength [nm]")
+    ax[-1,1].set_xlabel("Wavelength [nm]")
+    
+    plt.savefig(file("MidFlux.png"))
+    
+    #% PLOT FLUX WALLS FIELD
+    
+    index_to_space = lambda i : i/resolution - cell_width/2
+    space_to_index = lambda x : round(resolution * (x + cell_width/2))
+    
+    field_walls = [field[space_to_index(-r),:,:],
+                   field[space_to_index(r),:,:],
+                   field[:,space_to_index(-r),:],
+                   field[:,space_to_index(r),:],
+                   field[:,:,space_to_index(-r)],
+                   field[:,:,space_to_index(r)]]
+    
+    zlims = (np.min([np.min(f) for f in field_walls]), 
+             np.max([np.max(f) for f in field_walls]))
+    
+    fig, ax = plt.subplots(3, 2)
+    fig.subplots_adjust(hspace=0.25)
+    for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
+        a.set_title(h.split(" ")[1].split("0")[0])
+    
+    for f, a in zip(field_walls, np.reshape(ax, 6)):
+        a.imshow(f.T, interpolation='spline36', cmap='RdBu', 
+                 vmin=zlims[0], vmax=zlims[1])
+        a.axis("off")
+    
+    plt.savefig(file("MidField.png"))
 
 #%% SECOND RUN: SETUP
 
@@ -399,6 +396,30 @@ enlapsed.append( time() - temp )
 ==> 14.47 s to build with sphere
 """
 
+#%% LOAD FLUX FROM FILE
+
+"""
+os.chdir(path)
+sim.load_flux("MidFluxX1", box_x1)
+sim.load_flux("MidFluxX2", box_x2)
+sim.load_flux("MidFluxY1", box_y1)
+sim.load_flux("MidFluxY2", box_y2)
+sim.load_flux("MidFluxZ1", box_z1)
+sim.load_flux("MidFluxZ2", box_z2)
+os.chdir(syshome)
+"""
+
+vm.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
+
+freqs = np.asarray(mp.get_flux_freqs(box_x1))
+box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
+box_x1_data = sim.get_flux_data(box_x1)
+box_x2_data = sim.get_flux_data(box_x2)
+box_y1_data = sim.get_flux_data(box_y1)
+box_y2_data = sim.get_flux_data(box_y2)
+box_z1_data = sim.get_flux_data(box_z1)
+box_z2_data = sim.get_flux_data(box_z2)
+
 temp = time()
 sim.load_minus_flux_data(box_x1, box_x1_data)
 sim.load_minus_flux_data(box_x2, box_x2_data)
@@ -409,20 +430,6 @@ sim.load_minus_flux_data(box_z2, box_z2_data)
 enlapsed.append( time() - temp )
 del box_x1_data, box_x2_data, box_y1_data, box_y2_data
 del box_z1_data, box_z2_data
-
-"""
-112x112x112 with resolution 2
-(24 cells in diameter)
-==> 0.016 s to add flux
-
-116x116x116 with resolution 2
-(24 cells inside diameter)
-==> 0.021 s to add flux
-
-67 x 67 x 67 with resolution 4
-(48 cells inside diameter)
-==> 0.043 s to add flux
-"""
 
 #%% SECOND RUN: SIMULATION :D
 
@@ -474,6 +481,8 @@ scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]),
 # analytic theory of PyMieScatt module
 
 #%% SAVE FINAL DATA
+
+for p in params_list: params[p] = eval(p)
 
 data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
 
