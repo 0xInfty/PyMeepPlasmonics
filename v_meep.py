@@ -19,7 +19,12 @@ It's widely based on Meep Materials Library.
 
 import meep as mp
 import numpy as np
+import os
+import v_save as vs
 import v_utilities as vu
+
+syshome = vs.get_sys_home()
+home = vs.get_home()
 
 #%%
 
@@ -159,6 +164,119 @@ def max_stable_courant_dim_index(medium, freq, ndims=3):
     
     return max_courant
     
+#%%
+
+def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, path):
+    
+    dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
+    dir_backup = os.path.join(home, "FluxData/FluxDataDirectoryBackup.txt")
+    new_path = vs.new_dir(os.path.join(home, "FluxData/MidFlux"))
+
+    os.chdir(new_path)
+    sim.save_flux("MidFluxX1", box_x1)
+    sim.save_flux("MidFluxX2", box_x2)
+    sim.save_flux("MidFluxY1", box_y1)
+    sim.save_flux("MidFluxY2", box_y2)
+    sim.save_flux("MidFluxZ1", box_z1)
+    sim.save_flux("MidFluxZ2", box_z2)
+    os.chdir(syshome)
+        
+    database = vs.retrieve_footer(dir_file)
+    vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
+    key_params = ["from_um_factor", "resolution", "courant", 
+                 "wlen_range", "cutoff", "nfreq", 
+                 "submerged_index", "surface_index", "displacement",
+                 "cell_width", "pml_width", "source_center",
+                 "until_after_sources", 
+                 "parallel", "np_process"]
+    
+    database["flux_path"].append( os.path.split(new_path)[-1] )
+    database["path"].append(path)
+    for key in key_params:
+        try:
+            database[key].append(params[key])
+        except:
+            raise ValueError(f"Missing key parameter: {key}")
+    
+    vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
+    
+    return
+
+#%%
+
+def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params):
+    
+    dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
+    
+    database = vs.retrieve_footer(dir_file)
+    key_params = ["from_um_factor", "resolution", "courant", 
+                 "wlen_range", "cutoff", "nfreq", 
+                 "submerged_index", "surface_index", "displacement",
+                 "cell_width", "pml_width", "source_center",
+                 "until_after_sources", 
+                 "parallel", "np_process"]
+    
+    database_array = []
+    for key in key_params:
+        if isinstance(database[key][0], bool):
+            aux_data = [int(data) for data in database[key]]
+            database_array.append(aux_data)
+        else:
+            try:
+                if len(list(database[key][0])) > 1:
+                    for i in range( len(list( database[key][0] )) ):
+                        aux_data = [data[i] for data in database[key]]
+                        database_array.append(aux_data)
+                else:
+                    database_array.append(database[key])
+            except:
+                database_array.append(database[key])
+    database_array = np.array(database_array)
+    
+    desired_array = []
+    for key in key_params:
+        if isinstance(params[key], bool):
+            desired_array.append(int(params[key]))
+        else:
+            try:
+                if len(list(params[key])) > 1:
+                    for i in range( len(list( params[key] )) ):
+                        desired_array.append(params[key][i])
+                else:
+                    desired_array.append(params[key])
+            except:
+                desired_array.append(params[key])
+    desired_array = np.array(desired_array)
+    
+    boolean_array = []
+    for array in database_array.T:
+        boolean_array.append( np.all( array - desired_array.T == np.zeros(desired_array.T.shape) ) )
+    index = [i for i, boolean in enumerate(boolean_array) if boolean]
+    
+    if len(index) == 0:
+        print("No coincidences where found at the midflux database!")
+        return False
+    elif len(index) == 1:
+        right_index = index[0]
+        print(f"Loading... '{database['path'][right_index]}'")
+    else:
+        right_index = index[0]
+        print("More than one coincidence was found at the midflux database!")
+        print(f"Loading... '{database['path'][right_index]}'")
+        
+    flux_path = os.path.join(home, "FluxData", database['flux_path'][right_index])
+    
+    os.chdir(flux_path)
+    sim.load_flux("MidFluxX1", box_x1)
+    sim.load_flux("MidFluxX2", box_x2)
+    sim.load_flux("MidFluxY1", box_y1)
+    sim.load_flux("MidFluxY2", box_y2)
+    sim.load_flux("MidFluxZ1", box_z1)
+    sim.load_flux("MidFluxZ2", box_z2)
+    os.chdir(syshome)
+    
+    return True
+
 #%%
 
 def parallel_assign(process_number, process_total_number, parallel=True):
