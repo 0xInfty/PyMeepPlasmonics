@@ -65,7 +65,7 @@ def main(series, folder, resolution, from_um_factor, r, paper, reference, wlen_r
     if reference=="Meep":
         medium = vmt.import_medium("Au", from_um_factor, paper=paper)
     elif reference=="RIinfo":
-        medium = vmt.MediumFromFile("Au", paper=paper, reference=reference, from_um_factor=from_um_factor)
+        medium = vmt.MediumFromFile(material="Au", paper=paper, reference=reference, from_um_factor=from_um_factor)
     else:
         raise ValueError("Reference for medium not recognized. Sorry :/")
     
