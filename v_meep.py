@@ -23,6 +23,7 @@ import os
 import v_save as vs
 import v_utilities as vu
 
+sysname = vs.get_sys_name()
 syshome = vs.get_sys_home()
 home = vs.get_home()
 
@@ -168,11 +169,12 @@ def max_stable_courant_dim_index(medium, freq, ndims=3):
 
 def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, path):
     
+    
     dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
-    dir_backup = os.path.join(home, "FluxData/FluxDataDirectoryBackup.txt")
-    new_path = vs.new_dir(os.path.join(home, "FluxData/MidFlux"))
+    dir_backup = os.path.join(home, f"FluxData/FluxDataDir{sysname}Backup.txt")
+    new_flux_path = vs.new_dir(vs.datetime_dir(os.path.join(home, "FluxData/MidFlux")))
 
-    os.chdir(new_path)
+    os.chdir(new_flux_path)
     sim.save_flux("MidFluxX1", box_x1)
     sim.save_flux("MidFluxX2", box_x2)
     sim.save_flux("MidFluxY1", box_y1)
@@ -188,23 +190,26 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center",
                  "until_after_sources", 
-                 "parallel", "np_process"]
+                 "parallel", "n_processes"]
     
-    database["flux_path"].append( os.path.split(new_path)[-1] )
+    database["flux_path"].append( os.path.split(new_flux_path)[-1] )
     database["path"].append(path)
     for key in key_params:
         try:
-            database[key].append(params[key])
+            if isinstance(params[key], np.ndarray):
+                database[key].append(list(params[key]))
+            else:
+                database[key].append(params[key])
         except:
             raise ValueError(f"Missing key parameter: {key}")
     
     vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
     
-    return
+    return new_flux_path
 
 #%%
 
-def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params):
+def check_midflux(params):
     
     dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
     
@@ -214,7 +219,7 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params):
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center",
                  "until_after_sources", 
-                 "parallel", "np_process"]
+                 "parallel", "n_processes"]
     
     database_array = []
     for key in key_params:
@@ -255,16 +260,26 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params):
     
     if len(index) == 0:
         print("No coincidences where found at the midflux database!")
-        return False
     elif len(index) == 1:
         right_index = index[0]
-        print(f"Loading... '{database['path'][right_index]}'")
+        print(f"You could use data from '{database['path'][right_index]}'")
     else:
         right_index = index[0]
         print("More than one coincidence was found at the midflux database!")
-        print(f"Loading... '{database['path'][right_index]}'")
+        print(f"You could use data from '{database['path'][right_index]}'")
         
-    flux_path = os.path.join(home, "FluxData", database['flux_path'][right_index])
+    try:
+        flux_path = os.path.join(home, "FluxData", database['flux_path'][right_index])
+    except:
+        flux_path = None
+    
+    return flux_path
+
+#%%
+
+def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path):
+    
+    print(f"Loading flux from '{flux_path}'")
     
     os.chdir(flux_path)
     sim.load_flux("MidFluxX1", box_x1)
@@ -275,7 +290,7 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params):
     sim.load_flux("MidFluxZ2", box_z2)
     os.chdir(syshome)
     
-    return True
+    return
 
 #%%
 
