@@ -299,10 +299,8 @@ def savetxt(file, datanumpylike, overwrite=False, header='', footer=''):
             try:
                 aux = []
                 for key, value in footer.items():
-                    if isinstance(value, tuple) and len(value) == 2:
-                        condition = isinstance(value[0], str)
-                        if not condition and isinstance(value[1], str):
-                            value = '"{}, {}"'.format(*value)
+                    if isinstance(value, np.ndarray) or isinstance(value, tuple):
+                        value = str(list(value))
                     elif isinstance(value, str):
                         value = '"{}"'.format(value)
                     aux.append('{}={}'.format(key, value) + ', ')
