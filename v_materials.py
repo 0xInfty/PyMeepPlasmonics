@@ -580,294 +580,6 @@ def epsilon_function(material="Au", paper="JC", reference="RIinfo",
     
     return epsilon_function
 
-#%% MEEP ORIGINAL MEDIUM
-
-"""
-
-class Medium(object):
-    ""
-    This class is used to specify the materials that geometric objects are made of. It
-    represents an electromagnetic medium which is possibly nonlinear and/or dispersive.
-    See also [Materials](Materials.md). To model a perfectly-conducting metal, use the
-    predefined `metal` object, above. To model imperfect conductors, use a dispersive
-    dielectric material. See also the [Predefined Variables](#predefined-variables):
-    `metal`, `perfect_electric_conductor`, and `perfect_magnetic_conductor`.
-
-    **Material Function**
-
-    Any function that accepts a `Medium` instance can also accept a user-defined Python
-    function. This allows you to specify the material as an arbitrary function of
-    position. The function must have one argument, the position `Vector3`, and return the
-    material at that point, which should be a Python `Medium` instance. This is
-    accomplished by passing a function to the `material_function` keyword argument in the
-    `Simulation` constructor, or the `material` keyword argument in any `GeometricObject`
-    constructor. For an example, see [Subpixel Smoothing/Enabling Averaging for Material
-    Function](Subpixel_Smoothing.md#enabling-averaging-for-material-function).
-
-    Instead of the `material` or `material_function` arguments, you can also use the
-    `epsilon_func` keyword argument to `Simulation` and `GeometricObject`, which takes a
-    function of position that returns the dielectric constant at that point.
-
-    **Important:** If your material function returns nonlinear, dispersive (Lorentzian or
-    conducting), or magnetic materials, you should also include a list of these materials
-    in the `extra_materials` input variable (above) to let Meep know that it needs to
-    support these material types in your simulation. For dispersive materials, you need to
-    include a material with the *same* values of $\\gamma_n$ and $\\omega_n$, so
-    you can only have a finite number of these, whereas $\\sigma_n$ can vary
-    continuously and a matching $\\sigma_n$ need not be specified in
-    `extra_materials`. For nonlinear or conductivity materials, your `extra_materials`
-    list need not match the actual values of $\\sigma$ or $\\chi$ returned by your material function,
-    which can vary continuously.
-
-    **Complex $\\varepsilon$ and $\\mu$**: you cannot specify a
-    frequency-independent complex $\\varepsilon$ or $\\mu$ in Meep where
-    the imaginary part is a frequency-independent loss but there is an
-    alternative.  That is because there are only two important
-    physical situations. First, if you only care about the loss in a
-    narrow bandwidth around some frequency, you can set the loss at
-    that frequency via the
-    [conductivity](Materials.md#conductivity-and-complex).  Second, if
-    you care about a broad bandwidth, then all physical materials have
-    a frequency-dependent complex $\\varepsilon$ and/or $\\mu$, and you
-    need to specify that frequency dependence by fitting to Lorentzian
-    and/or Drude resonances via the `LorentzianSusceptibility` or
-    `DrudeSusceptibility` classes below.
-
-    Dispersive dielectric and magnetic materials, above, are specified via a list of
-    objects that are subclasses of type `Susceptibility`.
-    ""
-    def __init__(self, epsilon_diag=Vector3(1, 1, 1),
-                 epsilon_offdiag=Vector3(),
-                 mu_diag=Vector3(1, 1, 1),
-                 mu_offdiag=Vector3(),
-                 E_susceptibilities=[],
-                 H_susceptibilities=[],
-                 E_chi2_diag=Vector3(),
-                 E_chi3_diag=Vector3(),
-                 H_chi2_diag=Vector3(),
-                 H_chi3_diag=Vector3(),
-                 D_conductivity_diag=Vector3(),
-                 D_conductivity_offdiag=Vector3(),
-                 B_conductivity_diag=Vector3(),
-                 B_conductivity_offdiag=Vector3(),
-                 epsilon=None,
-                 index=None,
-                 mu=None,
-                 chi2=None,
-                 chi3=None,
-                 D_conductivity=None,
-                 B_conductivity=None,
-                 E_chi2=None,
-                 E_chi3=None,
-                 H_chi2=None,
-                 H_chi3=None,
-                 valid_freq_range=FreqRange(min=-mp.inf, max=mp.inf)):
-        ""
-        Creates a `Medium` object.
-
-        + **`epsilon` [`number`]** The frequency-independent isotropic relative
-          permittivity or dielectric constant. Default is 1. You can also use `index=n` as
-          a synonym for `epsilon=n*n`; note that this is not really the refractive index
-          if you also specify μ, since the true index is $\\sqrt{\\mu\\varepsilon}$. Using
-          `epsilon=ep` is actually a synonym for `epsilon_diag=mp.Vector3(ep, ep, ep)`.
-
-        + **`epsilon_diag` and `epsilon_offdiag` [`Vector3`]** — These properties allow
-          you to specify ε as an arbitrary real-symmetric tensor by giving the diagonal
-          and offdiagonal parts. Specifying `epsilon_diag=Vector3(a, b, c)` and/or
-          `epsilon_offdiag=Vector3(u, v, w)` corresponds to a relative permittivity ε
-          tensor \\begin{pmatrix} a & u & v \\\\ u & b & w \\\\ v & w & c \\end{pmatrix}
-          Default is the identity matrix ($a = b = c = 1$ and $u = v = w = 0$).
-
-        + **`mu` [`number`]** — The frequency-independent isotropic relative permeability
-          μ. Default is 1. Using `mu=pm` is actually a synonym for `mu_diag=mp.Vector3(pm,
-          pm, pm)`.
-
-        + **`mu_diag` and `mu_offdiag` [`Vector3`]** — These properties allow you to
-          specify μ as an arbitrary real-symmetric tensor by giving the diagonal and
-          offdiagonal parts exactly as for ε above. Default is the identity matrix.
-
-        + **`D_conductivity` [`number`]** — The frequency-independent electric
-          conductivity $\\sigma_D$. Default is 0. You can also specify a diagonal
-          anisotropic conductivity tensor by using the property `D_conductivity_diag`
-          which takes a `Vector3` to give the $\\sigma_D$ tensor diagonal. See also
-          [Conductivity](Materials.md#conductivity-and-complex).
-
-        + **`B_conductivity` [`number`]** — The frequency-independent magnetic
-          conductivity $\\sigma_B$. Default is 0. You can also specify a diagonal
-          anisotropic conductivity tensor by using the property `B_conductivity_diag`
-          which takes a `Vector3` to give the $\\sigma_B$ tensor diagonal. See also
-          [Conductivity](Materials.md#conductivity-and-complex).
-
-        + **`chi2` [`number`]** — The nonlinear electric
-          [Pockels](https://en.wikipedia.org/wiki/Pockels_effect) susceptibility
-          $\\chi^{(2)}$ (quadratic nonlinearity). Default is 0. See also [Nonlinearity](Materials.md#nonlinearity).
-          This is equivalent to setting `E_chi2`; alternatively, an analogous magnetic
-          nonlinearity can be specified using `H_chi2`. These are isotropic nonlinearities,
-          but *diagonal* anisotropic polarizations of the form $\\chi_i^{(2)} E_i^2$ can
-          be specified with `E_chi2_diag` (which defaults to `[E_chi2,E_chi2,E_chi2]`).
-
-        + **`chi3` [`number`]** — The nonlinear electric
-          [Kerr](https://en.wikipedia.org/wiki/Kerr_effect) susceptibility $\\chi^{(3)}$
-          (cubic nonlinearity). Default is 0. See also [Nonlinearity](Materials.md#nonlinearity).
-          This is equivalent to setting `E_chi3`; alternatively, an analogous magnetic nonlinearity
-          can be specified using `H_chi3`. These are isotropic nonlinearities, but *diagonal*
-          anisotropic polarizations of the form $\\chi_i^{(3)} |E|^2 E_i$ can be specified with
-          `E_chi3_diag` (which defaults to `[E_chi3,E_chi3,E_chi3]`).
-
-        + **`E_susceptibilities` [ list of `Susceptibility` class ]** — List of dispersive
-          susceptibilities (see below) added to the dielectric constant ε in order to
-          model material dispersion. Defaults to none (empty list). See also [Material
-          Dispersion](Materials.md#material-dispersion).
-
-        + **`H_susceptibilities` [ list of `Susceptibility` class ]** — List of dispersive
-          susceptibilities (see below) added to the permeability μ in order to model
-          material dispersion. Defaults to none (empty list). See also [Material
-          Dispersion](Materials.md#material-dispersion).
-        ""
-
-        if epsilon:
-            epsilon_diag = Vector3(epsilon, epsilon, epsilon)
-        elif index:
-            i2 = index * index
-            epsilon_diag = Vector3(i2, i2, i2)
-
-        if mu:
-            mu_diag = Vector3(mu, mu, mu)
-
-        if D_conductivity:
-            D_conductivity_diag = Vector3(D_conductivity, D_conductivity, D_conductivity)
-        if B_conductivity:
-            B_conductivity_diag = Vector3(B_conductivity, B_conductivity, B_conductivity)
-
-        if E_chi2:
-            E_chi2_diag = Vector3(E_chi2, E_chi2, E_chi2)
-        if E_chi3:
-            E_chi3_diag = Vector3(E_chi3, E_chi3, E_chi3)
-        if H_chi2:
-            H_chi2_diag = Vector3(H_chi2, H_chi2, H_chi2)
-        if H_chi3:
-            H_chi3_diag = Vector3(H_chi3, H_chi3, H_chi3)
-
-        self.epsilon_diag = Vector3(*epsilon_diag)
-        self.epsilon_offdiag = Vector3(*epsilon_offdiag)
-        self.mu_diag = Vector3(*mu_diag)
-        self.mu_offdiag = Vector3(*mu_offdiag)
-        self.E_susceptibilities = E_susceptibilities
-        self.H_susceptibilities = H_susceptibilities
-        self.E_chi2_diag = Vector3(chi2, chi2, chi2) if chi2 else Vector3(*E_chi2_diag)
-        self.E_chi3_diag = Vector3(chi3, chi3, chi3) if chi3 else Vector3(*E_chi3_diag)
-        self.H_chi2_diag = Vector3(*H_chi2_diag)
-        self.H_chi3_diag = Vector3(*H_chi3_diag)
-        self.D_conductivity_diag = Vector3(*D_conductivity_diag)
-        self.D_conductivity_offdiag = Vector3(*D_conductivity_offdiag)
-        self.B_conductivity_diag = Vector3(*B_conductivity_diag)
-        self.B_conductivity_offdiag = Vector3(*D_conductivity_offdiag)
-        self.valid_freq_range = valid_freq_range
-    ##########################################################################    
-        self._logger_list = []
-    ##########################################################################
-
-    def __repr__(self):
-        return 'Medium()'
-    ##########################################################################
-    
-    def _log_string(self, string):
-        
-        if not string in self._logger_list: self._logger_list.append(string)
-    ##########################################################################
-
-    def transform(self, m):
-        ""
-        Transforms `epsilon`, `mu`, and `sigma` of any [susceptibilities](#susceptibility)
-        by the 3×3 matrix `m`. If `m` is a [rotation
-        matrix](https://en.wikipedia.org/wiki/Rotation_matrix), then the principal axes of
-        the susceptibilities are rotated by `m`.  More generally, the susceptibilities χ
-        are transformed to MχMᵀ/|det M|, which corresponds to [transformation
-        optics](http://math.mit.edu/~stevenj/18.369/coordinate-transform.pdf) for an
-        arbitrary curvilinear coordinate transformation with Jacobian matrix M. The
-        absolute value of the determinant is to prevent inadvertent construction of
-        left-handed materials, which are [problematic in nondispersive
-        media](FAQ.md#why-does-my-simulation-diverge-if-0).
-        ""
-        eps = Matrix(mp.Vector3(self.epsilon_diag.x, self.epsilon_offdiag.x, self.epsilon_offdiag.y),
-                     mp.Vector3(self.epsilon_offdiag.x, self.epsilon_diag.y, self.epsilon_offdiag.z),
-                     mp.Vector3(self.epsilon_offdiag.y, self.epsilon_offdiag.z, self.epsilon_diag.z))
-        mu = Matrix(mp.Vector3(self.mu_diag.x, self.mu_offdiag.x, self.mu_offdiag.y),
-                    mp.Vector3(self.mu_offdiag.x, self.mu_diag.y, self.mu_offdiag.z),
-                    mp.Vector3(self.mu_offdiag.y, self.mu_offdiag.z, self.mu_diag.z))
-
-        new_eps = (m * eps * m.transpose()) / abs(m.determinant())
-        new_mu = (m * mu * m.transpose()) / abs(m.determinant())
-        self.epsilon_diag = mp.Vector3(new_eps.c1.x, new_eps.c2.y, new_eps.c3.z)
-        self.epsilon_offdiag = mp.Vector3(new_eps.c2.x, new_eps.c3.x, new_eps.c3.y)
-        self.mu_diag = mp.Vector3(new_mu.c1.x, new_mu.c2.y, new_mu.c3.z)
-        self.mu_offdiag = mp.Vector3(new_mu.c2.x, new_mu.c3.x, new_mu.c3.y)
-
-        for s in self.E_susceptibilities:
-            s.transform(m)
-
-        for s in self.H_susceptibilities:
-            s.transform(m)
-
-    def rotate(self, axis, theta):
-        T = get_rotation_matrix(axis,theta)
-        self.transform(T)
-
-    def epsilon(self,freq):
-        "
-        Returns the medium's permittivity tensor as a 3x3 Numpy array at the specified
-        frequency `freq` which can be either a scalar, list, or Numpy array. In the case
-        of a list/array of N frequency points, a Numpy array of size Nx3x3 is returned.
-        ""
-        ##########################################################################
-        self._log_string("Outside eps")
-        ##########################################################################
-        return self._get_epsmu(self.epsilon_diag, self.epsilon_offdiag, self.E_susceptibilities, self.D_conductivity_diag, self.D_conductivity_offdiag, freq)
-
-    def mu(self,freq):
-        ""
-        Returns the medium's permeability tensor as a 3x3 Numpy array at the specified
-        frequency `freq` which can be either a scalar, list, or Numpy array. In the case
-        of a list/array of N frequency points, a Numpy array of size Nx3x3 is returned.
-        ""
-        ##########################################################################
-        self._log_string("Outside mu")
-        ##########################################################################
-        return self._get_epsmu(self.mu_diag, self.mu_offdiag, self.H_susceptibilities, self.B_conductivity_diag, self.B_conductivity_offdiag, freq)
-
-    def _get_epsmu(self, diag, offdiag, susceptibilities, conductivity_diag, conductivity_offdiag, freq):
-        ##########################################################################
-        self._log_string("Inside epsmu")
-        ##########################################################################
-        # Clean the input
-        if np.isscalar(freq):
-            freqs = np.array(freq)[np.newaxis, np.newaxis, np.newaxis]
-        else:
-            freqs = np.squeeze(freq)
-            freqs = freqs[:, np.newaxis, np.newaxis]
-
-        # Check for values outside of allowed ranges
-        if np.min(np.squeeze(freqs)) < self.valid_freq_range.min:
-            raise ValueError('User specified frequency {} is below the Medium\'s limit, {}.'.format(np.min(np.squeeze(freqs)),self.valid_freq_range.min))
-        if np.max(np.squeeze(freqs)) > self.valid_freq_range.max:
-            raise ValueError('User specified frequency {} is above the Medium\'s limit, {}.'.format(np.max(np.squeeze(freqs)),self.valid_freq_range.max))
-
-        # Initialize with instantaneous dielectric tensor
-        epsmu = np.expand_dims(Matrix(diag=diag,offdiag=offdiag),axis=0)
-
-        # Iterate through susceptibilities
-        for i_sus in range(len(susceptibilities)):
-            epsmu = epsmu + susceptibilities[i_sus].eval_susceptibility(freqs)
-
-        # Account for conductivity term (only multiply if nonzero to avoid unnecessary complex numbers)
-        conductivity = np.expand_dims(Matrix(diag=conductivity_diag,offdiag=conductivity_offdiag),axis=0)
-        if np.count_nonzero(conductivity) > 0:
-            epsmu = (1 + 1j/freqs * conductivity) * epsmu
-
-        # Convert list matrix to 3D numpy array size [freqs,3,3]
-        return np.squeeze(epsmu)
-"""
-
 #%% MEEP MEDIUM THAT TAKES FUNCTION
 
 class MediumFromFunction(mp.Medium):
@@ -1136,9 +848,6 @@ class MediumFromFile(MediumFromFunction):
                                                       from_um_factor=from_um_factor)
         
         super().__init__(
-                  epsilon_function=epsilon_function,
-                  mu_function=lambda wlen:1,
-                  have_logger=have_logger,
                   epsilon_diag=epsilon_diag,
                   epsilon_offdiag=epsilon_offdiag,
                   mu_diag=mu_diag,
@@ -1164,10 +873,156 @@ class MediumFromFile(MediumFromFunction):
                   E_chi3=E_chi3,
                   H_chi2=H_chi2,
                   H_chi3=H_chi3,
-                  valid_freq_range=valid_freq_range)
+                  valid_freq_range=valid_freq_range,
+                  epsilon_function=epsilon_function,
+                  mu_function=lambda wlen:1,
+                  have_logger=have_logger)
         
         if len(E_susceptibilities)>0 or len(H_susceptibilities)>0:
             raise ValueError("This class doesn't take susceptibilities!")
+
+#%% MEEP SUSCEPTIBILITY THAT TAKES AN INTERPOLATION
+
+class FromFileSusceptibility(mp.Susceptibility):
+    """
+    Specifies a susceptibility which is an interpolation of data loaded from a file.
+    """
+    def __init__(self, 
+                  material="Au",
+                  paper="JC",
+                  reference="RIinfo",
+                  from_um_factor=1e-3,
+                  have_logger=False):
         
-        # self.__class__ = mp.Medium
+        super().__init__(sigma_diag=mp.Vector3(1,1,1), sigma_offdiag=mp.Vector3(), sigma=None)
         
+        self.material = material
+        self.paper = paper
+        self.reference = reference
+        self.from_um_factor = from_um_factor
+        
+        epsilon_function = epsilon_function_from_file(material=material, 
+                                                      paper=paper, 
+                                                      reference=reference, 
+                                                      from_um_factor=from_um_factor)
+        
+        self.epsilon_function = epsilon_function
+        
+        self._have_logger = have_logger
+        self._logger_list = []
+
+    def _log_string(self, string):
+        
+        if self._have_logger and not string in self._logger_list: self._logger_list.append(string)
+    
+    def _log_print(self):
+        
+        print(self._logger_list)
+
+    def eval_susceptibility(self,freq):
+        self._log_string("Called eval susceptibility")
+        sigma = np.expand_dims(mp.Matrix(diag=self.sigma_diag,offdiag=self.sigma_offdiag),axis=0)
+        return self.epsilon_function(1/freq) * sigma
+        
+class MediumFromFileSusceptibility(mp.Medium):
+    
+    """A Meep Medium subclass that loads experimental data and interpoles"""
+    
+    def __init__(self, 
+                  epsilon_diag=mp.Vector3(0,0,0),
+                  epsilon_offdiag=mp.Vector3(),
+                  mu_diag=mp.Vector3(1,1,1),
+                  mu_offdiag=mp.Vector3(),
+                  E_susceptibilities=[],
+                  H_susceptibilities=[],
+                  E_chi2_diag=mp.Vector3(),
+                  E_chi3_diag=mp.Vector3(),
+                  H_chi2_diag=mp.Vector3(),
+                  H_chi3_diag=mp.Vector3(),
+                  D_conductivity_diag=mp.Vector3(),
+                  D_conductivity_offdiag=mp.Vector3(),
+                  B_conductivity_diag=mp.Vector3(),
+                  B_conductivity_offdiag=mp.Vector3(),
+                  epsilon=None,
+                  index=None,
+                  mu=None,
+                  chi2=None,
+                  chi3=None,
+                  D_conductivity=None,
+                  B_conductivity=None,
+                  E_chi2=None,
+                  E_chi3=None,
+                  H_chi2=None,
+                  H_chi3=None,
+                  valid_freq_range=mp.FreqRange(min=-mp.inf, max=mp.inf),
+                  material="Au",
+                  paper="JC",
+                  reference="RIinfo",
+                  from_um_factor=1e-3,
+                  have_logger=False):
+        
+        if len(E_susceptibilities)>0 or len(H_susceptibilities)>0:
+            raise ValueError("This class doesn't take external susceptibilities!")
+        
+        self.material = material
+        self.paper = paper
+        self.reference = reference
+        self.from_um_factor = from_um_factor
+        
+        interpolated_susceptibility = FromFileSusceptibility(
+            material=material, 
+            paper=paper, 
+            reference=reference, 
+            from_um_factor=from_um_factor,
+            have_logger=have_logger)
+        
+        try:
+            eps_wlen_range = interpolated_susceptibility.epsilon_function._wlen_range_
+        except:
+            eps_wlen_range = np.array([-mp.inf, mp.inf])
+        
+        self.valid_wlen_range = eps_wlen_range
+        
+        if self.valid_wlen_range[1] == np.inf:
+            min_freq = -mp.inf
+        elif 1/self.valid_wlen_range[1] < mp.inf:
+            min_freq = 1/self.valid_wlen_range[1]
+        else:
+            min_freq = -mp.inf
+        if self.valid_wlen_range[0] == -np.inf:
+            max_freq = mp.inf
+        elif 1/self.valid_wlen_range[0] > -mp.inf:
+            max_freq = 1/self.valid_wlen_range[0]
+        else:
+            max_freq = -mp.inf
+
+        valid_freq_range = mp.FreqRange(min_freq, max_freq)
+
+        super().__init__(
+                  epsilon_diag=epsilon_diag,
+                  epsilon_offdiag=epsilon_offdiag,
+                  mu_diag=mu_diag,
+                  mu_offdiag=mu_offdiag,
+                  E_susceptibilities=[interpolated_susceptibility],
+                  H_susceptibilities=[],
+                  E_chi2_diag=E_chi2_diag,
+                  E_chi3_diag=E_chi3_diag,
+                  H_chi2_diag=H_chi2_diag,
+                  H_chi3_diag=H_chi3_diag,
+                  D_conductivity_diag=D_conductivity_diag,
+                  D_conductivity_offdiag=D_conductivity_offdiag,
+                  B_conductivity_diag=B_conductivity_diag,
+                  B_conductivity_offdiag=B_conductivity_offdiag,
+                  epsilon=epsilon,
+                  index=index,
+                  mu=mu,
+                  chi2=chi2,
+                  chi3=chi3,
+                  D_conductivity=D_conductivity,
+                  B_conductivity=B_conductivity,
+                  E_chi2=E_chi2,
+                  E_chi3=E_chi3,
+                  H_chi2=H_chi2,
+                  H_chi3=H_chi3,
+                  valid_freq_range=valid_freq_range)
+
