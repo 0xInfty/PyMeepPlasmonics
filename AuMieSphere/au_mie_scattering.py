@@ -37,7 +37,7 @@ courant = 0.5
 # Au sphere
 r = 60  # Radius of sphere in nm
 paper = "R"
-medium = "Au"
+material = "Au"
 reference = "Meep"
 
 # Frequency and wavelength
@@ -52,10 +52,10 @@ folder = "AuMieSphere/AuMie/14)SaveFlux"
 # Au Sphere
 r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
 if reference=="Meep":
-    medium = vmt.import_medium("Au", from_um_factor, paper=paper)
+    medium = vmt.import_medium(material, from_um_factor, paper=paper)
 elif reference=="RIinfo":
-    medium = vmt.MediumFromFile("Au", paper=paper, reference=reference, from_um_factor=from_um_factor,
-                                have_logger=True)
+    medium = vmt.MediumFromFile(material=material, paper=paper, reference=reference, 
+                                from_um_factor=from_um_factor, have_logger=True)
 else:
     raise ValueError("Reference for medium not recognized. Sorry :/")
 
