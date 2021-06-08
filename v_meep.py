@@ -20,6 +20,7 @@ It's widely based on Meep Materials Library.
 import meep as mp
 import numpy as np
 import os
+from time import sleep
 import v_save as vs
 import v_utilities as vu
 
@@ -165,14 +166,34 @@ def max_stable_courant_dim_index(medium, freq, ndims=3):
     
     return max_courant
     
+
+#%%
+
+def parallel_assign(process_number, process_total_number, parallel=True):
+    
+    if parallel and process_total_number > 1:
+        if process_number == 0:
+            return mp.am_master()
+        else:
+            return mp.my_rank() == 1
+    else:
+        return True
+
 #%%
 
 def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, path):
     
     
+    parallel = params["parallel"]
+    n_processes = params["n_processes"]
+    
     dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
     dir_backup = os.path.join(home, f"FluxData/FluxDataDir{sysname}Backup.txt")
-    new_flux_path = vs.new_dir(vs.datetime_dir(os.path.join(home, "FluxData/MidFlux")))
+    new_flux_path = vs.datetime_dir(os.path.join(home, "FluxData/MidFlux"))
+    if parallel_assign(0, n_processes, parallel):
+        os.makedirs(new_flux_path)
+    else:
+        sleep(.2)
 
     filename_prefix = sim.filename_prefix
     sim.filename_prefix = None
@@ -187,7 +208,8 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
     sim.filename_prefix = filename_prefix
         
     database = vs.retrieve_footer(dir_file)
-    vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
+    if parallel_assign(1, n_processes, parallel):
+        vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
     key_params = ["from_um_factor", "resolution", "courant", 
                  "wlen_range", "cutoff", "nfreq", 
                  "submerged_index", "surface_index", "displacement",
@@ -206,7 +228,8 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
         except:
             raise ValueError(f"Missing key parameter: {key}")
     
-    vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
+    if parallel_assign(0, n_processes, parallel):
+        vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
     
     return new_flux_path
 
@@ -297,18 +320,6 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
     sim.filename_prefix = filename_prefix
     
     return
-
-#%%
-
-def parallel_assign(process_number, process_total_number, parallel=True):
-    
-    if parallel and process_total_number > 1:
-        if process_number == 0:
-            return mp.am_master()
-        else:
-            return mp.my_rank() == 1
-    else:
-        return True
 
 #%%
 
