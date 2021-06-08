@@ -131,26 +131,73 @@ def import_medium(name, from_um_factor=1, paper="R"):
     # Gold (Au)
     # Fit to P.B. Johnson and R.W. Christy, Physical Review B, Vol. 6, pp. 4370-9, 1972
         
-        metal_visible_range = mp.FreqRange(min=from_um_factor*1e3/800, 
-                                           max=from_um_factor*1e3/400)
+        # metal_visible_range = mp.FreqRange(min=from_um_factor*1e3/800, 
+        #                                    max=from_um_factor*1e3/400)
     
-        Au_JC_visible_frq0 = 1*from_um_factor/0.139779231751333
-        Au_JC_visible_gam0 = 1*from_um_factor/26.1269913352870
-        Au_JC_visible_sig0 = 1
+        # Au_JC_visible_frq0 = 1*from_um_factor/0.139779231751333
+        # Au_JC_visible_gam0 = 1*from_um_factor/26.1269913352870
+        # Au_JC_visible_sig0 = 1
         
-        Au_JC_visible_frq1 = 1*from_um_factor/0.404064525036786
-        Au_JC_visible_gam1 = 1*from_um_factor/1.12834046202759
-        Au_JC_visible_sig1 = 2.07118534879440
+        # Au_JC_visible_frq1 = 1*from_um_factor/0.404064525036786
+        # Au_JC_visible_gam1 = 1*from_um_factor/1.12834046202759
+        # Au_JC_visible_sig1 = 2.07118534879440
         
-        Au_JC_visible_susc = [mp.DrudeSusceptibility(frequency=Au_JC_visible_frq0, gamma=Au_JC_visible_gam0, sigma=Au_JC_visible_sig0),
-                              mp.LorentzianSusceptibility(frequency=Au_JC_visible_frq1, gamma=Au_JC_visible_gam1, sigma=Au_JC_visible_sig1)]
+        # Au_JC_visible_susc = [mp.DrudeSusceptibility(frequency=Au_JC_visible_frq0, gamma=Au_JC_visible_gam0, sigma=Au_JC_visible_sig0),
+        #                       mp.LorentzianSusceptibility(frequency=Au_JC_visible_frq1, gamma=Au_JC_visible_gam1, sigma=Au_JC_visible_sig1)]
         
-        Au_JC_visible = mp.Medium(epsilon=6.1599, 
-                                  E_susceptibilities=Au_JC_visible_susc, 
-                                  valid_freq_range=metal_visible_range)
-        Au_JC_visible.from_um_factor = from_um_factor
+        # Au_JC_visible = mp.Medium(epsilon=6.1599, 
+        #                           E_susceptibilities=Au_JC_visible_susc, 
+        #                           valid_freq_range=metal_visible_range)
+        # Au_JC_visible.from_um_factor = from_um_factor
         
-        return Au_JC_visible
+        # return Au_JC_visible
+        
+    #------------------------------------------------------------------
+    # Metal from my own fit
+    # Wavelength range: 0.1879 - 1.937 um
+    # Gold (Au)
+    # Fit to P.B. Johnson and R.W. Christy, Physical Review B, Vol. 6, pp. 4370-9, 1972
+    
+        Au_JC_range = mp.FreqRange(min=from_um_factor/1.937, 
+                                   max=from_um_factor/.1879)
+        
+        freq_0 = 1.000000082740371e-10 * from_um_factor
+        gamma_0 = 4.4142682842363e-09 * from_um_factor
+        sigma_0 = 3.3002903009040977e+21
+        
+        freq_1 = 0.3260039379724786 * from_um_factor
+        gamma_1 = 0.03601307014052124 * from_um_factor
+        sigma_1 = 103.74591029640469
+        
+        freq_2 = 0.47387215165339414 * from_um_factor
+        gamma_2 = 0.34294093699162054 * from_um_factor
+        sigma_2 = 14.168079504545002
+        
+        freq_3 = 2.3910144662345445 * from_um_factor
+        gamma_3 = 0.5900378254265015 * from_um_factor
+        sigma_3 = 0.8155991478264435
+        
+        freq_4 = 3.3577076082530537 * from_um_factor
+        gamma_4 = 1.6689250252226686 * from_um_factor
+        sigma_4 = 2.038193481751111
+        
+        freq_5 = 8.915719663759013 * from_um_factor
+        gamma_5 = 7.539763092679264 * from_um_factor
+        sigma_5 = 3.74409654935571
+        
+        Au_JC_susc = [mp.DrudeSusceptibility(frequency=freq_0, gamma=gamma_0, sigma=sigma_0),
+                      mp.LorentzianSusceptibility(frequency=freq_1, gamma=gamma_1, sigma=sigma_1),
+                      mp.LorentzianSusceptibility(frequency=freq_2, gamma=gamma_2, sigma=sigma_2),
+                      mp.LorentzianSusceptibility(frequency=freq_3, gamma=gamma_3, sigma=sigma_3),
+                      mp.LorentzianSusceptibility(frequency=freq_4, gamma=gamma_4, sigma=sigma_4),
+                      mp.LorentzianSusceptibility(frequency=freq_5, gamma=gamma_5, sigma=sigma_5)]
+        
+        Au_JC = mp.Medium(epsilon=1.0,#6.1599, 
+                          E_susceptibilities=Au_JC_susc, 
+                          valid_freq_range=Au_JC_range)
+        Au_JC.from_um_factor = from_um_factor
+        
+        return Au_JC
 
     elif name=="Au" and paper=="P":
         
