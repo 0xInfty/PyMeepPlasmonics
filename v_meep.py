@@ -174,6 +174,8 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
     dir_backup = os.path.join(home, f"FluxData/FluxDataDir{sysname}Backup.txt")
     new_flux_path = vs.new_dir(vs.datetime_dir(os.path.join(home, "FluxData/MidFlux")))
 
+    filename_prefix = sim.filename_prefix
+    sim.filename_prefix = None
     os.chdir(new_flux_path)
     sim.save_flux("MidFluxX1", box_x1)
     sim.save_flux("MidFluxX2", box_x2)
@@ -182,6 +184,7 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
     sim.save_flux("MidFluxZ1", box_z1)
     sim.save_flux("MidFluxZ2", box_z2)
     os.chdir(syshome)
+    sim.filename_prefix = filename_prefix
         
     database = vs.retrieve_footer(dir_file)
     vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
@@ -281,6 +284,8 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
     
     print(f"Loading flux from '{flux_path}'")
     
+    filename_prefix = sim.filename_prefix
+    sim.filename_prefix = None
     os.chdir(flux_path)
     sim.load_flux("MidFluxX1", box_x1)
     sim.load_flux("MidFluxX2", box_x2)
@@ -289,6 +294,7 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
     sim.load_flux("MidFluxZ1", box_z1)
     sim.load_flux("MidFluxZ2", box_z2)
     os.chdir(syshome)
+    sim.filename_prefix = filename_prefix
     
     return
 
