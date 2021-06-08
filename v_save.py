@@ -25,6 +25,7 @@ saveanimation : function
 @author: Vall
 """
 
+from datetime import datetime
 import h5py as h5
 import matplotlib.pyplot as plt
 # import meep as mp
@@ -40,6 +41,19 @@ import re
 from socket import gethostname
 import v_utilities as vut
 
+#%% 
+
+def get_sys_name():
+    """Returns system name according to which CPU is running"""
+    
+    string = gethostname()
+    if "Nano" in string:
+        return "SC"
+    elif "vall" in string:
+        return "MC"
+    else:
+        raise ValueError("Your PC must appear inside get_sys_home definition")
+
 #%%
 
 def get_home():
@@ -52,7 +66,7 @@ def get_home():
     elif "vall" in string:
         return "/home/vall/Documents/Thesis/ThesisResults"
     else:
-        raise ValueError("Your PC must appear inside return_home definition")
+        raise ValueError("Your PC must appear inside get_home definition")
 
 #%%
 
@@ -66,7 +80,43 @@ def get_sys_home():
     elif "vall" in string:
         return "/home/vall/Documents/Thesis/ThesisPython"
     else:
-        raise ValueError("Your PC must appear inside return_home definition")
+        raise ValueError("Your PC must appear inside get_sys_home definition")
+        
+#%%
+
+def datetime_dir(path, strftime="(%Y-%m-%d)(%H:%M:%S)"):
+    
+    """Returns a path decorated with timestamp at the end.
+    
+    Takes the path to both a file or a directory.
+    
+    Parameters
+    ----------
+    path : str
+        Original path.
+    strftime="(%Y-%m-%d)(%H:%M:%S)" : str
+        Date and time formatter.
+    
+    Returns
+    -------
+    new_dir : str
+        New path, containing the timestamp.
+    
+    See Also
+    --------
+    datetime.date.strftime
+    
+    """
+    
+    date = datetime.now().strftime(strftime)
+    
+    base = os.path.split(path)[0]
+    name = os.path.splitext(os.path.split(path)[-1])[0]
+    extension = os.path.splitext(path)[-1]
+    
+    new_path = os.path.join(base, name+date+extension)
+    
+    return new_path
 
 #%%
 
@@ -299,10 +349,8 @@ def savetxt(file, datanumpylike, overwrite=False, header='', footer=''):
             try:
                 aux = []
                 for key, value in footer.items():
-                    if isinstance(value, tuple) and len(value) == 2:
-                        condition = isinstance(value[0], str)
-                        if not condition and isinstance(value[1], str):
-                            value = '"{}, {}"'.format(*value)
+                    if isinstance(value, np.ndarray) or isinstance(value, tuple):
+                        value = str(list(value))
                     elif isinstance(value, str):
                         value = '"{}"'.format(value)
                     aux.append('{}={}'.format(key, value) + ', ')

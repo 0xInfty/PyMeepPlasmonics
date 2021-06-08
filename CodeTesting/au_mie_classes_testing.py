@@ -40,20 +40,36 @@ plot_file = lambda n : os.path.join(
 
 #%% INNER MEDIUM EPSILON
 
+from_um_factor = 10e-3
+
+wlen_range = np.array([400, 800]) / (1e3 * from_um_factor)
 wlen = np.linspace(*wlen_range, npoints)
+
+au_jc = vmt.MediumFromFile(material="Au", 
+                           paper="JC", 
+                           reference="RIinfo",
+                           from_um_factor=from_um_factor)
+au_r = vmt.MediumFromFile(material="Au", 
+                          paper="R", 
+                          reference="RIinfo",
+                          from_um_factor=from_um_factor)
 
 epsilon_func_meep_jc = vmt.epsilon_function(material="Au", 
                                            paper="JC", 
-                                           reference="Meep")
+                                           reference="Meep",
+                                           from_um_factor=from_um_factor)
 epsilon_func_meep_r = vmt.epsilon_function(material="Au", 
                                           paper="R", 
-                                          reference="Meep")
-epsilon_func_exp_jc = vmt.epsilon_function(material="Au", 
-                                          paper="JC", 
-                                          reference="RIinfo")
-epsilon_func_exp_r = vmt.epsilon_function(material="Au", 
-                                          paper="R", 
-                                          reference="RIinfo")
+                                          reference="Meep",
+                                          from_um_factor=from_um_factor)
+# epsilon_func_exp_jc = vmt.epsilon_function(material="Au", 
+#                                           paper="JC", 
+#                                           reference="RIinfo")
+# epsilon_func_exp_r = vmt.epsilon_function(material="Au", 
+#                                           paper="R", 
+#                                           reference="RIinfo")
+epsilon_func_exp_jc = lambda wlen : au_jc.epsilon(1/wlen)[0,0]
+epsilon_func_exp_r = lambda wlen : au_r.epsilon(1/wlen)[0,0]
 
 epsilon_meep_jc = np.array([epsilon_func_meep_jc(wl) for wl in wlen])
 epsilon_meep_r = np.array([epsilon_func_meep_r(wl) for wl in wlen])
@@ -93,7 +109,7 @@ for ax, f, t, y in zip(axes, functions, titles, ylabels):
 for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)), 
                              max(max_value)+.1*(max(max_value)-min(min_value))])
     
-plt.savefig(plot_file("Epsilon.png"))
+# plt.savefig(plot_file("Epsilon.png"))
 
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
 

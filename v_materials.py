@@ -20,14 +20,6 @@ It's widely based on Meep Materials Library.
 @author: vall
 """
 
-from socket import gethostname
-if "Nano" in gethostname():
-    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
-elif "vall" in gethostname():
-    syshome = "/home/vall/Documents/Thesis/ThesisPython"
-else:
-    raise ValueError("Your PC must be registered at the top of this code")
-
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -36,7 +28,11 @@ try:
     import meep as mp
 except:
     print("Meep functions not available. Don't worry! You can still use everything else")
+import v_save as vs
 import v_utilities as vu
+
+syshome = vs.get_sys_home()
+home = vs.get_home()
 
 #%% MEEP MEDIUM IMPORT
 
@@ -135,26 +131,73 @@ def import_medium(name, from_um_factor=1, paper="R"):
     # Gold (Au)
     # Fit to P.B. Johnson and R.W. Christy, Physical Review B, Vol. 6, pp. 4370-9, 1972
         
-        metal_visible_range = mp.FreqRange(min=from_um_factor*1e3/800, 
-                                           max=from_um_factor*1e3/400)
+        # metal_visible_range = mp.FreqRange(min=from_um_factor*1e3/800, 
+        #                                    max=from_um_factor*1e3/400)
     
-        Au_JC_visible_frq0 = 1*from_um_factor/0.139779231751333
-        Au_JC_visible_gam0 = 1*from_um_factor/26.1269913352870
-        Au_JC_visible_sig0 = 1
+        # Au_JC_visible_frq0 = 1*from_um_factor/0.139779231751333
+        # Au_JC_visible_gam0 = 1*from_um_factor/26.1269913352870
+        # Au_JC_visible_sig0 = 1
         
-        Au_JC_visible_frq1 = 1*from_um_factor/0.404064525036786
-        Au_JC_visible_gam1 = 1*from_um_factor/1.12834046202759
-        Au_JC_visible_sig1 = 2.07118534879440
+        # Au_JC_visible_frq1 = 1*from_um_factor/0.404064525036786
+        # Au_JC_visible_gam1 = 1*from_um_factor/1.12834046202759
+        # Au_JC_visible_sig1 = 2.07118534879440
         
-        Au_JC_visible_susc = [mp.DrudeSusceptibility(frequency=Au_JC_visible_frq0, gamma=Au_JC_visible_gam0, sigma=Au_JC_visible_sig0),
-                              mp.LorentzianSusceptibility(frequency=Au_JC_visible_frq1, gamma=Au_JC_visible_gam1, sigma=Au_JC_visible_sig1)]
+        # Au_JC_visible_susc = [mp.DrudeSusceptibility(frequency=Au_JC_visible_frq0, gamma=Au_JC_visible_gam0, sigma=Au_JC_visible_sig0),
+        #                       mp.LorentzianSusceptibility(frequency=Au_JC_visible_frq1, gamma=Au_JC_visible_gam1, sigma=Au_JC_visible_sig1)]
         
-        Au_JC_visible = mp.Medium(epsilon=6.1599, 
-                                  E_susceptibilities=Au_JC_visible_susc, 
-                                  valid_freq_range=metal_visible_range)
-        Au_JC_visible.from_um_factor = from_um_factor
+        # Au_JC_visible = mp.Medium(epsilon=6.1599, 
+        #                           E_susceptibilities=Au_JC_visible_susc, 
+        #                           valid_freq_range=metal_visible_range)
+        # Au_JC_visible.from_um_factor = from_um_factor
         
-        return Au_JC_visible
+        # return Au_JC_visible
+        
+    #------------------------------------------------------------------
+    # Metal from my own fit
+    # Wavelength range: 0.1879 - 1.937 um
+    # Gold (Au)
+    # Fit to P.B. Johnson and R.W. Christy, Physical Review B, Vol. 6, pp. 4370-9, 1972
+    
+        Au_JC_range = mp.FreqRange(min=from_um_factor/1.937, 
+                                   max=from_um_factor/.1879)
+        
+        freq_0 = 1.000000082740371e-10 * from_um_factor
+        gamma_0 = 4.4142682842363e-09 * from_um_factor
+        sigma_0 = 3.3002903009040977e+21
+        
+        freq_1 = 0.3260039379724786 * from_um_factor
+        gamma_1 = 0.03601307014052124 * from_um_factor
+        sigma_1 = 103.74591029640469
+        
+        freq_2 = 0.47387215165339414 * from_um_factor
+        gamma_2 = 0.34294093699162054 * from_um_factor
+        sigma_2 = 14.168079504545002
+        
+        freq_3 = 2.3910144662345445 * from_um_factor
+        gamma_3 = 0.5900378254265015 * from_um_factor
+        sigma_3 = 0.8155991478264435
+        
+        freq_4 = 3.3577076082530537 * from_um_factor
+        gamma_4 = 1.6689250252226686 * from_um_factor
+        sigma_4 = 2.038193481751111
+        
+        freq_5 = 8.915719663759013 * from_um_factor
+        gamma_5 = 7.539763092679264 * from_um_factor
+        sigma_5 = 3.74409654935571
+        
+        Au_JC_susc = [mp.DrudeSusceptibility(frequency=freq_0, gamma=gamma_0, sigma=sigma_0),
+                      mp.LorentzianSusceptibility(frequency=freq_1, gamma=gamma_1, sigma=sigma_1),
+                      mp.LorentzianSusceptibility(frequency=freq_2, gamma=gamma_2, sigma=sigma_2),
+                      mp.LorentzianSusceptibility(frequency=freq_3, gamma=gamma_3, sigma=sigma_3),
+                      mp.LorentzianSusceptibility(frequency=freq_4, gamma=gamma_4, sigma=sigma_4),
+                      mp.LorentzianSusceptibility(frequency=freq_5, gamma=gamma_5, sigma=sigma_5)]
+        
+        Au_JC = mp.Medium(epsilon=1.0,#6.1599, 
+                          E_susceptibilities=Au_JC_susc, 
+                          valid_freq_range=Au_JC_range)
+        Au_JC.from_um_factor = from_um_factor
+        
+        return Au_JC
 
     elif name=="Au" and paper=="P":
         
@@ -591,9 +634,6 @@ class MediumFromFunction(mp.Medium):
     """A Meep Medium with isotropic complex epsilon and mu as functions of wavelength in nm"""
     
     def __init__(self, 
-                 epsilon_function=lambda wlen:1,
-                 mu_function=lambda wlen:1,
-                 have_logger=False,
                  epsilon_diag=mp.Vector3(1, 1, 1),
                  epsilon_offdiag=mp.Vector3(),
                  mu_diag=mp.Vector3(1, 1, 1),
@@ -619,7 +659,10 @@ class MediumFromFunction(mp.Medium):
                  E_chi3=None,
                  H_chi2=None,
                  H_chi3=None,
-                 valid_freq_range=mp.FreqRange(min=-mp.inf, max=mp.inf)):
+                 valid_freq_range=mp.FreqRange(min=-mp.inf, max=mp.inf),
+                 epsilon_function=lambda wlen:1,
+                 mu_function=lambda wlen:1,
+                 have_logger=False):
         
         super().__init__(epsilon_diag=epsilon_diag,
                  epsilon_offdiag=epsilon_offdiag,
@@ -808,11 +851,7 @@ class MediumFromFile(MediumFromFunction):
     
     """A Meep Medium subclass that loads experimental data and interpoles"""
     
-    def __init__(self, material,
-                  paper="JC",
-                  reference="RIinfo",
-                  from_um_factor=1e-3,
-                  have_logger=False,
+    def __init__(self, 
                   epsilon_diag=mp.Vector3(1, 1, 1),
                   epsilon_offdiag=mp.Vector3(),
                   mu_diag=mp.Vector3(1, 1, 1),
@@ -838,7 +877,12 @@ class MediumFromFile(MediumFromFunction):
                   E_chi3=None,
                   H_chi2=None,
                   H_chi3=None,
-                  valid_freq_range=mp.FreqRange(min=-mp.inf, max=mp.inf)):
+                  valid_freq_range=mp.FreqRange(min=-mp.inf, max=mp.inf),
+                  material="Au",
+                  paper="JC",
+                  reference="RIinfo",
+                  from_um_factor=1e-3,
+                  have_logger=False):
         
         self.material = material
         self.paper = paper
@@ -851,9 +895,6 @@ class MediumFromFile(MediumFromFunction):
                                                       from_um_factor=from_um_factor)
         
         super().__init__(
-                  epsilon_function=epsilon_function,
-                  mu_function=lambda wlen:1,
-                  have_logger=have_logger,
                   epsilon_diag=epsilon_diag,
                   epsilon_offdiag=epsilon_offdiag,
                   mu_diag=mu_diag,
@@ -879,10 +920,156 @@ class MediumFromFile(MediumFromFunction):
                   E_chi3=E_chi3,
                   H_chi2=H_chi2,
                   H_chi3=H_chi3,
-                  valid_freq_range=valid_freq_range)
+                  valid_freq_range=valid_freq_range,
+                  epsilon_function=epsilon_function,
+                  mu_function=lambda wlen:1,
+                  have_logger=have_logger)
         
         if len(E_susceptibilities)>0 or len(H_susceptibilities)>0:
             raise ValueError("This class doesn't take susceptibilities!")
+
+#%% MEEP SUSCEPTIBILITY THAT TAKES AN INTERPOLATION
+
+class FromFileSusceptibility(mp.Susceptibility):
+    """
+    Specifies a susceptibility which is an interpolation of data loaded from a file.
+    """
+    def __init__(self, 
+                  material="Au",
+                  paper="JC",
+                  reference="RIinfo",
+                  from_um_factor=1e-3,
+                  have_logger=False):
         
-        # self.__class__ = mp.Medium
+        super().__init__(sigma_diag=mp.Vector3(1,1,1), sigma_offdiag=mp.Vector3(), sigma=None)
         
+        self.material = material
+        self.paper = paper
+        self.reference = reference
+        self.from_um_factor = from_um_factor
+        
+        epsilon_function = epsilon_function_from_file(material=material, 
+                                                      paper=paper, 
+                                                      reference=reference, 
+                                                      from_um_factor=from_um_factor)
+        
+        self.epsilon_function = epsilon_function
+        
+        self._have_logger = have_logger
+        self._logger_list = []
+
+    def _log_string(self, string):
+        
+        if self._have_logger and not string in self._logger_list: self._logger_list.append(string)
+    
+    def _log_print(self):
+        
+        print(self._logger_list)
+
+    def eval_susceptibility(self,freq):
+        self._log_string("Called eval susceptibility")
+        sigma = np.expand_dims(mp.Matrix(diag=self.sigma_diag,offdiag=self.sigma_offdiag),axis=0)
+        return self.epsilon_function(1/freq) * sigma
+        
+class MediumFromFileSusceptibility(mp.Medium):
+    
+    """A Meep Medium subclass that loads experimental data and interpoles"""
+    
+    def __init__(self, 
+                  epsilon_diag=mp.Vector3(0,0,0),
+                  epsilon_offdiag=mp.Vector3(),
+                  mu_diag=mp.Vector3(1,1,1),
+                  mu_offdiag=mp.Vector3(),
+                  E_susceptibilities=[],
+                  H_susceptibilities=[],
+                  E_chi2_diag=mp.Vector3(),
+                  E_chi3_diag=mp.Vector3(),
+                  H_chi2_diag=mp.Vector3(),
+                  H_chi3_diag=mp.Vector3(),
+                  D_conductivity_diag=mp.Vector3(),
+                  D_conductivity_offdiag=mp.Vector3(),
+                  B_conductivity_diag=mp.Vector3(),
+                  B_conductivity_offdiag=mp.Vector3(),
+                  epsilon=None,
+                  index=None,
+                  mu=None,
+                  chi2=None,
+                  chi3=None,
+                  D_conductivity=None,
+                  B_conductivity=None,
+                  E_chi2=None,
+                  E_chi3=None,
+                  H_chi2=None,
+                  H_chi3=None,
+                  valid_freq_range=mp.FreqRange(min=-mp.inf, max=mp.inf),
+                  material="Au",
+                  paper="JC",
+                  reference="RIinfo",
+                  from_um_factor=1e-3,
+                  have_logger=False):
+        
+        if len(E_susceptibilities)>0 or len(H_susceptibilities)>0:
+            raise ValueError("This class doesn't take external susceptibilities!")
+        
+        self.material = material
+        self.paper = paper
+        self.reference = reference
+        self.from_um_factor = from_um_factor
+        
+        interpolated_susceptibility = FromFileSusceptibility(
+            material=material, 
+            paper=paper, 
+            reference=reference, 
+            from_um_factor=from_um_factor,
+            have_logger=have_logger)
+        
+        try:
+            eps_wlen_range = interpolated_susceptibility.epsilon_function._wlen_range_
+        except:
+            eps_wlen_range = np.array([-mp.inf, mp.inf])
+        
+        self.valid_wlen_range = eps_wlen_range
+        
+        if self.valid_wlen_range[1] == np.inf:
+            min_freq = -mp.inf
+        elif 1/self.valid_wlen_range[1] < mp.inf:
+            min_freq = 1/self.valid_wlen_range[1]
+        else:
+            min_freq = -mp.inf
+        if self.valid_wlen_range[0] == -np.inf:
+            max_freq = mp.inf
+        elif 1/self.valid_wlen_range[0] > -mp.inf:
+            max_freq = 1/self.valid_wlen_range[0]
+        else:
+            max_freq = -mp.inf
+
+        valid_freq_range = mp.FreqRange(min_freq, max_freq)
+
+        super().__init__(
+                  epsilon_diag=epsilon_diag,
+                  epsilon_offdiag=epsilon_offdiag,
+                  mu_diag=mu_diag,
+                  mu_offdiag=mu_offdiag,
+                  E_susceptibilities=[interpolated_susceptibility],
+                  H_susceptibilities=[],
+                  E_chi2_diag=E_chi2_diag,
+                  E_chi3_diag=E_chi3_diag,
+                  H_chi2_diag=H_chi2_diag,
+                  H_chi3_diag=H_chi3_diag,
+                  D_conductivity_diag=D_conductivity_diag,
+                  D_conductivity_offdiag=D_conductivity_offdiag,
+                  B_conductivity_diag=B_conductivity_diag,
+                  B_conductivity_offdiag=B_conductivity_offdiag,
+                  epsilon=epsilon,
+                  index=index,
+                  mu=mu,
+                  chi2=chi2,
+                  chi3=chi3,
+                  D_conductivity=D_conductivity,
+                  B_conductivity=B_conductivity,
+                  E_chi2=E_chi2,
+                  E_chi3=E_chi3,
+                  H_chi2=H_chi2,
+                  H_chi3=H_chi3,
+                  valid_freq_range=valid_freq_range)
+
