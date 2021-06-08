@@ -192,36 +192,6 @@ if flux_path == None:
     sim.init_sim()
     enlapsed.append( time() - temp )
     
-    """
-    112x112x112 with resolution 4
-    (48 cells inside diameter)
-    ==> 30 s to build
-    
-    112x112x112 with resolution 2
-    (24 cells inside diameter)
-    ==> 4.26 s to build
-    
-    116x116x116 with resolution 2
-    (24 cells inside diameter)
-    ==> 5.63 s
-    
-    98 x 98 x 98 with resolution 3
-    (36 cells inside diameter)
-    ==> 9.57 s
-    
-    172x172x172 with resolution 2
-    (24 cells inside diameter)
-    ==> 17.47 s
-    
-    67 x 67 x 67 with resolution 4
-    (48 cells inside diameter)
-    ==> 7.06 s
-    
-    67,375 x 67,375 x 67,375 with resolution 8
-    (100 cells inside diameter)
-    ==> 56.14 s
-    """
-    
     #% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
     
     temp = time()
@@ -233,20 +203,6 @@ if flux_path == None:
         # 1e-3)) # Factor to decay
     enlapsed.append( time() - temp )
     
-    """
-    112x112x112 with resolution 2
-    (24 cells inside diameter)
-    ==> 135.95 s to complete 1st run
-    
-    116x116x116 with resolution 2
-    (24 cells inside diameter)
-    ==> 208 s to complete 1st run
-    
-    67 x 67 x 67 with resolution 4
-    (48 cells inside diameter)
-    ==> 2000 s = 33 min to complete 1st run
-    """
-    
     #% SAVE MID DATA
     
     for p in params_list: params[p] = eval(p)
@@ -254,12 +210,6 @@ if flux_path == None:
     field = sim.get_array(center=mp.Vector3(), 
                           size=(cell_width, cell_width, cell_width), 
                           component=mp.Ez)
-    
-    f = h5.File(file("MidField.h5"), "w")
-    f.create_dataset("Ez", data=field)
-    for a in params: f["Ez"].attrs[a] = params[a]
-    f.close()
-    del f
 
     flux_path = vm.save_midflux(sim, box_x1, box_x2, box_y1, 
                                 box_y2, box_z1, box_z2, params, path)
@@ -372,32 +322,7 @@ temp = time()
 sim.init_sim()
 enlapsed.append( time() - temp )
 
-"""
-112x112x112 with resolution 2
-(24 cells in diameter)
-==> 5.16 s to build with sphere
-
-116x116x116 with resolution 2
-(24 cells inside diameter)
-==> 9.71 s to build with sphere
-
-67 x 67 x 67 with resolution 4
-(48 cells inside diameter)
-==> 14.47 s to build with sphere
-"""
-
 #%% LOAD FLUX FROM FILE
-
-"""
-os.chdir(path)
-sim.load_flux("MidFluxX1", box_x1)
-sim.load_flux("MidFluxX2", box_x2)
-sim.load_flux("MidFluxY1", box_y1)
-sim.load_flux("MidFluxY2", box_y2)
-sim.load_flux("MidFluxZ1", box_z1)
-sim.load_flux("MidFluxZ2", box_z2)
-os.chdir(syshome)
-"""
 
 vm.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
 

@@ -144,9 +144,9 @@ def main(series, folder, resolution, from_um_factor, r, paper, reference, wlen_r
     # Au sphere with frequency-dependant characteristics imported from Meep.
     
     home = vs.get_home()
-    path = os.path.join(home, folder, f"{series}")
+    path = os.path.join(home, folder, series)
     if not os.path.isdir(path) and mp.am_master(): 
-        vs.new_dir(path)
+        os.makedirs(path)
     file = lambda f : os.path.join(path, f)
     
     #%% FIRST RUN: SET UP
