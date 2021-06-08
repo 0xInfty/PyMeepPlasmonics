@@ -31,12 +31,12 @@ script = "au_mie_sphere_scattering"
 
 # Units: 10 nm as length unit
 from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 courant = 0.5
 
 # Au sphere
 r = 60  # Radius of sphere in nm
-paper = "R"
+paper = "JC"
 material = "Au"
 reference = "Meep"
 
@@ -44,15 +44,15 @@ reference = "Meep"
 wlen_range = np.array([500,650]) # Wavelength range in nm
 
 # Saving directories
-series = "TestSaveFlux2SerialRes1"
-folder = "AuMieSphere/AuMie/14)SaveFlux"
+series = "TestPaperJCFitRes2"
+folder = "AuMieSphere/AuMie/13)TestPaper/4)PaperJCFit"
 
 ### INNER PARAMETERS
 
 # Au Sphere
 r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
 if reference=="Meep":
-    medium = vmt.import_medium(material, from_um_factor, paper=paper)
+    medium = vmt.import_medium(material, from_um_factor=from_um_factor, paper=paper)
 elif reference=="RIinfo":
     medium = vmt.MediumFromFile(material=material, paper=paper, reference=reference, 
                                 from_um_factor=from_um_factor, have_logger=True)
@@ -260,17 +260,7 @@ if flux_path == None:
     for a in params: f["Ez"].attrs[a] = params[a]
     f.close()
     del f
-    
-    """
-    os.chdir(path)
-    sim.save_flux("MidFluxX1", box_x1)
-    sim.save_flux("MidFluxX2", box_x2)
-    sim.save_flux("MidFluxY1", box_y1)
-    sim.save_flux("MidFluxY2", box_y2)
-    sim.save_flux("MidFluxZ1", box_z1)
-    sim.save_flux("MidFluxZ2", box_z2)
-    os.chdir(syshome)
-    """
+
     flux_path = vm.save_midflux(sim, box_x1, box_x2, box_y1, 
                                 box_y2, box_z1, box_z2, params, path)
     
