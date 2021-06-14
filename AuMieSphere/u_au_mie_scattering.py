@@ -59,6 +59,11 @@ import v_utilities as vu
 @cli.option("--index", "-i", "submerged_index", 
             type=float, default=1,
             help="Reflective index of sourrounding medium")
+@cli.option("--displacement", "-dis", "displacement", default=0, type=float,
+            help="Overlap of sphere and surface in nm")
+@cli.option("--surface-index", "-si", "surface_index", 
+            type=float, default=1,
+            help="Reflective index of surface medium")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
@@ -74,7 +79,8 @@ import v_utilities as vu
 @cli.option("--n-processes", "-np", "n_processes", type=int, default=1,
             help="Number of nuclei used to run the program in parallel")
 def main(from_um_factor, resolution, courant, 
-         r, paper, reference, submerged_index,
+         r, paper, reference, submerged_index, 
+         displacement, surface_index,
          wlen_range, second_time_factor,
          series, folder, parallel, n_processes):
 
@@ -82,13 +88,16 @@ def main(from_um_factor, resolution, courant,
     """
     # Simulation size
     from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-    resolution = 1 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+    resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
     courant = 0.5
     
     # Nanoparticle specifications: Sphere in Vacuum :)
     r = 60  # Radius of sphere in nm
     paper = "R"
     reference = "Meep"
+    displacement = 0 # Displacement of the surface from the bottom of the sphere in nm
+    submerged_index = 1.33 # 1.33 for water
+    surface_index = 1.54 # 1.54 for glass
     
     # Frequency and wavelength
     wlen_range = np.array([500,650]) # Wavelength range in nm
@@ -97,8 +106,8 @@ def main(from_um_factor, resolution, courant,
     second_time_factor = 10
     
     # Saving directories
-    series = f"TestRnd{randint(1,1000)}"
-    folder = "TestRnd"
+    series = None
+    folder = None
     
     # Configuration
     parallel = False
@@ -131,6 +140,7 @@ def main(from_um_factor, resolution, courant,
         # Importing material constants dependant on frequency from external file
     else:
         raise ValueError("Reference for medium not recognized. Sorry :/")
+    displacement = displacement / ( from_um_factor * 1e3 ) # Now in Meep units
     
     # Frequency and wavelength
     wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Now in Meep units
@@ -173,11 +183,17 @@ def main(from_um_factor, resolution, courant,
     # Two mirror planes reduce cell size to 1/4
     # Issue related that lead me to comment this lines:
     # https://github.com/NanoComp/meep/issues/1484
-    
+
     cell_width = 2 * (pml_width + air_width + r)
     cell_width = cell_width - cell_width%(1/resolution)
     cell_size = mp.Vector3(cell_width, cell_width, cell_width)
-        
+    
+    # surface_center = r/4 - displacement/2 + cell_width/4
+    # surface_center = surface_center - surface_center%(1/resolution)
+    # displacement = r/2 + cell_width/2 - 2*surface_center
+    
+    displacement = displacement - displacement%(1/resolution)
+
     source_center = -0.5*cell_width + pml_width
     sources = [mp.Source(mp.GaussianSource(freq_center,
                                             fwidth=freq_width,
@@ -206,6 +222,17 @@ def main(from_um_factor, resolution, courant,
                           radius=r)]
     # Au sphere with frequency-dependant characteristics imported from Meep.
     
+    if surface_index != 1:
+        geometry = [mp.Block(material=mp.Medium(index=surface_index),
+                             center=mp.Vector3(
+                                 r/2 - displacement/2 + cell_width/4,
+                                 0, 0),
+                             size=mp.Vector3(
+                                 cell_width/2 - r + displacement,
+                                 cell_width, cell_width)),
+                    *geometry]
+    # A certain material surface underneath it
+    
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
@@ -220,10 +247,10 @@ def main(from_um_factor, resolution, courant,
     params["displacement"] = 0
     for p in params_list: params[p] = eval(p)
     
-    flux_path = vm.check_midflux(params)
+    try:
+        flux_path = vm.check_midflux(params)[0]
     
-    if flux_path == None:
-    
+    except:
         #% FIRST RUN: SET UP
         
         sim = mp.Simulation(resolution=resolution,
@@ -233,7 +260,7 @@ def main(from_um_factor, resolution, courant,
                             k_point=mp.Vector3(),
                             Courant=courant,
                             default_material=mp.Medium(index=submerged_index),
-                            filename_prefix=None)#,
+                            output_single_precision=True)#,
                             # symmetries=symmetries)
         # >> k_point zero specifies boundary conditions needed
         # for the source to be infinitely extended
@@ -380,9 +407,10 @@ def main(from_um_factor, resolution, courant,
                         k_point=mp.Vector3(),
                         Courant=courant,
                         default_material=mp.Medium(index=submerged_index),
-                        filename_prefix=None,
+                        output_single_precision=True,
                         # symmetries=symmetries,
-                        geometry=geometry)
+                        geometry=geometry,)
+    
     
     box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
                           mp.FluxRegion(center=mp.Vector3(x=-r),
