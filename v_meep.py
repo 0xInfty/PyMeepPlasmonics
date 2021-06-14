@@ -197,14 +197,14 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
         sleep(.2)
 
     filename_prefix = sim.filename_prefix
-    sim.filename_prefix = None
+    sim.filename_prefix = "MidFlux"
     os.chdir(new_flux_path)
-    sim.save_flux("MidFluxX1", box_x1)
-    sim.save_flux("MidFluxX2", box_x2)
-    sim.save_flux("MidFluxY1", box_y1)
-    sim.save_flux("MidFluxY2", box_y2)
-    sim.save_flux("MidFluxZ1", box_z1)
-    sim.save_flux("MidFluxZ2", box_z2)
+    sim.save_flux("X1", box_x1)
+    sim.save_flux("X2", box_x2)
+    sim.save_flux("Y1", box_y1)
+    sim.save_flux("Y2", box_y2)
+    sim.save_flux("Z1", box_z1)
+    sim.save_flux("Z2", box_z2)
     os.chdir(syshome)
     sim.filename_prefix = filename_prefix
         
@@ -309,14 +309,14 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
     print(f"Loading flux from '{flux_path}'")
     
     filename_prefix = sim.filename_prefix
-    sim.filename_prefix = None
+    sim.filename_prefix = "MidFlux"
     os.chdir(flux_path)
-    sim.load_flux("MidFluxX1", box_x1)
-    sim.load_flux("MidFluxX2", box_x2)
-    sim.load_flux("MidFluxY1", box_y1)
-    sim.load_flux("MidFluxY2", box_y2)
-    sim.load_flux("MidFluxZ1", box_z1)
-    sim.load_flux("MidFluxZ2", box_z2)
+    sim.load_flux("X1", box_x1)
+    sim.load_flux("X2", box_x2)
+    sim.load_flux("Y1", box_y1)
+    sim.load_flux("Y2", box_y2)
+    sim.load_flux("Z1", box_z1)
+    sim.load_flux("Z2", box_z2)
     os.chdir(syshome)
     sim.filename_prefix = filename_prefix
     
