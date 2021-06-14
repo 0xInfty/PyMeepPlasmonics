@@ -189,7 +189,8 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
     
     dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
     dir_backup = os.path.join(home, f"FluxData/FluxDataDir{sysname}Backup.txt")
-    new_flux_path = vs.datetime_dir(os.path.join(home, "FluxData/MidFlux"))
+    new_flux_path = vs.datetime_dir(os.path.join(home, "FluxData/MidFlux"), 
+                                    strftime="%Y%m%d%H%M%S")
     if parallel_assign(0, n_processes, parallel):
         os.makedirs(new_flux_path)
     else:
@@ -249,34 +250,36 @@ def check_midflux(params):
     
     database_array = []
     for key in key_params:
-        if isinstance(database[key][0], bool):
-            aux_data = [int(data) for data in database[key]]
-            database_array.append(aux_data)
-        else:
-            try:
-                if len(list(database[key][0])) > 1:
-                    for i in range( len(list( database[key][0] )) ):
-                        aux_data = [data[i] for data in database[key]]
-                        database_array.append(aux_data)
-                else:
+        if key in params.keys():
+            if isinstance(database[key][0], bool):
+                aux_data = [int(data) for data in database[key]]
+                database_array.append(aux_data)
+            else:
+                try:
+                    if len(list(database[key][0])) > 1:
+                        for i in range( len(list( database[key][0] )) ):
+                            aux_data = [data[i] for data in database[key]]
+                            database_array.append(aux_data)
+                    else:
+                        database_array.append(database[key])
+                except:
                     database_array.append(database[key])
-            except:
-                database_array.append(database[key])
     database_array = np.array(database_array)
     
     desired_array = []
     for key in key_params:
-        if isinstance(params[key], bool):
-            desired_array.append(int(params[key]))
-        else:
-            try:
-                if len(list(params[key])) > 1:
-                    for i in range( len(list( params[key] )) ):
-                        desired_array.append(params[key][i])
-                else:
+        if key in params.keys():
+            if isinstance(params[key], bool):
+                desired_array.append(int(params[key]))
+            else:
+                try:
+                    if len(list(params[key])) > 1:
+                        for i in range( len(list( params[key] )) ):
+                            desired_array.append(params[key][i])
+                    else:
+                        desired_array.append(params[key])
+                except:
                     desired_array.append(params[key])
-            except:
-                desired_array.append(params[key])
     desired_array = np.array(desired_array)
     
     boolean_array = []
@@ -287,19 +290,17 @@ def check_midflux(params):
     if len(index) == 0:
         print("No coincidences where found at the midflux database!")
     elif len(index) == 1:
-        right_index = index[0]
-        print(f"You could use data from '{database['path'][right_index]}'")
+        print(f"You could use data from '{database['path'][index[0]]}'")
     else:
-        right_index = index[0]
         print("More than one coincidence was found at the midflux database!")
-        print(f"You could use data from '{database['path'][right_index]}'")
+        print(f"You could use data from '{database['path'][index[0]]}'")
         
     try:
-        flux_path = os.path.join(home, "FluxData", database['flux_path'][right_index])
+        flux_path_list = [os.path.join(home, "FluxData", database['flux_path'][i]) for i in index]
     except:
-        flux_path = None
+        flux_path_list = [None]
     
-    return flux_path
+    return flux_path_list  
 
 #%%
 
