@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 # -*- coding: utf-8 -*-
+"""
+Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
 
-# Adapted from Meep Tutorial: Mie Scattering of a Lossless Dielectric Sphere
-
-# Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
+Adapted from Meep Tutorial: Mie Scattering of a Lossless Dielectric Sphere
+"""
 
 script = "au_mie_scattering"
 
@@ -124,9 +125,7 @@ def main(from_um_factor, resolution, courant,
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
     
     # Simulation time
-    time_factor_cell = 1.2 # Broadly defined as multiples of simulation cell size
-    until_after_sources = False # Broadly defined as multiples of source's period
-    # One of this must be false and be determined by the other
+    time_factor_cell = 1.2 # Defined in multiples of time required to go through the cell
     
     ### TREATED INPUT PARAMETERS
     
@@ -207,12 +206,7 @@ def main(from_um_factor, resolution, courant,
     # >> The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
     
-    if time_factor_cell is not False:
-        until_after_sources = time_factor_cell * cell_width
-    else:
-        if until_after_sources is False:
-            raise ValueError("Either time_factor_cell or until_after_sources must be specified")
-        time_factor_cell = until_after_sources/cell_width
+    until_after_sources = time_factor_cell * cell_width * submerged_index
     # Enough time for the pulse to pass through all the cell
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
