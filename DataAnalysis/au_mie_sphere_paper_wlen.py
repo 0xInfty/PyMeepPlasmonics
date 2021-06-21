@@ -12,34 +12,34 @@ import matplotlib.pylab as plab
 import os
 import PyMieScatt as ps
 import v_analysis as va
-from v_materials import import_medium
+import v_materials as vmt
 import v_save as vs
 import v_utilities as vu
 
 #%% PARAMETERS
 
 # Saving directories
-folder = ["AuMieMediums/AllWaterMaxRes/AllWaterMax80Res"]
+folder = ["AuMieSphere/AuMie/13)TestPaper/4)PaperJCFit/TestWLenJC/NewTime"]
 home = vs.get_home()
 
 # Sorting and labelling data series
-sorting_function = [lambda l : vu.sort_by_number(l, -1)]
+sorting_function = [lambda l : vu.sort_by_number(l, -2)]
 # def special_label(s):
 #     if "5" in s:
 #         return "Mie"
 #     else:
 #         return ""
-series_label = [lambda s : f"Meep Resolution {vu.find_numbers(s)[-1]}"]
+series_label = [lambda s : f"Meep $\lambda$ Range Max {vu.find_numbers(s)[-2]} nm"]
 series_must = [""] # leave "" per default
-series_mustnt = ["15"] # leave "" per default
+series_mustnt = [""] # leave "" per default
 series_column = [1]
 
 # Scattering plot options
-plot_title = "Scattering for Au spheres in water with 103 nm diameter"
-series_colors = [plab.cm.Blues]
+plot_title = "Scattering for JC Au spheres in vacuum with 103 nm diameter"
+series_colors = [plab.cm.Reds]
 series_linestyles = ["solid"]
-plot_make_big = True
-plot_file = lambda n : os.path.join(home, "DataAnalysis/AllWaterMax80FU20Res" + n)
+plot_make_big = False
+plot_file = lambda n : os.path.join(home, "DataAnalysis/PaperWLenRange" + n)
 
 #%% LOAD DATA
 
@@ -71,8 +71,11 @@ for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
         if not isinstance(params[-1][i], dict): 
             params[-1][i] = vu.fix_params_dict(params[-1][i])
     
-    # r = [p["r"] for p in params]
-    # from_um_factor = [p["from_um_factor"] for p in params]
+r = []
+from_um_factor = []
+for par in params:
+    r.append([p["r"] for p in par])
+    from_um_factor.append([p["from_um_factor"] for p in par])
 
 #%% LOAD MIE DATA
 
@@ -81,9 +84,9 @@ wlen_range = params[0][0]["wlen_range"]
 r = params[0][0]["r"]
 index = params[0][0]["submerged_index"]
 
-medium = import_medium("Au", from_um_factor)
+medium = vmt.import_medium("Au", from_um_factor, paper="JC")
 
-wlens = data[0][0][:,0]
+wlens = data[0][-1][:,0]
 freqs = 1e3*from_um_factor/wlens
 scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
                             1e3*from_um_factor/f,
@@ -102,67 +105,85 @@ max_wlen_theory = wlens[np.argmax(scatt_eff_theory)]
 
 dif_max_wlen = [ml - max_wlen_theory for ml in max_wlen[0]]
 
-resolution = [vu.find_numbers(s)[-1] for s in series[0]]
+#%% WAVELENGTH MAXIMUM DIFFERENCE VS WAVELENGTH RANGE MAXIMUM
 
-def exponential_fit(X, A, b, C):
-    return A * np.exp(-b*X) + C
-
-# First value is wrong
-resolution_fit = resolution[1:]
-dif_max_wlen_fit = dif_max_wlen[1:]
-
-rsq, parameters = va.nonlinear_fit(np.array(resolution_fit), 
-                                   np.array(dif_max_wlen_fit), 
-                                   exponential_fit,
-                                   par_units=["nm", "", "nm"])
+wlen_maximum = [vu.find_numbers(s)[-2] for s in series[0]]
 
 plt.title("Difference in scattering maximum for Au 103 nm sphere in water")
+plt.plot(wlen_maximum, dif_max_wlen, '.k', markersize=12)
+plt.grid(True)
 plt.legend(["Data", r"Fit $f(r)=a_0 e^{-a_1 r} + a_2$"])
-plt.xlabel("Resolution")
-plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$")
+plt.xlabel("Wavelength Range Maximum [nm]")
+plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
+
+#%% AVERAGE RESIDUUM VS WAVELENGTH RANGE MAXIMUM
+
+residuums = [[scatt_eff_theory - d[:,1] for d in dat] for dat in data]
+
+plt.figure()
+for dat, res, ser in zip(data, residuums, series):
+    for d, rs, s in zip(dat, res, ser):
+        plt.plot(d[:,0], rs, '.', label=f"Range Max {vu.find_numbers(s)[-2]:.0f} nm")
+plt.legend()
+plt.xlabel("Wavelength [nm]")
+plt.ylabel("Scattering Effienciency Residuum")
+
+accumulated_residuums = [sum(r) for r in res for res in residuums]
+mean_residuums = [np.mean(r) for r in res for res in residuums]
+# ¿Cómo comparo estas curvas si tienen amplitudes distintas y recorren rangos distintos de longitud de onda?
+
+#%%
+
+norm_residuums = [[scatt_eff_theory/max(scatt_eff_theory) - d[:,1]/max(d[:,1]) for d in dat] for dat in data]
+
+plt.figure()
+for dat, res, ser in zip(data, norm_residuums, series):
+    for d, r, s in zip(dat, res, ser):
+        plt.plot(d[:,0], r, '.', label=f"Range Max {vu.find_numbers(s)[-2]:.0f} nm")
+plt.legend()
+plt.xlabel("Wavelength [nm]")
+plt.ylabel("Normalized Scattering Residuum")
 
 #%% GET ENLAPSED TIME
 
 enlapsed_time = [params[0][i]["enlapsed"] for i in range(len(data[0]))]
 total_enlapsed_time = [sum(et) for et in enlapsed_time]
 
-def quartic_fit(X, A, b):
-    return A * (X)**4 + b
-rsq, parameters = va.nonlinear_fit(np.array(resolution), 
-                                   np.array(total_enlapsed_time), 
-                                   quartic_fit,
-                                   par_units=["s","s"])
+rsq, m, b = va.linear_fit(np.array(wlen_maximum), 
+                          np.array(total_enlapsed_time), 
+                          mb_units=["nm/s","s"])
 
+# plt.figure()
 plt.title("Enlapsed total time for simulation of Au 103 nm sphere in water")
-# plt.plot(resolution, total_enlapsed_time)
-plt.legend(["Data", r"Fit $f(r)=a_0 r^4 + a_1$"], loc="lower right")
-plt.xlabel("Resolution")
+# plt.plot(wlen_maximum, total_enlapsed_time, '.k', markersize=12)
+plt.legend(["Data", r"Fit $f(r)=a_0 \lambda + a_1$"], loc="lower right")
+plt.xlabel("Wavelength Range Maximum [nm]")
 plt.ylabel("Enlapsed time [s]")
 vs.saveplot(plot_file("TotTime.png"), overwrite=True)
-
+        
 plt.figure()
 plt.title("Enlapsed time for simulations of Au 103 nm sphere in water")
-plt.plot(resolution, [et[1] for et in enlapsed_time], 'D-b', label="Sim I")
-plt.plot(resolution, [et[-1] for et in enlapsed_time], 's-b', label="Sim II")
-plt.xlabel("Resolution")
+plt.plot(wlen_maximum, [et[1] for et in enlapsed_time], 'D-b', label="Sim I")
+plt.plot(wlen_maximum, [et[-1] for et in enlapsed_time], 's-b', label="Sim II")
+plt.xlabel("Wavelength Range Maximum [nm]")
 plt.ylabel("Enlapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("SimTime.png"), bbox_inches='tight')
 
 plt.figure()
 plt.title("Enlapsed time for building of Au 103 nm sphere in water")
-plt.plot(resolution, [et[0] for et in enlapsed_time], 'D-r', label="Sim I")
-plt.plot(resolution, [et[2] for et in enlapsed_time], 's-r', label="Sim II")
-plt.xlabel("Resolution")
+plt.plot(wlen_maximum, [et[0] for et in enlapsed_time], 'D-r', label="Sim I")
+plt.plot(wlen_maximum, [et[2] for et in enlapsed_time], 's-r', label="Sim II")
+plt.xlabel("Wavelength Range Maximum [nm]")
 plt.ylabel("Enlapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("BuildTime.png"), bbox_inches='tight')
 
 plt.figure()
 plt.title("Enlapsed time for loading flux of Au 103 nm sphere in water")
-plt.plot(resolution, [et[3] for et in enlapsed_time], 's-m')
-plt.xlabel("Resolution")
+plt.plot(wlen_maximum, [et[3] for et in enlapsed_time], 's-m')
+plt.xlabel("Wavelength Range Maximum [nm]")
 plt.ylabel("Enlapsed time in loading flux [s]")
 plt.savefig(plot_file("LoadTime.png"), bbox_inches='tight')
 
@@ -189,34 +210,8 @@ plt.legend()
 if plot_make_big:
     mng = plt.get_current_fig_manager()
     mng.window.showMaximized()
-del mng
+    del mng
 vs.saveplot(plot_file("AllScattNorm.png"), overwrite=True)
-
-#%% PLOT EFFIENCIENCY
-
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-          for sc, s in zip(series_colors, series)]
-
-plt.figure()
-plt.title(plot_title)
-for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
-                                     series_label, colors, series_linestyles):
-
-    for ss, sd, sp, spc in zip(s, d, p, pc):
-        if ss!=series[0][0]:
-            plt.plot(sd[:,0], sd[:,sc],# / max(sd[:,sc]), 
-                     linestyle=pls, color=spc, label=psl(ss))
-
-plt.plot(wlens, scatt_eff_theory,# / max(scatt_eff_theory), 
-         linestyle="dashed", color='red', label="Mie Theory")
-plt.xlabel("Wavelength [nm]")
-plt.ylabel("Scattering Effiency")
-plt.legend()
-if plot_make_big:
-    mng = plt.get_current_fig_manager()
-    mng.window.showMaximized()
-del mng
-vs.saveplot(plot_file("AllScattEff.png"), overwrite=True)
 
 #%% PLOT IN UNITS
 
@@ -230,10 +225,10 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
 
     for ss, sd, sp, spc in zip(s, d, p, pc):
         if ss!=series[0][0]:
-            plt.plot(sd[:,0], sd[:,sc] * np.pi * (r * from_um_factor * 1e3)**2,
+            plt.plot(sd[:,0], sd[:,sc] * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
                      linestyle=pls, color=spc, label=psl(ss))
             
-plt.plot(wlens, scatt_eff_theory  * np.pi * (r * from_um_factor * 1e3)**2,
+plt.plot(wlens, scatt_eff_theory  * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
          linestyle="dashed", color='red', label="Mie Theory")
 plt.xlabel("Wavelength [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
@@ -241,5 +236,5 @@ plt.legend()
 if plot_make_big:
     mng = plt.get_current_fig_manager()
     mng.window.showMaximized()
-del mng
+    del mng
 vs.saveplot(plot_file("AllScatt.png"), overwrite=True)
