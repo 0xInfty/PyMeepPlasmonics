@@ -68,7 +68,11 @@ import v_utilities as vu
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
-@cli.option("--stime", "-st", "second_time_factor", 
+@cli.option("--time-factor-cell", "-tfc", "time_factor_cell", 
+            type=float, default=1.2,
+            help="First simulation total time expressed as multiples of time \
+                required to go through the cell")
+@cli.option("--second-time-factor", "-stf", "second_time_factor", 
             type=float, default=10,
             help="Second simulation total time expressed as multiples of 1st")
 @cli.option("--series", "-s", type=str, default=None,
@@ -82,7 +86,7 @@ import v_utilities as vu
 def main(from_um_factor, resolution, courant, 
          r, paper, reference, submerged_index, 
          displacement, surface_index,
-         wlen_range, second_time_factor,
+         wlen_range, time_factor_cell, second_time_factor,
          series, folder, parallel, n_processes):
 
     #%% CLASSIC INPUT PARAMETERS    
@@ -125,7 +129,7 @@ def main(from_um_factor, resolution, courant,
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
     
     # Simulation time
-    time_factor_cell = 1.2 # Defined in multiples of time required to go through the cell
+    # time_factor_cell = 1.2 # Defined in multiples of time required to go through the cell
     
     ### TREATED INPUT PARAMETERS
     
