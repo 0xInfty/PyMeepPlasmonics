@@ -21,6 +21,8 @@ import v_utilities as vu
 # Saving directories
 folder = ["AuMieSphere/AuMie/10)MaxRes/Max103FUMixRes",
           "AuMieSphere/AuMie/13)TestPaper/4)PaperJCFit/PaperJCFit103MaxRes/AllVac450600"]
+# folder = ["AuMieMediums/AllWaterMaxRes/AllWaterMax103Res",
+#           "AuMieSphere/AuMie/13)TestPaper/4)PaperJCFit/PaperJCFit103MaxRes/AllWat500650"]
 home = vs.get_home()
 
 # Sorting and labelling data series
@@ -34,12 +36,13 @@ sorting_function = [lambda l : vu.sort_by_number(l, -1),
 series_label = [lambda s : f"Meep R Resolution {vu.find_numbers(s)[-1]}",
                 lambda s : f"Meep JC Resolution {vu.find_numbers(s)[-1]}"]
 series_must = ["", ""] # leave "" per default
-series_mustnt = ["", "Failed"] # leave "" per default
+series_mustnt = ["Failed", "Failed"] # leave "" per default
 series_column = [1, 1]
 series_colors = [plab.cm.Reds, plab.cm.Blues]
 series_linestyles = ["solid", "solid"]
 
-plot_title = "Au spheres in vacuum with 103 nm diameter and different material sources"
+plot_title = "JC/R Au 103 nm sphere in vacuum"
+# plot_title = "JC/R Au 103 nm sphere in water"
 theory_label = [lambda s : f"R Theory {vu.find_numbers(s)[0]} nm",
                 lambda s : f"JC Theory {vu.find_numbers(s)[0]} nm"]
 theory_linestyle = ["dashed", "dashed"]
@@ -78,23 +81,37 @@ for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
         if not isinstance(params[-1][i], dict): 
             params[-1][i] = vu.fix_params_dict(params[-1][i])
     
+base_from_um_factor = 20e-3    
+
 r = []
 from_um_factor = []
 resolution = []
+joint_from_um_factor = []
+joint_resolution = []
 paper = []
 index = []
 for p in params:
     r.append( [pi["r"] for pi in p] )
-    from_um_factor.append( [pi["from_um_factor"] for pi in p] )
     resolution.append( [pi["resolution"] for pi in p] )
+    from_um_factor.append( [pi["from_um_factor"] for pi in p] )
+    joint_from_um_factor.append([])
+    joint_resolution.append([])
+    for pi in p:
+        if pi["from_um_factor"] == base_from_um_factor:            
+            joint_from_um_factor[-1].append( pi["from_um_factor"] )
+            joint_resolution[-1].append( pi["resolution"] )
+        else:
+            factor = base_from_um_factor / pi["from_um_factor"]
+            joint_from_um_factor[-1].append( pi["from_um_factor"]*factor )
+            joint_resolution[-1].append( int(pi["resolution"]*factor) )
     try:
         paper.append( [pi["paper"] for pi in p])
     except:
         paper.append( ["R" for pi in p] )
     index.append( [] )
-    for p in params[-1]:
+    for pi in p:
         try:
-            index[-1].append( p["submerged_index"] )
+            index[-1].append( pi["submerged_index"] )
         except KeyError:
             index[-1].append( 1 )
 
@@ -112,7 +129,7 @@ for di, ri, fi, resi, ppi, ii in zip(data, r, from_um_factor, resolution, paper,
             [ps.MieQ(np.sqrt(mediumj.epsilon(fqm)[0,0]*mediumj.mu(fqm)[0,0]), 
                      wl, # Wavelength (nm)
                      2*rj*1e3*fj, # Diameter (nm)
-                     nMedium=ij, # Refraction Index of Medium
+                     nMedium=ij, # Refraction Index of Mediums
                      asDict=True)['Qsca'] 
              for wl, fq, fqm in zip(wlenj, freqj, freqmeepj)]))
 
@@ -132,10 +149,8 @@ for md, mt in zip(max_wlen, max_wlen_theory):
 
 #%% WAVELENGTH MAXIMUM DIFFERENCE VS RESOLUTION COMPARED
 
-resolution = [[vu.find_numbers(s)[-1] for s in ser] for ser in series]
-
-plt.title(plot_title)
-for res, dif in zip(resolution, max_wlen_diff):
+plt.title("Difference in wavelength maximum for " + plot_title)
+for res, dif in zip(joint_resolution, max_wlen_diff):
     plt.plot(res, dif, '.', markersize=12)
 plt.grid(True)
 plt.legend(["R", "JC"])
@@ -153,7 +168,7 @@ rsq, parameters = va.nonlinear_fit(np.array(resolution[1]),
                                    exponential_fit,
                                    par_units=["nm", "", "nm"])
 
-plt.title("Difference in scattering maximum for Au 103 nm sphere in water")
+plt.title("Difference in scattering maximum")
 # plt.plot(resolution, dif_max_wlen, '.k', markersize=12)
 plt.grid(True)
 plt.legend(["JC Meep Data", r"Fit $f(r)=a_0 e^{-a_1 r} + a_2$"])
@@ -163,7 +178,6 @@ vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
 #%% GET ENLAPSED TIME COMPARED
 
-enlapsed_time = [params[0][i]["enlapsed"] for i in range(len(data[0]))]
 enlapsed_time = [[p["enlapsed"] for p in par] for par in params]
 total_enlapsed_time = [[sum(p["enlapsed"]) for p in par] for par in params]
 
@@ -174,7 +188,7 @@ first_sim_time = []
 second_flux_time = []
 second_build_time = []
 second_sim_time = []
-for enl, res in zip(enlapsed_time, resolution):
+for enl, res in zip(enlapsed_time, joint_resolution):
     first_resolution.append( [] )
     first_build_time.append( [] )
     first_sim_time.append( [] )
@@ -200,8 +214,8 @@ for enl, res in zip(enlapsed_time, resolution):
             print(f"Unknown error in resolution {rs} of", res)
 
 plt.figure()
-plt.title("Enlapsed total time for simulation of Au 103 nm sphere in water")
-for res, tot in zip(resolution, total_enlapsed_time):
+plt.title("Enlapsed total time for simulation of " + plot_title)
+for res, tot in zip(joint_resolution, total_enlapsed_time):
     plt.plot(res, tot, '.', markersize=12)
 plt.legend(["Meep R", "Meep JC"], loc="lower right")
 plt.xlabel("Resolution")
@@ -209,7 +223,7 @@ plt.ylabel("Enlapsed time [s]")
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 plt.figure()
-plt.title("Enlapsed time for simulations of Au 103 nm sphere in water")
+plt.title("Enlapsed time for simulations of " + plot_title)
 plt.plot(first_resolution[0], first_sim_time[0], 'D-', color="C0", label="R Sim I")
 plt.plot(first_resolution[1], first_sim_time[1], 'D-', color="C1", label="JC Sim I")
 plt.plot(second_resolution[0], second_sim_time[0], 's-', color="C0", label="R Sim II")
@@ -220,7 +234,7 @@ plt.legend()
 plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of Au 103 nm sphere in water")
+plt.title("Enlapsed time for building of " + plot_title)
 plt.plot(first_resolution[0], first_build_time[0], 'D-', color="C0", label="R Sim I")
 plt.plot(first_resolution[1], first_build_time[1], 'D-', color="C1", label="JC Sim I")
 plt.plot(second_resolution[0], second_build_time[0], 's-', color="C0", label="R Sim II")
@@ -231,7 +245,7 @@ plt.legend()
 plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of Au 103 nm sphere in water")
+plt.title("Enlapsed time for loading flux of " + plot_title)
 plt.plot(second_resolution[0], second_flux_time[0], 's-', color="C0", label="R Sim II")
 plt.plot(second_resolution[1], second_flux_time[1], 's-', color="C1", label="JC Sim II")
 plt.xlabel("Resolution")
@@ -247,7 +261,7 @@ rsq, parameters = va.nonlinear_fit(np.array(resolution[1][:-1]),
                                    quartic_fit,
                                    par_units=["s","s"])
 
-plt.title("Enlapsed total time for simulation of JC Au 103 nm sphere in water")
+plt.title("Enlapsed total time for simulation of " + plot_title)
 # plt.plot(resolution, total_enlapsed_time)
 plt.legend(["Data", r"Fit $f(r)=a_0 r^4 + a_1$"], loc="lower right")
 plt.xlabel("Resolution")
@@ -255,7 +269,7 @@ plt.ylabel("Enlapsed time [s]")
 vs.saveplot(plot_file("TotTime.png"), overwrite=True)
         
 plt.figure()
-plt.title("Enlapsed time for simulations of JC Au 103 nm sphere in water")
+plt.title("Enlapsed time for simulations of " + plot_title)
 plt.plot(first_resolution[1], first_sim_time[1], 'D-b', label="Sim I")
 plt.plot(second_resolution[1], second_sim_time[1], 's-b', label="Sim II")
 plt.xlabel("Resolution")
@@ -264,7 +278,7 @@ plt.legend()
 plt.savefig(plot_file("SimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of JC Au 103 nm sphere in water")
+plt.title("Enlapsed time for building of " + plot_title)
 plt.plot(first_resolution[1], first_build_time[1], 'D-r', label="Sim I")
 plt.plot(second_resolution[1], second_build_time[1], 's-r', label="Sim II")
 plt.xlabel("Resolution")
@@ -273,7 +287,7 @@ plt.legend()
 plt.savefig(plot_file("BuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of Au 103 nm sphere in water")
+plt.title("Enlapsed time for loading flux of " + plot_title)
 plt.plot(second_resolution[1], second_flux_time[1], 's-m')
 plt.xlabel("Resolution")
 plt.ylabel("Enlapsed time in loading flux [s]")
@@ -281,21 +295,29 @@ plt.savefig(plot_file("LoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED
 
+jc_wlens = data[1][0][:,0]
+jc_theory = theory[1][0]
+r_wlens = data[0][0][:,0]
+r_theory = theory[0][0]
+
 colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
           for sc, s in zip(series_colors, series)]
 
 plt.figure()
-plt.title(plot_title)
+plt.title("Normalized scattering for " + plot_title)
 for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
                                       series_label, colors, series_linestyles):
 
     for ss, sd, sp, spc in zip(s, d, p, pc):
-        if ss!=series[0][0]:
+        if ss not in series[0]:
             plt.plot(sd[:,0], sd[:,sc] / max(sd[:,sc]), 
                       linestyle=pls, color=spc, label=psl(ss))
 
-plt.plot(wlens, scatt_eff_theory / max(scatt_eff_theory), 
-          linestyle="dashed", color='red', label="Mie Theory")
+plt.plot(jc_wlens, jc_theory / max(jc_theory), 
+          linestyle="dashed", color='red', label="JC Mie Theory")
+plt.plot(r_wlens, r_theory / max(r_theory), 
+          linestyle="dashed", color='k', label="R Mie Theory")
+
 plt.xlabel("Wavelength [nm]")
 plt.ylabel("Normalized Scattering Cross Section")
 plt.legend()
@@ -311,17 +333,20 @@ colors = [sc(np.linspace(0,1,len(s)+3))[3:]
           for sc, s in zip(series_colors, series)]
 
 plt.figure()
-plt.title(plot_title)
+plt.title("Scattering effiency for " + plot_title)
 for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
                                       series_label, colors, series_linestyles):
 
     for ss, sd, sp, spc in zip(s, d, p, pc):
-        if ss!=series[0][0]:
-            plt.plot(sd[:,0], sd[:,sc],# / max(sd[:,sc]), 
+        if ss not in series[0]:
+            plt.plot(sd[:,0], sd[:,sc], 
                       linestyle=pls, color=spc, label=psl(ss))
 
-plt.plot(wlens, scatt_eff_theory,# / max(scatt_eff_theory), 
-          linestyle="dashed", color='red', label="Mie Theory")
+plt.plot(jc_wlens, jc_theory, 
+          linestyle="dashed", color='red', label="JC Mie Theory")
+plt.plot(r_wlens, r_theory, 
+          linestyle="dashed", color='k', label="R Mie Theory")
+
 plt.xlabel("Wavelength [nm]")
 plt.ylabel("Scattering Effiency")
 plt.legend()
@@ -337,17 +362,20 @@ colors = [sc(np.linspace(0,1,len(s)+3))[3:]
           for sc, s in zip(series_colors, series)]
 
 plt.figure()
-plt.title(plot_title)
+plt.title("Scattering for " + plot_title)
 for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
                                       series_label, colors, series_linestyles):
 
     for ss, sd, sp, spc in zip(s, d, p, pc):
-        if ss!=series[0][0]:
-            plt.plot(sd[:,0], sd[:,sc] * np.pi * (r * from_um_factor * 1e3)**2,
+        if ss not in series[0]:
+            plt.plot(sd[:,0], sd[:,sc] * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2, 
                       linestyle=pls, color=spc, label=psl(ss))
-            
-plt.plot(wlens, scatt_eff_theory  * np.pi * (r * from_um_factor * 1e3)**2,
-          linestyle="dashed", color='red', label="Mie Theory")
+
+plt.plot(jc_wlens, jc_theory  * np.pi * (r[0][0] * from_um_factor[0][0] * 1e3)**2, 
+          linestyle="dashed", color='red', label="JC Mie Theory")
+plt.plot(r_wlens, r_theory  * np.pi * (r[1][0] * from_um_factor[1][0] * 1e3)**2, 
+          linestyle="dashed", color='k', label="R Mie Theory")
+
 plt.xlabel("Wavelength [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
 plt.legend()
