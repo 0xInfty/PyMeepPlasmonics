@@ -68,6 +68,15 @@ import v_utilities as vu
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
+@cli.option("--air-r-factor", "-air", "air_r_factor", 
+            type=float, default=0.5,
+            help="Empty layer width expressed in multiples of radius")
+@cli.option("--pml-wlen-factor", "-pml", "pml_wlen_factor", 
+            type=float, default=0.38,
+            help="PML layer width expressed in multiples of maximum wavelength")
+@cli.option("--flux-r-factor", "-flux", "flux_r_factor", 
+            type=float, default=0,
+            help="Flux box padding expressed in multiples of radius")
 @cli.option("--time-factor-cell", "-tfc", "time_factor_cell", 
             type=float, default=1.2,
             help="First simulation total time expressed as multiples of time \
@@ -85,8 +94,9 @@ import v_utilities as vu
             help="Number of nuclei used to run the program in parallel")
 def main(from_um_factor, resolution, courant, 
          r, paper, reference, submerged_index, 
-         displacement, surface_index,
-         wlen_range, time_factor_cell, second_time_factor,
+         displacement, surface_index, wlen_range, 
+         air_r_factor, pml_wlen_factor, flux_r_factor,
+         time_factor_cell, second_time_factor,
          series, folder, parallel, n_processes):
 
     #%% CLASSIC INPUT PARAMETERS    
@@ -106,6 +116,11 @@ def main(from_um_factor, resolution, courant,
     
     # Frequency and wavelength
     wlen_range = np.array([500,650]) # Wavelength range in nm
+    
+    # Box dimensions
+    pml_wlen_factor = 0.38
+    air_r_factor = 0.5
+    flux_r_factor = 0
     
     # Simulation time
     second_time_factor = 10
@@ -128,9 +143,6 @@ def main(from_um_factor, resolution, courant,
     nfreq = 100 # Number of frequencies to discretize range
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
     
-    # Simulation time
-    # time_factor_cell = 1.2 # Defined in multiples of time required to go through the cell
-    
     ### TREATED INPUT PARAMETERS
     
     # Nanoparticle specifications: Sphere in Vacuum :)
@@ -152,8 +164,9 @@ def main(from_um_factor, resolution, courant,
     freq_width = max(freq_range) - min(freq_range)
     
     # Space configuration
-    pml_width = 0.38 * max(wlen_range)
-    air_width = r/2 # 0.5 * max(wlen_range)
+    pml_width = pml_wlen_factor * max(wlen_range)
+    air_width = air_r_factor * r # 0.5 * max(wlen_range)
+    flux_box_size = 2 * ( 1 + flux_r_factor ) * r
     
     # Computation
     enlapsed = []
@@ -169,7 +182,7 @@ def main(from_um_factor, resolution, courant,
         folder = "Test"
     params_list = ["from_um_factor", "resolution", "courant",
                    "r", "paper", "reference", "submerged_index",
-                   "wlen_range", "nfreq", "cutoff",
+                   "wlen_range", "nfreq", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
                    "enlapsed", "parallel", "n_processes", "script", "sysname", "path"]
@@ -196,6 +209,8 @@ def main(from_um_factor, resolution, courant,
     # displacement = r/2 + cell_width/2 - 2*surface_center
     
     displacement = displacement - displacement%(1/resolution)
+    
+    flux_box_size = flux_box_size - flux_box_size%(1/resolution)
 
     source_center = -0.5*cell_width + pml_width
     sources = [mp.Source(mp.GaussianSource(freq_center,
@@ -266,23 +281,23 @@ def main(from_um_factor, resolution, courant,
         # Scattered power --> Computed by surrounding it with closed DFT flux box 
         # (its size and orientation are irrelevant because of Poynting's theorem) 
         box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                              mp.FluxRegion(center=mp.Vector3(x=-r),
-                                            size=mp.Vector3(0,2*r,2*r)))
+                              mp.FluxRegion(center=mp.Vector3(x=-flux_box_size/2),
+                                            size=mp.Vector3(0,flux_box_size,flux_box_size)))
         box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                              mp.FluxRegion(center=mp.Vector3(x=+r),
-                                            size=mp.Vector3(0,2*r,2*r)))
+                              mp.FluxRegion(center=mp.Vector3(x=+flux_box_size/2),
+                                            size=mp.Vector3(0,flux_box_size,flux_box_size)))
         box_y1 = sim.add_flux(freq_center, freq_width, nfreq,
-                              mp.FluxRegion(center=mp.Vector3(y=-r),
-                                            size=mp.Vector3(2*r,0,2*r)))
+                              mp.FluxRegion(center=mp.Vector3(y=-flux_box_size/2),
+                                            size=mp.Vector3(flux_box_size,0,flux_box_size)))
         box_y2 = sim.add_flux(freq_center, freq_width, nfreq,
-                              mp.FluxRegion(center=mp.Vector3(y=+r),
-                                            size=mp.Vector3(2*r,0,2*r)))
+                              mp.FluxRegion(center=mp.Vector3(y=+flux_box_size/2),
+                                            size=mp.Vector3(flux_box_size,0,flux_box_size)))
         box_z1 = sim.add_flux(freq_center, freq_width, nfreq,
-                              mp.FluxRegion(center=mp.Vector3(z=-r),
-                                            size=mp.Vector3(2*r,2*r,0)))
+                              mp.FluxRegion(center=mp.Vector3(z=-flux_box_size/2),
+                                            size=mp.Vector3(flux_box_size,flux_box_size,0)))
         box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
-                              mp.FluxRegion(center=mp.Vector3(z=+r),
-                                            size=mp.Vector3(2*r,2*r,0)))
+                              mp.FluxRegion(center=mp.Vector3(z=+flux_box_size/2),
+                                            size=mp.Vector3(flux_box_size,flux_box_size,0)))
         # Funny you can encase the sphere (r radius) so closely (2r-sided box)
         
         #% FIRST RUN: INITIALIZE
@@ -411,23 +426,23 @@ def main(from_um_factor, resolution, courant,
     
     
     box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(x=-r),
-                                        size=mp.Vector3(0,2*r,2*r)))
+                          mp.FluxRegion(center=mp.Vector3(x=-flux_box_size/2),
+                                        size=mp.Vector3(0,flux_box_size,flux_box_size)))
     box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(x=+r),
-                                        size=mp.Vector3(0,2*r,2*r)))
+                          mp.FluxRegion(center=mp.Vector3(x=+flux_box_size/2),
+                                        size=mp.Vector3(0,flux_box_size,flux_box_size)))
     box_y1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(y=-r),
-                                        size=mp.Vector3(2*r,0,2*r)))
+                          mp.FluxRegion(center=mp.Vector3(y=-flux_box_size/2),
+                                        size=mp.Vector3(flux_box_size,0,flux_box_size)))
     box_y2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(y=+r),
-                                        size=mp.Vector3(2*r,0,2*r)))
+                          mp.FluxRegion(center=mp.Vector3(y=+flux_box_size/2),
+                                        size=mp.Vector3(flux_box_size,0,flux_box_size)))
     box_z1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(z=-r),
-                                        size=mp.Vector3(2*r,2*r,0)))
+                          mp.FluxRegion(center=mp.Vector3(z=-flux_box_size/2),
+                                        size=mp.Vector3(flux_box_size,flux_box_size,0)))
     box_z2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(z=+r),
-                                        size=mp.Vector3(2*r,2*r,0)))
+                          mp.FluxRegion(center=mp.Vector3(z=+flux_box_size/2),
+                                        size=mp.Vector3(flux_box_size,flux_box_size,0)))
     
     #%% SECOND RUN: INITIALIZE
     
