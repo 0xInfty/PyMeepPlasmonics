@@ -214,7 +214,7 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
     key_params = ["from_um_factor", "resolution", "courant", 
                  "wlen_range", "cutoff", "nfreq", 
                  "submerged_index", "surface_index", "displacement",
-                 "cell_width", "pml_width", "source_center",
+                 "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
                  "parallel", "n_processes"]
     
@@ -244,7 +244,7 @@ def check_midflux(params):
     key_params = ["from_um_factor", "resolution", "courant", 
                  "wlen_range", "cutoff", "nfreq", 
                  "submerged_index", "surface_index", "displacement",
-                 "cell_width", "pml_width", "source_center",
+                 "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
                  "parallel", "n_processes"]
     
