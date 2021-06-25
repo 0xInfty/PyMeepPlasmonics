@@ -68,6 +68,9 @@ import v_utilities as vu
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=vu.NUMPY_ARRAY, default="np.array([500,650])",
             help="Wavelength range expressed in nm")
+@cli.option("--nfreq", "-nfreq", "nfreq", 
+            type=int, default=100,
+            help="Quantity of frequencies to sample in wavelength range")
 @cli.option("--air-r-factor", "-air", "air_r_factor", 
             type=float, default=0.5,
             help="Empty layer width expressed in multiples of radius")
@@ -94,7 +97,7 @@ import v_utilities as vu
             help="Number of nuclei used to run the program in parallel")
 def main(from_um_factor, resolution, courant, 
          r, paper, reference, submerged_index, 
-         displacement, surface_index, wlen_range, 
+         displacement, surface_index, wlen_range, nfreq,
          air_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
          series, folder, parallel, n_processes):
@@ -116,6 +119,7 @@ def main(from_um_factor, resolution, courant,
     
     # Frequency and wavelength
     wlen_range = np.array([500,650]) # Wavelength range in nm
+    nfreq = 100
     
     # Box dimensions
     pml_wlen_factor = 0.38
@@ -140,7 +144,6 @@ def main(from_um_factor, resolution, courant,
     material = "Au" # Gold: "Au"    
     
     # Frequency and wavelength
-    nfreq = 100 # Number of frequencies to discretize range
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
     
     ### TREATED INPUT PARAMETERS
@@ -164,7 +167,7 @@ def main(from_um_factor, resolution, courant,
     freq_width = max(freq_range) - min(freq_range)
     
     # Space configuration
-    pml_width = pml_wlen_factor * max(wlen_range)
+    pml_width = pml_wlen_factor * max(wlen_range) # 0.5 * max(wlen_range)
     air_width = air_r_factor * r # 0.5 * max(wlen_range)
     flux_box_size = 2 * ( 1 + flux_r_factor ) * r
     
@@ -500,7 +503,7 @@ def main(from_um_factor, resolution, courant,
     scatt_flux = scatt_flux + box_y1_flux - box_y2_flux
     scatt_flux = scatt_flux + box_z1_flux - box_z2_flux
     
-    intensity = box_x1_flux0/(2*r)**2
+    intensity = box_x1_flux0/(flux_box_size)**2
     # Flux of one of the six monitor planes / Área
     # (the closest one, facing the planewave source) 
     # This is why the six sides of the flux box are separated
