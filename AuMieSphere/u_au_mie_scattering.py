@@ -127,6 +127,7 @@ def main(from_um_factor, resolution, courant,
     flux_r_factor = 0
     
     # Simulation time
+    time_factor_cell = 1.2
     second_time_factor = 10
     
     # Saving directories
@@ -184,7 +185,7 @@ def main(from_um_factor, resolution, courant,
     if folder is None:
         folder = "Test"
     params_list = ["from_um_factor", "resolution", "courant",
-                   "r", "paper", "reference", "submerged_index",
+                   "material", "r", "paper", "reference", "submerged_index",
                    "wlen_range", "nfreq", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
@@ -259,8 +260,6 @@ def main(from_um_factor, resolution, courant,
     #%% FIRST RUN
     
     params = {}
-    params["surface_index"] = 1
-    params["displacement"] = 0
     for p in params_list: params[p] = eval(p)
     
     try:
