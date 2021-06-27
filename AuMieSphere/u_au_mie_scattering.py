@@ -261,6 +261,12 @@ def main(from_um_factor, resolution, courant,
     
     params = {}
     for p in params_list: params[p] = eval(p)
+    stable, max_courant = vm.check_stability(params)
+    if stable:
+        print("As a whole, the simulation should be stable")
+    else:
+        print("As a whole, the simulation could not be stable")
+        print(f"Recommended maximum courant factor is {max_courant}")
     
     try:
         flux_path = vm.check_midflux(params)[0]
