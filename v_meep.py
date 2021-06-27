@@ -21,6 +21,7 @@ import meep as mp
 import numpy as np
 import os
 from time import sleep
+import v_materials as vmt
 import v_save as vs
 import v_utilities as vu
 
@@ -30,7 +31,7 @@ home = vs.get_home()
 
 #%%
 
-def verify_stability_freq_res(medium, resolution, courant=0.5):
+def verify_stability_freq_res(medium, resolution, courant=0.5, print_log=True):
     """Verifies stability via temporal resolution and resonant frequencies.
     
     Parameters
@@ -43,14 +44,24 @@ def verify_stability_freq_res(medium, resolution, courant=0.5):
     Courant=0.5 : float
         The Courant factor that defines temporal discretization dt = Courant*dx 
         in Meep units.
+    print_log=True : bool
+        Whether to print the result or not.
     
     Returns
     -------
     stable : bool
         True if the simulation turns out stable for that medium.        
+    max_courant : float
+        Maximum value of Courant factor for the FDTD method to be stable.
     """
     
+    def log(string):
+        if print_log:
+            print(string)
+    
     resonant_frequencies = [Es.frequency for Es in medium.E_susceptibilities]
+    max_courant = resolution / (np.pi * np.max(resonant_frequencies))
+    
     dt = courant/resolution
     stable = True
     error = []
@@ -59,21 +70,24 @@ def verify_stability_freq_res(medium, resolution, courant=0.5):
             stable = False
             error.append(i)
     if stable:
-        answer = "Medium is stable."
-        answer += " All resonant frequencies are small enough for this resolution."
-        print(answer)
+        answer = "Medium should be stable according to frequency and resolution criteria.\n"
+        answer += "All resonant frequencies are small enough for this resolution."
+        log(answer)
     else:
         answer = [str(i) + vu.counting_sufix(i) for i in error]
         if len(error)>1: 
             answer = vu.enumerate_string(answer) + " frequencies are"
         else:
             answer = answer + " frequency is"
-        print(f"Medium is not stable: {answer} too large.")
-    return stable
+        log("Medium could be unstable according to frequency and resolution criteria:")
+        log(f"{answer} too large.")
+        log(f"Maximum Courant to be stable is {max_courant}")
+    
+    return stable, max_courant
 
 #%%
 
-def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5):
+def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5, print_log=True):
     """Verifies stability via dimensions, refractive index and Courant factor.
     
     Parameters
@@ -87,12 +101,20 @@ def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5):
     courant=0.5 : float, optional
         Courant factor that defines temporal discretization from spatial 
         discretization as dt = Courant * dx.
+    print_log=True : bool
+        Whether to print the result or not.
 
     Returns
     -------
     stable : bool
         True if the simulation turns out to be stable for that medium.
+    max_courant : float
+        Maximum value of Courant factor for the FDTD method to be stable.
     """
+    
+    def log(string):
+        if print_log:
+            print(string)
     
     try:
         freq = [*freq]
@@ -105,67 +127,59 @@ def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5):
     
     stable = ( courant < min_index / np.sqrt(ndims) )
     
-    return stable
-
-#%%
-
-def max_stable_courant_freq_res(medium, resolution):
-    """Maximum stable Courant via temporal resolution and resonant frequencies.
-    
-    Parameters
-    ----------
-    medium : mp.Medium
-        The mp.Medium instance of the material.
-    resolution : int
-        The resolution that defines spatial discretization dx = 1/resolution 
-        in Meep units.
-    
-    Returns
-    -------
-    max_courant : float
-        Maximum value of Courant factor for the FDTD method to be stable.
-    """
-    
-    resonant_frequencies = [Es.frequency for Es in medium.E_susceptibilities]
-    max_courant = resolution / (np.pi * np.max(resonant_frequencies))
-    
-    return max_courant
-
-#%%
-
-def max_stable_courant_dim_index(medium, freq, ndims=3):
-    """Maximum stable Courant via dimensions and refractive index condition.
-    
-    Parameters
-    ----------
-    medium : The mp.Medium instance of the material.
-        The mp.Medium instance of the material.
-    freq : float, array of floats
-        Frequency in Meep units.
-    ndims=3 : int, optional
-        Number of dimensions of simulation.
-    method="abs" : str, optional
-        Method applied to epsilon * mu product to obtain refractive index.
-
-    Returns
-    -------
-    max_courant : float
-        Maximum value of Courant factor for the FDTD method to be stable.
-    """
-    
-    try:
-        freq = [*freq]
-    except:
-        freq = [freq]
-    
-    index = np.array([ np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]) for f in freq ])
-    
-    min_index = np.min(np.real(index))
-    
     max_courant = min_index / np.sqrt(ndims)
     
-    return max_courant
+    if stable:
+        log("Simulation should be stable according to dimensions and index criteria")
+    else:
+        log("Simulation could be unstable according to dimensions and index criteria")
+        log(f"Maximum Courant to be stable is {max_courant}")
     
+    return stable, max_courant
+
+#%% STABILITY CHECK
+
+def check_stability(params):
+    
+    if params["reference"]=="Meep": 
+        medium = vmt.import_medium(params["material"], params["from_um_factor"], 
+                                   paper=params["paper"])
+        # Importing material constants dependant on frequency from Meep Library
+    elif params["reference"]=="RIinfo":
+        medium = vmt.MediumFromFile(params["material"], paper=params["paper"], 
+                                    reference=params["reference"], 
+                                    from_um_factor=params["from_um_factor"])
+        # Importing material constants dependant on frequency from external file
+    else:
+        raise ValueError("Reference for medium not recognized. Sorry :/")
+
+    stable_freq_res, max_courant_freq_res = verify_stability_freq_res(
+        medium, params["resolution"], courant=params["courant"], print_log=True)
+    
+    freqs = np.linspace(1/max(params["wlen_range"]), 1/min(params["wlen_range"]), params["nfreq"])
+    
+    stable_dim_index = []
+    max_courant_dim_index  = []
+    for f in freqs:
+        stable, max_courant = verify_stability_dim_index(medium, f, 
+                                                         courant=params["courant"], 
+                                                         print_log=False)
+        stable_dim_index.append(stable)
+        max_courant_dim_index.append(max_courant)
+    
+    stable_dim_index = all(stable_dim_index)
+    max_courant_dim_index = min(max_courant_dim_index)
+    
+    if stable_dim_index:
+        print("Medium should be stable according to frequency and resolution criteria.")
+    else:
+        print("Medium could be unstable according to frequency and resolution criteria.")
+        print(f"Maximum Courant factor should be {max_courant_dim_index}")
+    
+    stable = all([stable_freq_res, stable_dim_index])
+    max_courant = min([max_courant_dim_index, max_courant_freq_res])
+    
+    return stable, max_courant    
 
 #%%
 
