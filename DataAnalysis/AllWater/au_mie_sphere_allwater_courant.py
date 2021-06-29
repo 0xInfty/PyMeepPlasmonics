@@ -33,7 +33,7 @@ sorting_function = [lambda l : vu.sort_by_number(l, -2)]*2
 series_label = [lambda s : f"500-650 nm Courant {vu.find_numbers(s)[-2]:.2f}",
                 lambda s : f"500-700 nm Courant {vu.find_numbers(s)[-2]:.2f}"]
 series_must = [""]*2 # leave "" per default
-series_mustnt = ["0.60"]*2 # leave "" per default
+series_mustnt = ["Failed"]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
