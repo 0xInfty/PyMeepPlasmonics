@@ -186,6 +186,7 @@ def main(from_um_factor, resolution, courant,
         folder = "Test"
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", "reference", "submerged_index",
+                   "displacement", "surface_index",
                    "wlen_range", "nfreq", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
