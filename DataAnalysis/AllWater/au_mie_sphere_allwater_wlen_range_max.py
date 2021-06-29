@@ -246,7 +246,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
         plt.plot(sd[:,0], sign * sd[:,sc] * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
                  linestyle=pls, color=spc, label=psl(ss))
             
-plt.plot(sd[0][-1][:,0], theory[0][-1] * np.pi * (params[0][-1]["r"] * params[0][-1]["from_um_factor"] * 1e3)**2,
+plt.plot(data[0][-1][:,0], theory[0][-1] * np.pi * (params[0][-1]["r"] * params[0][-1]["from_um_factor"] * 1e3)**2,
          linestyle="dashed", color='red', label="Mie Theory")
 plt.xlabel("Wavelength [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")

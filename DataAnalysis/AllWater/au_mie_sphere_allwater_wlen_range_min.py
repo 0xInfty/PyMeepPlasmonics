@@ -176,7 +176,7 @@ for enl, wlm in zip(enlapsed_time, wlen_range_min):
 
 plt.figure()
 plt.title("Enlapsed total time for simulation of " + plot_title)
-for wlm, tot, col in zip(wlen_range_min, total_enlapsed_time, ["black", "darkgray"]):
+for wlm, tot, col in zip(wlen_range_min, total_enlapsed_time, ["darkgray", "black"]):
     plt.plot(wlm, tot, '.', color=col, markersize=12)
 plt.legend(["NFreq100", r"NFreq200"])
 plt.xlabel("Wavelength range minimum [nm]")
