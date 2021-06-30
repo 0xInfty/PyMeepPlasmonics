@@ -19,8 +19,8 @@ import v_utilities as vu
 #%% PARAMETERS
 
 # Saving directories
-folder = ["AuMieMediums/AllWaterTest/6)Courant/500to650", 
-          "AuMieMediums/AllWaterTest/6)Courant/500to700"]
+folder = ["AuMieMediums/AllWaterTest/9)BoxDimensions/Courant/500to650", 
+          "AuMieMediums/AllWaterTest/9)BoxDimensions/Courant/500to700"]
 home = vs.get_home()
 
 # Parameter for the test
@@ -34,7 +34,7 @@ sorting_function = [lambda l : vu.sort_by_number(l, -2)]*2
 series_label = [lambda s : f"500-650 nm Courant {vu.find_numbers(s)[test_param_position]:.2f}",
                 lambda s : f"500-700 nm Courant {vu.find_numbers(s)[test_param_position]:.2f}"]
 series_must = [""]*2 # leave "" per default
-series_mustnt = ["0.60"]*2 # leave "" per default
+series_mustnt = ["Failed"]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
@@ -129,7 +129,37 @@ max_wlen_diff = []
 for md, mt in zip(max_wlen, max_wlen_theory):
     max_wlen_diff.append( [d - t for d,t in zip(md, mt)] )
 
+mean_residual = [[np.mean(np.square(d[:,1] - t)) for d,t in zip(dat, theo)] for dat, theo in zip(data, theory)]
+
 #%% WAVELENGTH MAXIMUM DIFFERENCE
+
+colors = ["darkgrey", "k"]
+
+fig, [ax1, ax2] = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
+
+plt.suptitle("Difference in scattering for " + plot_title)
+
+ax1.set_ylabel("$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
+for tp, mwl, col, leg in zip(test_param, max_wlen_diff, colors, series_legend):
+    ax1.plot(tp, mwl, '.', color=col, markersize=12)
+ax1.grid(True)
+ax1.legend(series_legend)
+
+ax2.set_ylabel("MSD( $\sigma^{MEEP} - \sigma^{MIE}$ )")
+for tp, mr, col, leg in zip(test_param, mean_residual, colors, series_legend):
+    ax2.plot(tp, mr, '.', color=col, markersize=12)
+ax2.grid(True)
+ax2.legend(series_legend)
+
+plt.xlabel(test_param_label)
+# plt.figlegend(bbox_to_anchor=(.95, 0.7), bbox_transform=ax2.transAxes)
+# ax2.legend()
+plt.tight_layout()
+plt.show()
+
+vs.saveplot(plot_file("TheoryDiff.png"), overwrite=True)
+
+#%% DIFFERENCE IN SCATTERING MAXIMUM
 
 colors = ["darkgrey", "k"]
 
@@ -145,18 +175,16 @@ vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
 #%% MEAN RESIDUAL
 
-mean_residual = [[np.mean(np.square(d[:,1] - t)) for d,t in zip(dat, theo)] for dat, theo in zip(data, theory)]
-courant = [[vu.find_numbers(s)[0] for s in ser] for ser in series]
 colors = ["darkgrey", "k"]
 
 plt.figure()
-plt.title("Mean quadratic difference in scattering for " + plot_title)
+plt.title("Mean quadratic difference in effiency for " + plot_title)
 for tp, mr, col in zip(test_param, mean_residual, colors):
     plt.plot(tp, mr, '.', color=col, markersize=12)
 plt.grid(True)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
-plt.ylabel("Mean quadratic difference in scattering effiency")
+plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
 #%% GET ENLAPSED TIME COMPARED
