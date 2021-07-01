@@ -97,6 +97,12 @@ if test_param_in_params:
 else:
     test_param = [[vu.find_numbers(s)[test_param_position] for s in ser] for ser in series]
 
+minor_division = [[fum * 1e3 / res for fum, res in zip(frum, reso)] for frum, reso in zip(from_um_factor, resolution)]
+width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in params] 
+grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
+memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
+
+
 #%% LOAD MIE DATA
 
 theory = [] # Scattering effiency
@@ -133,7 +139,10 @@ mean_residual = [[np.mean(np.square(d[:,1] - t)) for d,t in zip(dat, theo)] for 
 
 #%% WAVELENGTH MAXIMUM DIFFERENCE
 
-colors = ["darkgrey", "k"]
+if len(series)>1:
+    colors = ["darkgrey", "k"]
+else:
+    colors = ["k"]
 
 fig, [ax1, ax2] = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
 
@@ -161,7 +170,10 @@ vs.saveplot(plot_file("TheoryDiff.png"), overwrite=True)
 
 #%% DIFFERENCE IN SCATTERING MAXIMUM
 
-colors = ["darkgrey", "k"]
+if len(series)>1:
+    colors = ["darkgrey", "k"]
+else:
+    colors = ["k"]
 
 plt.figure()
 plt.title("Difference in scattering maximum for " + plot_title)
@@ -175,7 +187,10 @@ vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
 #%% MEAN RESIDUAL
 
-colors = ["darkgrey", "k"]
+if len(series)>1:
+    colors = ["darkgrey", "k"]
+else:
+    colors = ["k"]
 
 plt.figure()
 plt.title("Mean quadratic difference in effiency for " + plot_title)
@@ -224,7 +239,11 @@ for enl, tpar in zip(enlapsed_time, test_param):
         else:
             print(f"Unknown error in '{test_param_string}' {tp} of", tpar)
 
-colors = ["darkgrey", "k"]
+if len(series)>1:
+    colors = ["darkgrey", "k"]
+else:
+    colors = ["k"]
+
 plt.figure()
 plt.title("Enlapsed total time for simulation of " + plot_title)
 for tp, tot, col in zip(test_param, total_enlapsed_time, colors):
