@@ -171,9 +171,9 @@ def check_stability(params):
     max_courant_dim_index = min(max_courant_dim_index)
     
     if stable_dim_index:
-        print("Medium should be stable according to frequency and resolution criteria.")
+        print("Medium should be stable according to dimensions and index criteria.")
     else:
-        print("Medium could be unstable according to frequency and resolution criteria.")
+        print("Medium could be unstable according to dimensions and index criteria.")
         print(f"Maximum Courant factor should be {max_courant_dim_index}")
     
     stable = all([stable_freq_res, stable_dim_index])
@@ -230,7 +230,7 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes"]
+                 "parallel", "n_processes", "split_chunks_evenly"]
     
     database["flux_path"].append( os.path.split(new_flux_path)[-1] )
     database["path"].append(path)
@@ -260,7 +260,7 @@ def check_midflux(params):
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes"]
+                 "parallel", "n_processes", "split_chunks_evenly"]
     
     database_array = []
     for key in key_params:
@@ -304,17 +304,17 @@ def check_midflux(params):
     if len(index) == 0:
         print("No coincidences where found at the midflux database!")
     elif len(index) == 1:
-        print(f"You could use data from '{database['path'][index[0]]}'")
+        print(f"You could use midflux data from '{database['path'][index[0]]}'")
     else:
         print("More than one coincidence was found at the midflux database!")
-        print(f"You could use data from '{database['path'][index[0]]}'")
+        print(f"You could use midflux data from '{database['path'][index[0]]}'")
         
     try:
         flux_path_list = [os.path.join(home, "FluxData", database['flux_path'][i]) for i in index]
     except:
         flux_path_list = [None]
     
-    return flux_path_list  
+    return flux_path_list
 
 #%%
 
@@ -335,6 +335,143 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
     sim.filename_prefix = filename_prefix
     
     return
+
+#%%
+
+def save_chunks(sim, params, path):
+    
+    parallel = params["parallel"]
+    n_processes = params["n_processes"]
+    
+    dir_file = os.path.join(home, "ChunksData/ChunksDataDirectory.txt")
+    dir_backup = os.path.join(home, f"ChunksData/ChunksDataDir{sysname}Backup.txt")
+    new_chunks_path = vs.datetime_dir(os.path.join(home, "ChunksData/Chunks"), 
+                                      strftime="%Y%m%d%H%M%S")
+    if parallel_assign(0, n_processes, parallel):
+        os.makedirs(new_chunks_path)
+    else:
+        sleep(.2)
+
+    filename_prefix = sim.filename_prefix
+    sim.filename_prefix = "Chunks"
+    os.chdir(new_chunks_path)
+    sim.dump_chunk_layout("Layout.h5")
+    sim.dump_structure("Structure.h5")
+    os.chdir(syshome)
+    sim.filename_prefix = filename_prefix
+        
+    database = vs.retrieve_footer(dir_file)
+    if parallel_assign(1, n_processes, parallel):
+        vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
+    key_params = ["from_um_factor", "resolution", "courant", 
+                 "wlen_range", "cutoff", "nfreq", 
+                 "r", "material", "paper", "reference",
+                 "submerged_index", "surface_index", "displacement",
+                 "cell_width", "pml_width", "source_center", "flux_box_size",
+                 "until_after_sources", 
+                 "parallel", "n_processes", "split_chunks_evenly"]
+    
+    database["chunks_path"].append( os.path.split(new_chunks_path)[-1] )
+    database["path"].append(path)
+    for key in key_params:
+        try:
+            if isinstance(params[key], np.ndarray):
+                database[key].append(list(params[key]))
+            else:
+                database[key].append(params[key])
+        except:
+            raise ValueError(f"Missing key parameter: {key}")
+    
+    if parallel_assign(0, n_processes, parallel):
+        vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
+    
+    return new_chunks_path
+
+#%%
+
+def check_chunks(params):
+    
+    dir_file = os.path.join(home, "ChunksData/ChunksDataDirectory.txt")
+    
+    database = vs.retrieve_footer(dir_file)
+    key_params = ["from_um_factor", "resolution", "courant", 
+                 "wlen_range", "cutoff", "nfreq", 
+                 "r", "material", "paper", "reference",
+                 "submerged_index", "surface_index", "displacement",
+                 "cell_width", "pml_width", "source_center", "flux_box_size",
+                 "until_after_sources", 
+                 "parallel", "n_processes", "split_chunks_evenly"]
+    
+    database_array = []
+    database_strings = {}
+    for key in key_params:
+        if key in params.keys():
+            if isinstance(database[key][0], bool):
+                aux_data = [int(data) for data in database[key]]
+                database_array.append(aux_data)
+            elif isinstance(database[key][0], str):
+                database_strings[key] = database[key]
+            else:
+                try:
+                    if len(list(database[key][0])) > 1:
+                        for i in range( len(list( database[key][0] )) ):
+                            aux_data = [data[i] for data in database[key]]
+                            database_array.append(aux_data)
+                    else:
+                        database_array.append(database[key])
+                except:
+                    database_array.append(database[key])
+    database_array = np.array(database_array)
+    
+    desired_array = []
+    desired_strings = {}
+    for key in key_params:
+        if key in params.keys():
+            if isinstance(params[key], bool):
+                desired_array.append(int(params[key]))
+            elif isinstance(params[key], str):
+                desired_strings[key] = params[key]
+            else:
+                try:
+                    if len(list(params[key])) > 1:
+                        for i in range( len(list( params[key] )) ):
+                            desired_array.append(params[key][i])
+                    else:
+                        desired_array.append(params[key])
+                except:
+                    desired_array.append(params[key])
+    desired_array = np.array(desired_array)
+    
+    boolean_array = []
+    for array in database_array.T:
+        boolean_array.append( np.all( array - desired_array.T == np.zeros(desired_array.T.shape) ) )
+    index = [i for i, boolean in enumerate(boolean_array) if boolean]
+    
+    for key, values_list in database_strings.items():
+        for i, value in enumerate(values_list):
+            if value == desired_strings[key]:
+                index.append(i)
+    
+    index_in_common = []
+    for i in index:
+        if index.count(i) == len(list(desired_strings.keys())) + 1:
+            if i not in index_in_common:
+                index_in_common.append(i)
+    
+    if len(index_in_common) == 0:
+        print("No coincidences where found at the chunks database!")
+    elif len(index_in_common) == 1:
+        print(f"You could use chunks data from '{database['path'][index[0]]}'")
+    else:
+        print("More than one coincidence was found at the chunks database!")
+        print(f"You could use chunks data from '{database['path'][index[0]]}'")
+        
+    try:
+        chunks_path_list = [os.path.join(home, "ChunksData", database['chunks_path'][i]) for i in index_in_common]
+    except:
+        chunks_path_list = [None]
+    
+    return chunks_path_list
 
 #%%
 
