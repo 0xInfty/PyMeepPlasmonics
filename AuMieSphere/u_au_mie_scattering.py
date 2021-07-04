@@ -51,7 +51,7 @@ import v_utilities as vu
 @cli.option("--courant", "-c", "courant", 
             type=float, default=0.5,
             help="Courant factor: time discretization from space discretization")
-@cli.option("--radius", "-r", "r", default=60, type=float,
+@cli.option("--radius", "-r", "r", default=51.5, type=float,
             help="Radius of sphere expressed in nm")
 @cli.option("--paper", "-pp", "paper", type=str, default="R",
             help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
@@ -66,7 +66,7 @@ import v_utilities as vu
             type=float, default=1,
             help="Reflective index of surface medium")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
-            type=vu.NUMPY_ARRAY, default="np.array([500,650])",
+            type=vu.NUMPY_ARRAY, default="np.array([450,600])",
             help="Wavelength range expressed in nm")
 @cli.option("--nfreq", "-nfreq", "nfreq", 
             type=int, default=100,
@@ -93,14 +93,24 @@ import v_utilities as vu
             help="Series folder used to save files")
 @cli.option("--parallel", "-par", type=bool, default=False,
             help="Whether the program is being run in parallel or in serial")
+@cli.option("--split-chunks-evenly", "-chev", "split_chunks_evenly", 
+            type=bool, default=True,
+            help="Whether to split chunks evenly or not during parallel run")
 @cli.option("--n-processes", "-np", "n_processes", type=int, default=1,
             help="Number of nuclei used to run the program in parallel")
+@cli.option("--load-flux", "-loadf", "load_flux", 
+            type=bool, default=True,
+            help="Whether to search the midflux database and load, if possible, or not.")
+@cli.option("--load-chunks", "-loadc", "load_chunks", 
+            type=bool, default=True,
+            help="Whether to search the chunks layout database and load, if possible, or not.")
 def main(from_um_factor, resolution, courant, 
          r, paper, reference, submerged_index, 
          displacement, surface_index, wlen_range, nfreq,
          air_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
-         series, folder, parallel, n_processes):
+         series, folder, parallel, n_processes, split_chunks_evenly,
+         load_flux, load_chunks):
 
     #%% CLASSIC INPUT PARAMETERS    
     """
@@ -110,12 +120,12 @@ def main(from_um_factor, resolution, courant,
     courant = 0.5
     
     # Nanoparticle specifications: Sphere in Vacuum :)
-    r = 60  # Radius of sphere in nm
+    r = 51.5  # Radius of sphere in nm
     paper = "R"
     reference = "Meep"
     displacement = 0 # Displacement of the surface from the bottom of the sphere in nm
-    submerged_index = 1.33 # 1.33 for water
-    surface_index = 1.54 # 1.54 for glass
+    submerged_index = 1 # 1.33 for water
+    surface_index = 1 # 1.54 for glass
     
     # Frequency and wavelength
     wlen_range = np.array([500,650]) # Wavelength range in nm
@@ -124,7 +134,7 @@ def main(from_um_factor, resolution, courant,
     # Box dimensions
     pml_wlen_factor = 0.38
     air_r_factor = 0.5
-    flux_r_factor = 0
+    flux_r_factor = 0.1
     
     # Simulation time
     time_factor_cell = 1.2
@@ -137,6 +147,7 @@ def main(from_um_factor, resolution, courant,
     # Configuration
     parallel = False
     n_processes = 1
+    split_chunks_evenly = True
     """
 
     #%% MORE INPUT PARAMETERS
@@ -190,7 +201,8 @@ def main(from_um_factor, resolution, courant,
                    "wlen_range", "nfreq", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
-                   "enlapsed", "parallel", "n_processes", "script", "sysname", "path"]
+                   "enlapsed", "parallel", "n_processes", "split_chunks_evenly",
+                   "script", "sysname", "path"]
     
     #%% GENERAL GEOMETRY SETUP
     
@@ -268,11 +280,54 @@ def main(from_um_factor, resolution, courant,
     else:
         print("As a whole, the simulation could not be stable")
         print(f"Recommended maximum courant factor is {max_courant}")
+        
+    if load_flux:
+        try:
+            flux_path = vm.check_midflux(params)[0]
+            flux_needed = False
+        except:
+            flux_needed = True
+    else:
+        flux_needed = True
+        
+    if load_chunks and not split_chunks_evenly:
+        try:
+            chunks_path = vm.check_chunks(params)[0]
+            chunk_layout = os.path.join(chunks_path, "Layout.h5")
+            chunks_needed = False
+        except:
+            chunks_needed = True
+            flux_needed = True
+    else:
+        if not split_chunks_evenly:
+            chunks_needed = True
+            flux_needed = True
+        else:
+            chunk_layout = None
+            chunks_needed = False
+        
+    if chunks_needed:
+
+        sim = mp.Simulation(resolution=resolution,
+                            cell_size=cell_size,
+                            boundary_layers=pml_layers,
+                            sources=sources,
+                            k_point=mp.Vector3(),
+                            Courant=courant,
+                            default_material=mp.Medium(index=submerged_index),
+                            output_single_precision=True,
+                            split_chunks_evenly=split_chunks_evenly,
+                            # symmetries=symmetries,
+                            geometry=geometry)
     
-    try:
-        flux_path = vm.check_midflux(params)[0]
+        sim.init_sim()
+        
+        chunks_path = vm.save_chunks(sim, params, path)         
+        chunk_layout = os.path.join(chunks_path, "Layout.h5")
+        
     
-    except:
+    if flux_needed:
+        
         #% FIRST RUN: SET UP
         
         sim = mp.Simulation(resolution=resolution,
@@ -282,11 +337,13 @@ def main(from_um_factor, resolution, courant,
                             k_point=mp.Vector3(),
                             Courant=courant,
                             default_material=mp.Medium(index=submerged_index),
+                            split_chunks_evenly=split_chunks_evenly,
+                            chunk_layout=chunk_layout,
                             output_single_precision=True)#,
                             # symmetries=symmetries)
         # >> k_point zero specifies boundary conditions needed
         # for the source to be infinitely extended
-        
+
         # Scattered power --> Computed by surrounding it with closed DFT flux box 
         # (its size and orientation are irrelevant because of Poynting's theorem) 
         box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
@@ -345,6 +402,9 @@ def main(from_um_factor, resolution, courant,
 
         flux_path =  vm.save_midflux(sim, box_x1, box_x2, box_y1, 
                                      box_y2, box_z1, box_z2, params, path)
+        
+        if not split_chunks_evenly:
+            vm.save_chunks(sim, params, path)
         
         freqs = np.asarray(mp.get_flux_freqs(box_x1))
         box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
@@ -430,9 +490,10 @@ def main(from_um_factor, resolution, courant,
                         Courant=courant,
                         default_material=mp.Medium(index=submerged_index),
                         output_single_precision=True,
+                        split_chunks_evenly=split_chunks_evenly,
+                        chunk_layout=chunk_layout,
                         # symmetries=symmetries,
-                        geometry=geometry,)
-    
+                        geometry=geometry)
     
     box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
                           mp.FluxRegion(center=mp.Vector3(x=-flux_box_size/2),
@@ -565,6 +626,9 @@ def main(from_um_factor, resolution, courant,
                    header=header, footer=params)
         vs.savetxt(file("BaseResults.txt"), data_base, 
                    header=header_base, footer=params)
+        
+    if not split_chunks_evenly:
+        vm.save_chunks(sim, params, path)
     
     #%% PLOT ALL TOGETHER
     
