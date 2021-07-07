@@ -37,7 +37,7 @@ series_column = [1]
 
 # Scattering plot options
 plot_title = "Au 103 nm sphere in water"
-series_legend = ["500-700 nm"]
+series_legend = ["Data"]
 series_colors = [plab.cm.Reds]
 series_linestyles = ["solid"]
 plot_make_big = False
@@ -133,6 +133,8 @@ for md, mt in zip(max_wlen, max_wlen_theory):
     max_wlen_diff.append( [d - t for d,t in zip(md, mt)] )
 
 mean_residual = [[np.mean(np.square(d[:,1] - t)) for d,t in zip(dat, theo)] for dat, theo in zip(data, theory)]
+mean_residual_left = [[np.mean(np.square(d[:np.argmax(t),1] - t[:np.argmax(t)])) for d,t in zip(dat, theo)] for dat, theo in zip(data, theory)]
+mean_residual_right = [[np.mean(np.square(d[np.argmax(t):,1] - t[np.argmax(t):])) for d,t in zip(dat, theo)] for dat, theo in zip(data, theory)]
 
 #%% WAVELENGTH MAXIMUM DIFFERENCE
 
@@ -186,15 +188,21 @@ vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
 if len(series)>1:
     colors = ["darkgrey", "k"]
+    colors_right = ["red", "maroon"]
+    colors_left = ["darkviolet", "rebeccapurple"]
 else:
     colors = ["k"]
+    colors_right = ["red"]
+    colors_left = ["darkviolet"]
 
 plt.figure()
 plt.title("Mean quadratic difference in effiency for " + plot_title)
-for tp, mr, col in zip(test_param, mean_residual, colors):
-    plt.plot(tp, mr, '.', color=col, markersize=12)
+for i in range(len(test_param)):
+    plt.plot(test_param[i], mean_residual_left[i], '.', color=colors_left[i], markersize=12, label=series_legend[i]+" left")
+    plt.plot(test_param[i], mean_residual_right[i], '.', color=colors_right[i], markersize=12, label=series_legend[i]+" right")
+    plt.plot(test_param[i], mean_residual[i], '.', color=colors[i], markersize=12, label=series_legend[i]+" all")
 plt.grid(True)
-plt.legend(series_legend)
+plt.legend()
 plt.xlabel(test_param_label)
 plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
@@ -220,15 +228,21 @@ vs.saveplot(plot_file("WLenDiffDiv.png"), overwrite=True)
 
 if len(series)>1:
     colors = ["darkgrey", "k"]
+    colors_right = ["red", "maroon"]
+    colors_left = ["darkviolet", "rebeccapurple"]
 else:
     colors = ["k"]
+    colors_right = ["red"]
+    colors_left = ["darkviolet"]
 
 plt.figure()
 plt.title("Mean quadratic difference in effiency for " + plot_title)
 for md, mr, col in zip(minor_division, mean_residual, colors):
-    plt.plot(md, md, '.', color=col, markersize=12)
+    plt.plot(minor_division[i], mean_residual_left[i], '.', color=colors_left[i], markersize=12, label=series_legend[i]+" left")
+    plt.plot(minor_division[i], mean_residual_right[i], '.', color=colors_right[i], markersize=12, label=series_legend[i]+" right")
+    plt.plot(minor_division[i], mean_residual[i], '.', color=colors[i], markersize=12, label=series_legend[i]+" all")
 plt.grid(True)
-plt.legend(series_legend)
+plt.legend()
 plt.xlabel("Minor spatial division [nm]")
 plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
 vs.saveplot(plot_file("QuaDiffDiv.png"), overwrite=True)
@@ -335,7 +349,7 @@ plt.plot(data[0][-1][:,0], theory[0][-1] / max(theory[0][-1]),
          linestyle="dashed", color='red', label="Mie Theory")
 plt.xlabel("Wavelength [nm]")
 plt.ylabel("Normalized Scattering Cross Section")
-plt.legend()
+plt.legend(ncol=2)
 if plot_make_big:
     mng = plt.get_current_fig_manager()
     mng.window.showMaximized()
@@ -361,7 +375,7 @@ plt.plot(data[0][-1][:,0], theory[0][-1] * np.pi * (params[0][-1]["r"] * params[
          linestyle="dashed", color='red', label="Mie Theory")
 plt.xlabel("Wavelength [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
-plt.legend()
+plt.legend(ncol=2)
 if plot_make_big:
     mng = plt.get_current_fig_manager()
     mng.window.showMaximized()
@@ -385,7 +399,7 @@ for s, d, t, p, sc, psl, pc, pls in zip(series, data, theory, params, series_col
             
 plt.xlabel("Wavelength [nm]")
 plt.ylabel(r"Difference in Scattering Cross Section [nm$^2$]")
-plt.legend()
+plt.legend(ncol=2)
 if plot_make_big:
     mng = plt.get_current_fig_manager()
     mng.window.showMaximized()
