@@ -495,24 +495,26 @@ def main(from_um_factor, resolution, courant,
                         # symmetries=symmetries,
                         geometry=geometry)
     
-    box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(x=-flux_box_size/2),
-                                        size=mp.Vector3(0,flux_box_size,flux_box_size)))
-    box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(x=+flux_box_size/2),
-                                        size=mp.Vector3(0,flux_box_size,flux_box_size)))
-    box_y1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(y=-flux_box_size/2),
-                                        size=mp.Vector3(flux_box_size,0,flux_box_size)))
-    box_y2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(y=+flux_box_size/2),
-                                        size=mp.Vector3(flux_box_size,0,flux_box_size)))
-    box_z1 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(z=-flux_box_size/2),
-                                        size=mp.Vector3(flux_box_size,flux_box_size,0)))
-    box_z2 = sim.add_flux(freq_center, freq_width, nfreq, 
-                          mp.FluxRegion(center=mp.Vector3(z=+flux_box_size/2),
-                                        size=mp.Vector3(flux_box_size,flux_box_size,0)))
+    flux_box = sim.add_near2far(freq_center, freq_width, nfreq, 
+        mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
+                          size=mp.Vector3(0,flux_box_size,flux_box_size)),
+                          # weight=-1),
+        mp.Near2FarRegion(center=mp.Vector3(x=+flux_box_size/2),
+                          size=mp.Vector3(0,flux_box_size,flux_box_size)),
+                          # weight=+1),
+        mp.Near2FarRegion(center=mp.Vector3(y=-flux_box_size/2),
+                          size=mp.Vector3(flux_box_size,0,flux_box_size)),
+                          # weight=-1),
+        mp.Near2FarRegion(center=mp.Vector3(y=+flux_box_size/2),
+                          size=mp.Vector3(flux_box_size,0,flux_box_size)),
+                          # weight=+1),
+        mp.Near2FarRegion(center=mp.Vector3(z=-flux_box_size/2),
+                          size=mp.Vector3(flux_box_size,flux_box_size,0)),
+                          # weight=-1),
+        mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
+                          size=mp.Vector3(flux_box_size,flux_box_size,0)))
+                          # weight=+1))
+    ( box_x1, box_x2, box_y1, box_y2, box_z1, box_z2 ) = flux_box.regions
     
     #%% SECOND RUN: INITIALIZE
     
@@ -532,7 +534,7 @@ def main(from_um_factor, resolution, courant,
     box_y2_data = sim.get_flux_data(box_y2)
     box_z1_data = sim.get_flux_data(box_z1)
     box_z2_data = sim.get_flux_data(box_z2)
-    
+     
     temp = time()
     sim.load_minus_flux_data(box_x1, box_x1_data)
     sim.load_minus_flux_data(box_x2, box_x2_data)
@@ -564,7 +566,7 @@ def main(from_um_factor, resolution, courant,
     box_z1_flux = np.asarray(mp.get_fluxes(box_z1))
     box_z2_flux = np.asarray(mp.get_fluxes(box_z2))
     
-    #%% ANALYSIS
+    #%% SCATTERING ANALYSIS
     
     scatt_flux = box_x1_flux - box_x2_flux
     scatt_flux = scatt_flux + box_y1_flux - box_y2_flux
@@ -594,6 +596,44 @@ def main(from_um_factor, resolution, courant,
     # The simulation results are validated by comparing with 
     # analytic theory of PyMieScatt module
     
+    #%% ANGULAR PATTERN ANALYSIS
+    
+    radial_distance = 1000/freq_center      # half side length of far-field square box OR radius of far-field circle
+    resolution_farfields = 1         # resolution of far fields (points/length unit)
+    
+    azimuthal_npts = 50         # number of points in [0,2*pi) range of angles
+    polar_npts = 50
+    azimuthal_angle = 2 * np.pi / azimuthal_npts * np.arange(azimuthal_npts)
+    polar_angle = np.pi / azimuthal_npts * np.arange(polar_npts)
+    
+    poynting_x = []
+    poynting_y = []
+    poynting_z = []
+    for phi in azimuthal_angle:
+        poynting_x.append([])
+        poynting_y.append([])
+        poynting_z.append([])
+        for theta in polar_angle:
+            farfield_dict = sim.get_farfield(flux_box,
+                                             mp.Vector3(radial_distance * np.cos(phi) * np.sin(theta),
+                                                        radial_distance * np.sin(phi) * np.sin(theta),
+                                                        radial_distance * np.cos(theta)))
+            Px = farfield_dict["Ey"] * farfield_dict["Hz"] 
+            Px -= farfield_dict["Ey"] * farfield_dict["Hz"]
+            Py = farfield_dict["Ez"] * farfield_dict["Hx"] 
+            Py -= farfield_dict["Ex"] * farfield_dict["Hz"]
+            Pz = farfield_dict["Ex"] * farfield_dict["Hy"] 
+            Pz -= farfield_dict["Ey"] * farfield_dict["Hx"]
+            poynting_x[-1].append( Px )
+            poynting_y[-1].append( Py )
+            poynting_z[-1].append( Pz )
+    
+    Px = np.real(E[:,1]*H[:,2]-E[:,2]*H[:,1])
+    Py = np.real(E[:,2]*H[:,0]-E[:,0]*H[:,2])
+    Pr = np.sqrt(np.square(Px)+np.square(Py))
+    
+    far_flux_circle = np.sum(Pr)*2*np.pi*r/len(Pr)
+
     #%% SAVE FINAL DATA
     
     for p in params_list: params[p] = eval(p)
