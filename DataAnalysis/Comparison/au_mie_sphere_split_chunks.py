@@ -19,8 +19,14 @@ import v_utilities as vu
 #%% PARAMETERS
 
 # Saving directories
-folder = [*["Test/TestChunks/AllVac450to600"]*2, 
-          *["Test/TestChunks/AllWat500to650"]*2]
+# folder = [*["Test/TestChunks/AllVac450to600"]*2, 
+#           *["Test/TestChunks/AllWat500to650/Res2"]*2]
+folder = [*["Test/TestChunks/AllWat500to650/Res2"]*2, 
+          *["Test/TestChunks/AllWat500to650/Res4"]*2]
+# folder = [*["Test/TestChunks/AllWat500to650/Res2"]*2, 
+#           *["Test/TestChunks/AllWat500to650/Res2SC"]*2]
+# folder = [*["Test/TestChunks/AllVac450to600/Res2"]*2, 
+#           *["Test/TestChunks/AllVac450to600/Res2SC"]*2]
 home = vs.get_home()
 
 # Parameter for the test
@@ -35,17 +41,34 @@ series_label = [lambda s : f"Vacuum True {vu.find_numbers(s)[test_param_position
                 lambda s : f"Vacuum False {vu.find_numbers(s)[test_param_position]:.0f} Processes",
                 lambda s : f"Water True {vu.find_numbers(s)[test_param_position]:.0f} Processes",
                 lambda s : f"Water False {vu.find_numbers(s)[test_param_position]:.0f} Processes"]
+# series_label = [lambda s : f"Res 2 True {vu.find_numbers(s)[test_param_position]:.0f} Processes",
+#                 lambda s : f"Res 2 False {vu.find_numbers(s)[test_param_position]:.0f} Processes",
+#                 lambda s : f"Res 4 True {vu.find_numbers(s)[test_param_position]:.0f} Processes",
+#                 lambda s : f"Res 4 False {vu.find_numbers(s)[test_param_position]:.0f} Processes"]
+# series_label = [lambda s : f"MC True {vu.find_numbers(s)[test_param_position]:.0f} Processes",
+#                 lambda s : f"MC False {vu.find_numbers(s)[test_param_position]:.0f} Processes",
+#                 lambda s : f"SC True {vu.find_numbers(s)[test_param_position]:.0f} Processes",
+#                 lambda s : f"SC False {vu.find_numbers(s)[test_param_position]:.0f} Processes"]
 series_must = [*["True", "False"]*2] # leave "" per default
-series_mustnt = [""]*4 # leave "" per default
+series_mustnt = ["Failed"]*4 # leave "" per default
 series_column = [1]*4
 
 # Scattering plot options
-plot_title = "Au 103 nm sphere"
-series_legend = ["Vacuum True", "Vacuum False", "Water True", "Water False"]
-series_colors = [plab.cm.Reds, plab.cm.Reds, plab.cm.Blues, plab.cm.Blues]
+#plot_title = "Au 103 nm sphere"
+plot_title = "Au 103 nm sphere in water"
+# plot_title = "Au 103 nm sphere in vacuum"
+#series_legend = ["Vacuum True", "Vacuum False", "Water True", "Water False"]
+series_legend = ["Res 2 True", "Res 2 False", "Res 4 True", "Res 4 False"]
+# series_legend = ["MC True", "MC False", "SC True", "SC False"]
+# series_colors = [plab.cm.Reds, plab.cm.Reds, plab.cm.Blues, plab.cm.Blues]
+series_colors = [plab.cm.Greens, plab.cm.Greens, plab.cm.Blues, plab.cm.Blues]
+# series_colors = [plab.cm.Greens, plab.cm.Greens, plab.cm.Reds, plab.cm.Reds]
 series_linestyles = [*["solid", "dashed"]*2]
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Chunks" + n)
+#plot_file = lambda n : os.path.join(home, "DataAnalysis/Chunks" + n)
+# plot_file = lambda n : os.path.join(home, "DataAnalysis/ChunksRes4" + n)
+# plot_file = lambda n : os.path.join(home, "DataAnalysis/ChunksSC" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/ChunksSCVac" + n)
 
 #%% LOAD DATA
 
@@ -255,6 +278,8 @@ for enl, tpar, par in zip(enlapsed_time, test_param, params):
             else:
                 total_enlapsed_time[-1].append(sum(p["enlapsed"]) + e[0])
 
+#%%
+
 if len(series)>1:
     colors = [*["darkgrey", "k"]*2]
 else:
@@ -320,6 +345,70 @@ fig.axes[0].set_position(box)
 leg = plt.legend(ncol=2, bbox_to_anchor=(.5, -.3), loc="lower center", frameon=False)
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
+#%%
+
+if len(series)>1:
+    colors = [*["darkgrey", "k"]*2]
+else:
+    colors = ["k"]
+
+markers = ["o", "o", "D", "D"]
+
+fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
+axes = [*[axes[0]]*2, *[axes[1]]*2]
+plt.suptitle("Enlapsed total time for simulation of " + plot_title)
+for ax, tp, tot, col, mark in zip(axes, test_param, total_enlapsed_time, colors, markers):
+    ax.plot(tp, tot, '-', marker=mark, color=col, markersize=7)
+axes[0].legend(series_legend[:2])
+axes[2].legend(series_legend[2:])
+axes[0].set_ylabel("Enlapsed time [s]")
+axes[2].set_ylabel("Enlapsed time [s]")
+plt.xlabel(test_param_label)
+vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
+        
+colors = ["r", "maroon", "darkorange", "orangered"]
+fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
+axes = [*[axes[0]]*2, *[axes[1]]*2]
+plt.suptitle("Enlapsed time for simulations of " + plot_title)
+for ax, tp, tim, col, leg in zip(axes, first_test_param, first_sim_time, colors, series_legend):
+    ax.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
+for ax, tp, tim, col, leg in zip(axes, second_test_param, second_sim_time, colors, series_legend):
+    ax.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
+plt.xlabel(test_param_label)
+axes[0].legend()
+axes[2].legend()
+axes[0].set_ylabel("Enlapsed time [s]")
+axes[2].set_ylabel("Enlapsed time [s]")
+plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
+
+colors = ["b", "navy", "cyan", "deepskyblue"]
+fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
+axes = [*[axes[0]]*2, *[axes[1]]*2]
+plt.suptitle("Enlapsed time for building of " + plot_title)
+for ax, tp, tim, col, leg in zip(axes, first_test_param, first_build_time, colors, series_legend):
+    ax.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
+for ax, tp, tim, col, leg in zip(axes, second_test_param, second_build_time, colors, series_legend):
+    ax.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
+plt.xlabel(test_param_label)
+axes[0].legend(ncol=2)
+axes[2].legend(ncol=2)
+axes[0].set_ylabel("Enlapsed time [s]")
+axes[2].set_ylabel("Enlapsed time [s]")
+plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
+
+colors = ["m", "darkmagenta", "blueviolet", "indigo"]
+fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
+axes = [*[axes[0]]*2, *[axes[1]]*2]
+plt.suptitle("Enlapsed time for loading flux of " + plot_title)
+for ax, tp, tim, col, leg in zip(axes, second_test_param, second_flux_time, colors, series_legend):
+    ax.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
+plt.xlabel(test_param_label)
+axes[0].legend()
+axes[2].legend()
+axes[0].set_ylabel("Enlapsed time [s]")
+axes[2].set_ylabel("Enlapsed time [s]")
+plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
+
 #%% PLOT NORMALIZED
 
 colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
@@ -335,10 +424,10 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
         plt.plot(sd[:,0], sd[:,sc] / sd[index_argmax, sc], 
                  linestyle=pls, color=spc, label=psl(ss))
 
-plt.plot(data[1][-1][:,0], theory[1][-1] / max(theory[0][-1]), 
-         linestyle="dotted", color='red', label="Mie Theory Vacuum")
+# plt.plot(data[1][-1][:,0], theory[1][-1] / max(theory[0][-1]), 
+#           linestyle="dotted", color='red', label="Mie Theory Vacuum")
 plt.plot(data[-1][-1][:,0], theory[-1][-1] / max(theory[-1][-1]), 
-         linestyle="dotted", color='blue', label="Mie Theory Water")
+          linestyle="dotted", color='blue', label="Mie Theory Water")
 plt.xlabel("Wavelength [nm]")
 plt.ylabel("Normalized Scattering Cross Section")
 box = fig.axes[0].get_position()
@@ -366,10 +455,10 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
         plt.plot(sd[:,0], sign * sd[:,sc] * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
                  linestyle=pls, color=spc, label=psl(ss))
             
-plt.plot(data[1][-1][:,0], theory[1][-1] * np.pi * (params[0][-1]["r"] * params[0][-1]["from_um_factor"] * 1e3)**2,
-         linestyle="dotted", color='red', label="Mie Theory Vacuum")
+# plt.plot(data[1][-1][:,0], theory[1][-1] * np.pi * (params[0][-1]["r"] * params[0][-1]["from_um_factor"] * 1e3)**2,
+#           linestyle="dotted", color='red', label="Mie Theory Vacuum")
 plt.plot(data[-1][-1][:,0], theory[-1][-1] * np.pi * (params[-1][-1]["r"] * params[-1][-1]["from_um_factor"] * 1e3)**2,
-         linestyle="dotted", color='blue', label="Mie Theory Water")
+          linestyle="dotted", color='blue', label="Mie Theory Water")
 plt.xlabel("Wavelength [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
 box = fig.axes[0].get_position()
