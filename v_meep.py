@@ -142,7 +142,8 @@ def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5, print_log=Tru
 def check_stability(params):
     
     if params["reference"]=="Meep": 
-        medium = vmt.import_medium(params["material"], params["from_um_factor"], 
+        medium = vmt.import_medium(params["material"], 
+                                   from_um_factor=params["from_um_factor"], 
                                    paper=params["paper"])
         # Importing material constants dependant on frequency from Meep Library
     elif params["reference"]=="RIinfo":
@@ -195,11 +196,13 @@ def parallel_assign(process_number, process_total_number, parallel=True):
 
 #%%
 
-def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, path):
+def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
+                 near2far_box, params, path):
     
     
     parallel = params["parallel"]
     n_processes = params["n_processes"]
+    near2far = params["near2far"]
     
     dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
     dir_backup = os.path.join(home, f"FluxData/FluxDataDir{sysname}Backup.txt")
@@ -219,6 +222,7 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
     sim.save_flux("Y2", box_y2)
     sim.save_flux("Z1", box_z1)
     sim.save_flux("Z2", box_z2)
+    if near2far: sim.save_near2far("Near2Far", near2far_box)
     os.chdir(syshome)
     sim.filename_prefix = filename_prefix
         
@@ -230,7 +234,8 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, params, pa
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes", "split_chunks_evenly"]
+                 "parallel", "n_processes", 
+                 "split_chunks_evenly", "near2far"]
     
     database["flux_path"].append( os.path.split(new_flux_path)[-1] )
     database["path"].append(path)
@@ -260,7 +265,8 @@ def check_midflux(params):
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes", "split_chunks_evenly"]
+                 "parallel", "n_processes", 
+                 "split_chunks_evenly", "near2far"]
     
     database_array = []
     for key in key_params:
@@ -318,7 +324,8 @@ def check_midflux(params):
 
 #%%
 
-def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path):
+def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
+                 near2far_box, flux_path):
     
     print(f"Loading flux from '{flux_path}'")
     
@@ -331,6 +338,7 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
     sim.load_flux("Y2", box_y2)
     sim.load_flux("Z1", box_z1)
     sim.load_flux("Z2", box_z2)
+    if near2far_box is not None: sim.load_near2far("Near2Far", near2far_box)
     os.chdir(syshome)
     sim.filename_prefix = filename_prefix
     
@@ -369,7 +377,8 @@ def save_chunks(sim, params, path):
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes", "split_chunks_evenly"]
+                 "parallel", "n_processes", 
+                 "split_chunks_evenly", "near2far"]
     
     database["chunks_path"].append( os.path.split(new_chunks_path)[-1] )
     database["path"].append(path)
@@ -400,7 +409,8 @@ def check_chunks(params):
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes", "split_chunks_evenly"]
+                 "parallel", "n_processes", 
+                 "split_chunks_evenly", "near2far"]
     
     database_array = []
     database_strings = {}
