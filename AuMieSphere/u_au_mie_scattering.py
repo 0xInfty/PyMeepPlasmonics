@@ -104,13 +104,16 @@ import v_utilities as vu
 @cli.option("--load-chunks", "-loadc", "load_chunks", 
             type=bool, default=True,
             help="Whether to search the chunks layout database and load, if possible, or not.")
+@cli.option("--near2far", "-n2f", "near2far", 
+            type=bool, default=False,
+            help="Whether to calculate angular pattern or not.")
 def main(from_um_factor, resolution, courant, 
          r, paper, reference, submerged_index, 
          displacement, surface_index, wlen_range, nfreq,
          air_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
          series, folder, parallel, n_processes, split_chunks_evenly,
-         load_flux, load_chunks):
+         load_flux, load_chunks, near2far):
 
     #%% CLASSIC INPUT PARAMETERS    
     """
@@ -134,7 +137,7 @@ def main(from_um_factor, resolution, courant,
     # Box dimensions
     pml_wlen_factor = 0.38
     air_r_factor = 0.5
-    flux_r_factor = 0.1
+    flux_r_factor = 0 #0.1
     
     # Simulation time
     time_factor_cell = 1.2
@@ -148,6 +151,9 @@ def main(from_um_factor, resolution, courant,
     parallel = False
     n_processes = 1
     split_chunks_evenly = True
+    load_flux = True
+    load_chunks = True    
+    near2far = False
     """
 
     #%% MORE INPUT PARAMETERS
@@ -157,13 +163,15 @@ def main(from_um_factor, resolution, courant,
     
     # Frequency and wavelength
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
+    nazimuthal = 16
+    npolar = 20
     
     ### TREATED INPUT PARAMETERS
     
     # Nanoparticle specifications: Sphere in Vacuum :)
     r = r / ( from_um_factor * 1e3 ) # Now in Meep units
     if reference=="Meep": 
-        medium = vmt.import_medium(material, from_um_factor, paper=paper)
+        medium = vmt.import_medium(material, from_um_factor=from_um_factor, paper=paper)
         # Importing material constants dependant on frequency from Meep Library
     elif reference=="RIinfo":
         medium = vmt.MediumFromFile(material, paper=paper, reference=reference, from_um_factor=from_um_factor)
@@ -198,10 +206,11 @@ def main(from_um_factor, resolution, courant,
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", "reference", "submerged_index",
                    "displacement", "surface_index",
-                   "wlen_range", "nfreq", "cutoff", "flux_box_size",
+                   "wlen_range", "nfreq", "nazimuthal", "npolar", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
-                   "enlapsed", "parallel", "n_processes", "split_chunks_evenly",
+                   "enlapsed", "parallel", "n_processes", 
+                   "split_chunks_evenly", "near2far",
                    "script", "sysname", "path"]
     
     #%% GENERAL GEOMETRY SETUP
@@ -366,6 +375,29 @@ def main(from_um_factor, resolution, courant,
                                             size=mp.Vector3(flux_box_size,flux_box_size,0)))
         # Funny you can encase the sphere (r radius) so closely (2r-sided box)
         
+        if near2far:
+            near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
+                mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
+                                  size=mp.Vector3(0,flux_box_size,flux_box_size),
+                                   weight=-1),
+                mp.Near2FarRegion(center=mp.Vector3(x=+flux_box_size/2),
+                                  size=mp.Vector3(0,flux_box_size,flux_box_size),
+                                   weight=+1),
+                mp.Near2FarRegion(center=mp.Vector3(y=-flux_box_size/2),
+                                  size=mp.Vector3(flux_box_size,0,flux_box_size),
+                                   weight=-1),
+                mp.Near2FarRegion(center=mp.Vector3(y=+flux_box_size/2),
+                                  size=mp.Vector3(flux_box_size,0,flux_box_size),
+                                   weight=+1),
+                mp.Near2FarRegion(center=mp.Vector3(z=-flux_box_size/2),
+                                  size=mp.Vector3(flux_box_size,flux_box_size,0),
+                                   weight=-1),
+                mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
+                                  size=mp.Vector3(flux_box_size,flux_box_size,0),
+                                   weight=+1))
+        else:
+            near2far_box = None
+        
         #% FIRST RUN: INITIALIZE
         
         temp = time()
@@ -387,10 +419,6 @@ def main(from_um_factor, resolution, courant,
         
         for p in params_list: params[p] = eval(p)
         
-        field = sim.get_array(center=mp.Vector3(), 
-                              size=(cell_width, cell_width, cell_width), 
-                              component=mp.Ez)
-        
         # if parallel:
         #     f = h5.File(file("MidField.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
         # else:
@@ -401,7 +429,8 @@ def main(from_um_factor, resolution, courant,
         # del f
 
         flux_path =  vm.save_midflux(sim, box_x1, box_x2, box_y1, 
-                                     box_y2, box_z1, box_z2, params, path)
+                                     box_y2, box_z1, box_z2, 
+                                     near2far_box, params, path)
         
         if not split_chunks_evenly:
             vm.save_chunks(sim, params, path)
@@ -451,34 +480,6 @@ def main(from_um_factor, resolution, courant,
             ax[-1,1].set_xlabel("Wavelength [nm]")
             
             plt.savefig(file("MidFlux.png"))
-        
-        #% PLOT FLUX WALLS FIELD
-        
-        if vm.parallel_assign(0, np_process, parallel):
-            # index_to_space = lambda i : i/resolution - cell_width/2
-            space_to_index = lambda x : round(resolution * (x + cell_width/2))
-            
-            field_walls = [field[space_to_index(-r),:,:],
-                            field[space_to_index(r),:,:],
-                            field[:,space_to_index(-r),:],
-                            field[:,space_to_index(r),:],
-                            field[:,:,space_to_index(-r)],
-                            field[:,:,space_to_index(r)]]
-            
-            zlims = (np.min([np.min(f) for f in field_walls]), 
-                      np.max([np.max(f) for f in field_walls]))
-            
-            fig, ax = plt.subplots(3, 2)
-            fig.subplots_adjust(hspace=0.25)
-            for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
-                a.set_title(h.split(" ")[1].split("0")[0])
-            
-            for f, a in zip(field_walls, np.reshape(ax, 6)):
-                a.imshow(f.T, interpolation='spline36', cmap='RdBu', 
-                          vmin=zlims[0], vmax=zlims[1])
-                a.axis("off")
-            
-            plt.savefig(file("MidField.png"))
     
     #%% SECOND RUN: SETUP
     
@@ -495,27 +496,48 @@ def main(from_um_factor, resolution, courant,
                         # symmetries=symmetries,
                         geometry=geometry)
     
-    flux_box = sim.add_near2far(freq_center, freq_width, nfreq, 
-        mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
-                          size=mp.Vector3(0,flux_box_size,flux_box_size)),
-                          # weight=-1),
-        mp.Near2FarRegion(center=mp.Vector3(x=+flux_box_size/2),
-                          size=mp.Vector3(0,flux_box_size,flux_box_size)),
-                          # weight=+1),
-        mp.Near2FarRegion(center=mp.Vector3(y=-flux_box_size/2),
-                          size=mp.Vector3(flux_box_size,0,flux_box_size)),
-                          # weight=-1),
-        mp.Near2FarRegion(center=mp.Vector3(y=+flux_box_size/2),
-                          size=mp.Vector3(flux_box_size,0,flux_box_size)),
-                          # weight=+1),
-        mp.Near2FarRegion(center=mp.Vector3(z=-flux_box_size/2),
-                          size=mp.Vector3(flux_box_size,flux_box_size,0)),
-                          # weight=-1),
-        mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
-                          size=mp.Vector3(flux_box_size,flux_box_size,0)))
-                          # weight=+1))
-    ( box_x1, box_x2, box_y1, box_y2, box_z1, box_z2 ) = flux_box.regions
-    
+    box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(x=-flux_box_size/2),
+                                        size=mp.Vector3(0,flux_box_size,flux_box_size)))
+    box_x2 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(x=+flux_box_size/2),
+                                        size=mp.Vector3(0,flux_box_size,flux_box_size)))
+    box_y1 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(y=-flux_box_size/2),
+                                        size=mp.Vector3(flux_box_size,0,flux_box_size)))
+    box_y2 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(y=+flux_box_size/2),
+                                        size=mp.Vector3(flux_box_size,0,flux_box_size)))
+    box_z1 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(z=-flux_box_size/2),
+                                        size=mp.Vector3(flux_box_size,flux_box_size,0)))
+    box_z2 = sim.add_flux(freq_center, freq_width, nfreq, 
+                          mp.FluxRegion(center=mp.Vector3(z=+flux_box_size/2),
+                                        size=mp.Vector3(flux_box_size,flux_box_size,0)))
+
+    if near2far:
+        near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
+            mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
+                              size=mp.Vector3(0,flux_box_size,flux_box_size),
+                               weight=-1),
+            mp.Near2FarRegion(center=mp.Vector3(x=+flux_box_size/2),
+                              size=mp.Vector3(0,flux_box_size,flux_box_size),
+                               weight=+1),
+            mp.Near2FarRegion(center=mp.Vector3(y=-flux_box_size/2),
+                              size=mp.Vector3(flux_box_size,0,flux_box_size),
+                               weight=-1),
+            mp.Near2FarRegion(center=mp.Vector3(y=+flux_box_size/2),
+                              size=mp.Vector3(flux_box_size,0,flux_box_size),
+                               weight=+1),
+            mp.Near2FarRegion(center=mp.Vector3(z=-flux_box_size/2),
+                              size=mp.Vector3(flux_box_size,flux_box_size,0),
+                               weight=-1),
+            mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
+                              size=mp.Vector3(flux_box_size,flux_box_size,0),
+                               weight=+1))
+    else:
+        near2far_box = None
+
     #%% SECOND RUN: INITIALIZE
     
     temp = time()
@@ -524,7 +546,8 @@ def main(from_um_factor, resolution, courant,
     
     #%% LOAD FLUX FROM FILE
     
-    vm.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, flux_path)
+    vm.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
+                    near2far_box, flux_path)
 
     freqs = np.asarray(mp.get_flux_freqs(box_x1))
     box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
@@ -534,6 +557,7 @@ def main(from_um_factor, resolution, courant,
     box_y2_data = sim.get_flux_data(box_y2)
     box_z1_data = sim.get_flux_data(box_z1)
     box_z2_data = sim.get_flux_data(box_z2)
+    if near2far: near2far_data = sim.get_near2far_data(near2far_box)
      
     temp = time()
     sim.load_minus_flux_data(box_x1, box_x1_data)
@@ -542,9 +566,11 @@ def main(from_um_factor, resolution, courant,
     sim.load_minus_flux_data(box_y2, box_y2_data)
     sim.load_minus_flux_data(box_z1, box_z1_data)
     sim.load_minus_flux_data(box_z2, box_z2_data)
+    if near2far: sim.load_minus_near2far_data(near2far_box, near2far_data)
     enlapsed.append( time() - temp )
     del box_x1_data, box_x2_data, box_y1_data, box_y2_data
     del box_z1_data, box_z2_data
+    if near2far: del near2far_data
 
     #%% SECOND RUN: SIMULATION :D
     
@@ -598,41 +624,55 @@ def main(from_um_factor, resolution, courant,
     
     #%% ANGULAR PATTERN ANALYSIS
     
-    radial_distance = 1000/freq_center      # half side length of far-field square box OR radius of far-field circle
-    resolution_farfields = 1         # resolution of far fields (points/length unit)
-    
-    azimuthal_npts = 50         # number of points in [0,2*pi) range of angles
-    polar_npts = 50
-    azimuthal_angle = 2 * np.pi / azimuthal_npts * np.arange(azimuthal_npts)
-    polar_angle = np.pi / azimuthal_npts * np.arange(polar_npts)
-    
-    poynting_x = []
-    poynting_y = []
-    poynting_z = []
-    for phi in azimuthal_angle:
-        poynting_x.append([])
-        poynting_y.append([])
-        poynting_z.append([])
-        for theta in polar_angle:
-            farfield_dict = sim.get_farfield(flux_box,
-                                             mp.Vector3(radial_distance * np.cos(phi) * np.sin(theta),
-                                                        radial_distance * np.sin(phi) * np.sin(theta),
-                                                        radial_distance * np.cos(theta)))
-            Px = farfield_dict["Ey"] * farfield_dict["Hz"] 
-            Px -= farfield_dict["Ey"] * farfield_dict["Hz"]
-            Py = farfield_dict["Ez"] * farfield_dict["Hx"] 
-            Py -= farfield_dict["Ex"] * farfield_dict["Hz"]
-            Pz = farfield_dict["Ex"] * farfield_dict["Hy"] 
-            Pz -= farfield_dict["Ey"] * farfield_dict["Hx"]
-            poynting_x[-1].append( Px )
-            poynting_y[-1].append( Py )
-            poynting_z[-1].append( Pz )
-    
-    Px = np.real(E[:,1]*H[:,2]-E[:,2]*H[:,1])
-    Py = np.real(E[:,2]*H[:,0]-E[:,0]*H[:,2])
-    Pr = np.sqrt(np.square(Px)+np.square(Py))
-    
-    far_flux_circle = np.sum(Pr)*2*np.pi*r/len(Pr)
+    if near2far:
+        
+        fraunhofer_distance = 8 * (r**2) / min(wlen_range)        
+        radial_distance = max( 10 * fraunhofer_distance , 1.5 * cell_width/2 ) 
+        # radius of far-field circle must be at least Fraunhofer distance
+        
+        azimuthal_angle = np.arange(0, 2 + 2/nazimuthal, 2/nazimuthal) # in multiples of pi
+        polar_angle = np.arange(0, 1 + 1/npolar, 1/npolar)
+        
+        poynting_x = []
+        poynting_y = []
+        poynting_z = []
+        poynting_r = []
+        
+        for phi in azimuthal_angle:
+            
+            poynting_x.append([])
+            poynting_y.append([])
+            poynting_z.append([])
+            poynting_r.append([])
+            
+            for theta in polar_angle:
+                
+                farfield_dict = sim.get_farfields(near2far_box, 1,
+                                                  where=mp.Volume(
+                                                      center=mp.Vector3(radial_distance * np.cos(np.pi * phi) * np.sin(np.pi * theta),
+                                                                        radial_distance * np.sin(np.pi * phi) * np.sin(np.pi * theta),
+                                                                        radial_distance * np.cos(np.pi * theta))))
+                
+                Px = farfield_dict["Ey"] * np.conjugate(farfield_dict["Hz"])
+                Px -= farfield_dict["Ez"] * np.conjugate(farfield_dict["Hy"])
+                Py = farfield_dict["Ez"] * np.conjugate(farfield_dict["Hx"])
+                Py -= farfield_dict["Ex"] * np.conjugate(farfield_dict["Hz"])
+                Pz = farfield_dict["Ex"] * np.conjugate(farfield_dict["Hy"])
+                Pz -= farfield_dict["Ey"] * np.conjugate(farfield_dict["Hx"])
+                
+                Px = np.real(Px)
+                Py = np.real(Py)
+                Pz = np.real(Pz)
+                
+                poynting_x[-1].append( Px )
+                poynting_y[-1].append( Py )
+                poynting_z[-1].append( Pz )
+                poynting_r[-1].append( np.sqrt( np.square(Px) + np.square(Py) + np.square(Pz) ) )
+        
+        poynting_x = np.array(poynting_x)
+        poynting_y = np.array(poynting_y)
+        poynting_z = np.array(poynting_z)
+        poynting_r = np.array(poynting_r)
 
     #%% SAVE FINAL DATA
     
@@ -667,55 +707,74 @@ def main(from_um_factor, resolution, courant,
         vs.savetxt(file("BaseResults.txt"), data_base, 
                    header=header_base, footer=params)
         
+    if near2far:
+        
+        header_near2far = ["Poynting medio Px [u.a.]",
+                           "Poynting medio Py [u.a.]",
+                           "Poynting medio Pz [u.a.]",
+                           "Poynting medio Pr [u.a.]"]
+        
+        data_near2far = [poynting_x.reshape(poynting_x.size),
+                         poynting_y.reshape(poynting_y.size),
+                         poynting_z.reshape(poynting_z.size),
+                         poynting_r.reshape(poynting_r.size)]
+        
+        if vm.parallel_assign(1, np_process, parallel):
+            vs.savetxt(file("Near2FarResults.txt"), data_near2far, 
+                       header=header, footer=params)
+        
     if not split_chunks_evenly:
         vm.save_chunks(sim, params, path)
     
     #%% PLOT ALL TOGETHER
     
-    if vm.parallel_assign(1, np_process, parallel):
+    if vm.parallel_assign(0, np_process, parallel) and surface_index==submerged_index:
         plt.figure()
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
         plt.xlabel('Wavelength [nm]')
         plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
         plt.legend()
-        plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
+        plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
         plt.tight_layout()
         plt.savefig(file("Comparison.png"))
     
     #%% PLOT SEPARATE
     
-    if vm.parallel_assign(0, np_process, parallel):
+    if vm.parallel_assign(1, np_process, parallel):
         plt.figure()
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         plt.xlabel('Wavelength [nm]')
         plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
         plt.legend()
-        plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
+        plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
         plt.tight_layout()
         plt.savefig(file("Meep.png"))
+    
         
+    if vm.parallel_assign(0, np_process, parallel) and surface_index==submerged_index:
         plt.figure()
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'bo-',label='Theory')
+        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
         plt.xlabel('Wavelength [nm]')
         plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
         plt.legend()
-        plt.title('Mie Scattering of Au Sphere With {} nm Radius'.format(r*10))
+        plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*10))
         plt.tight_layout()
         plt.savefig(file("Theory.png"))
     
     #%% PLOT ONE ABOVE THE OTHER
     
-    if vm.parallel_assign(1, np_process, parallel):
+    if vm.parallel_assign(1, np_process, parallel) and surface_index==submerged_index:
         fig, axes = plt.subplots(nrows=2, sharex=True)
         fig.subplots_adjust(hspace=0)
+        plt.suptitle('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
         
         axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         axes[0].yaxis.tick_right()
         axes[0].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
         axes[0].legend()
         
-        axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'bo-',label='Theory')
+        axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
         axes[1].set_xlabel('Wavelength [nm]')
         axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
         axes[1].legend()
@@ -732,6 +791,7 @@ def main(from_um_factor, resolution, courant,
         
         fig, ax = plt.subplots(3, 2, sharex=True)
         fig.subplots_adjust(hspace=0, wspace=.05)
+        plt.suptitle('Final flux of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
         for a in ax[:,1]:
             a.yaxis.tick_right()
             a.yaxis.set_label_position("right")
@@ -745,6 +805,89 @@ def main(from_um_factor, resolution, courant,
         ax[-1,1].set_xlabel("Wavelength [nm]")
         
         plt.savefig(file("FinalFlux.png"))
+    
+    #%% PLOT ANGULAR PATTERN IN 3D
+    
+    if near2far and vm.parallel_assign(1, np_process, parallel):
+    
+        freq_index = np.argmin(np.abs(freqs - freq_center))
+    
+        fig = plt.figure()
+        plt.suptitle('Angular Pattern of Au Sphere With {:.1f} nm Radius at {:.1f} nm'.format(r*from_um_factor*1e3,
+                                                                                              from_um_factor*1e3/freqs[freq_index]))
+        ax = fig.add_subplot(1,1,1, projection='3d')
+        ax.plot_surface(
+            poynting_x[:,:,freq_index], 
+            poynting_y[:,:,freq_index], 
+            poynting_z[:,:,freq_index], cmap=plt.get_cmap('jet'), 
+            linewidth=1, antialiased=False, alpha=0.5)
+        ax.set_xlabel(r"$P_x$")
+        ax.set_ylabel(r"$P_y$")
+        ax.set_zlabel(r"$P_z$")
+        
+        plt.savefig(file("AngularPattern.png"))
+        
+    #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
+        
+    if near2far and vm.parallel_assign(0, np_process, parallel):
+        
+        freq_index = np.argmin(np.abs(freqs - freq_center))
+        index = [list(polar_angle).index(alpha) for alpha in [0, .25, .5, .75, 1]]
+        
+        plt.figure()
+        plt.suptitle('Angular Pattern of Au Sphere With {:.1f} nm Radius at {:.1f} nm'.format(r*from_um_factor*1e3,
+                                                                                              from_um_factor*1e3/freqs[freq_index]))
+        ax_plain = plt.axes()
+        for i in index:
+            ax_plain.plot(poynting_x[:,i,freq_index], 
+                          poynting_y[:,i,freq_index], 
+                          ".-", label=rf"$\theta$ = {polar_angle[i]:.2f} $\pi$")
+        plt.legend()
+        ax_plain.set_xlabel(r"$P_x$")
+        ax_plain.set_ylabel(r"$P_y$")
+        ax_plain.set_aspect("equal")
+        
+        plt.savefig(file("AngularPolar.png"))
+        
+    #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
+        
+    if near2far and vm.parallel_assign(1, np_process, parallel):
+        
+        freq_index = np.argmin(np.abs(freqs - freq_center))
+        index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
+        
+        plt.figure()
+        plt.suptitle('Angular Pattern of Au Sphere With {:.1f} nm Radius at {:.1f} nm'.format(r*from_um_factor*1e3,
+                                                                                      from_um_factor*1e3/freqs[freq_index]))
+        ax_plain = plt.axes()
+        for i in index:
+            ax_plain.plot(poynting_x[i,:,freq_index], 
+                          poynting_z[i,:,freq_index], 
+                          ".-", label=rf"$\phi$ = {azimuthal_angle[i]:.2f} $\pi$")
+        plt.legend()
+        ax_plain.set_xlabel(r"$P_x$")
+        ax_plain.set_ylabel(r"$P_z$")
+        
+        plt.savefig(file("AngularAzimuthal.png"))
+        
+    if near2far and vm.parallel_assign(0, np_process, parallel):
+        
+        freq_index = np.argmin(np.abs(freqs - freq_center))
+        index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
+        
+        plt.figure()
+        plt.suptitle('Angular Pattern of Au Sphere With {:.1f} nm Radius at {:.1f} nm'.format(r*from_um_factor*1e3,
+                                                                                      from_um_factor*1e3/freqs[freq_index]))
+        ax_plain = plt.axes()
+        for i in index:
+            ax_plain.plot(np.sqrt(np.square(poynting_x[i,:,freq_index]) + np.square(poynting_y[i,:,freq_index])), 
+                                  poynting_z[i,:,freq_index], ".-", label=rf"$\phi$ = {azimuthal_angle[i]:.2f} $\pi$")
+        plt.legend()
+        ax_plain.set_xlabel(r"$P_\rho$")
+        ax_plain.set_ylabel(r"$P_z$")
+        
+        plt.savefig(file("AngularAzimuthalAbs.png"))
+    
     
 #%%
 
