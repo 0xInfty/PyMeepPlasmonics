@@ -20,6 +20,7 @@ It's widely based on Meep Materials Library.
 import meep as mp
 import numpy as np
 import os
+import resource as res
 from time import sleep
 import v_materials as vmt
 import v_save as vs
@@ -193,6 +194,17 @@ def parallel_assign(process_number, process_total_number, parallel=True):
             return mp.my_rank() == 1
     else:
         return True
+
+#%%
+
+def ram_manager():
+
+    used_ram = []
+    def measure_ram():
+        ram = res.getrusage(res.RUSAGE_THREAD).ru_maxrss# / (1024**2)
+        used_ram.append(ram)
+    
+    return used_ram, measure_ram
 
 #%%
 
