@@ -23,12 +23,12 @@ import sys
 sys.path.append(syshome)
 
 import click as cli
-# import h5py as h5
+import h5py as h5
 import meep as mp
-# try: 
-#     from mpi4py import MPI
-# except:
-#     print("No mpi4py module found!")
+try: 
+    from mpi4py import MPI
+except:
+    print("No mpi4py module found!")
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -38,6 +38,9 @@ import v_materials as vmt
 import v_meep as vm
 import v_save as vs
 import v_utilities as vu
+
+used_ram, measure_ram = vm.ram_manager()
+measure_ram()
 
 #%% COMMAND LINE FORMATTER
 
@@ -144,7 +147,7 @@ def main(from_um_factor, resolution, courant,
     second_time_factor = 10
     
     # Saving directories
-    series = None
+    series = "TestRAMSpyder"
     folder = None
     
     # Configuration
@@ -278,11 +281,14 @@ def main(from_um_factor, resolution, courant,
     if not os.path.isdir(path) and vm.parallel_assign(0, n_processes, parallel):
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
-    
+        
     #%% FIRST RUN
+    
+    measure_ram()
     
     params = {}
     for p in params_list: params[p] = eval(p)
+    
     stable, max_courant = vm.check_stability(params)
     if stable:
         print("As a whole, the simulation should be stable")
@@ -314,7 +320,7 @@ def main(from_um_factor, resolution, courant,
         else:
             chunk_layout = None
             chunks_needed = False
-        
+    
     if chunks_needed:
 
         sim = mp.Simulation(resolution=resolution,
@@ -334,10 +340,13 @@ def main(from_um_factor, resolution, courant,
         chunks_path = vm.save_chunks(sim, params, path)         
         chunk_layout = os.path.join(chunks_path, "Layout.h5")
         
+        del sim
     
     if flux_needed:
         
         #% FIRST RUN: SET UP
+        
+        measure_ram()
         
         sim = mp.Simulation(resolution=resolution,
                             cell_size=cell_size,
@@ -352,6 +361,8 @@ def main(from_um_factor, resolution, courant,
                             # symmetries=symmetries)
         # >> k_point zero specifies boundary conditions needed
         # for the source to be infinitely extended
+        
+        measure_ram()
 
         # Scattered power --> Computed by surrounding it with closed DFT flux box 
         # (its size and orientation are irrelevant because of Poynting's theorem) 
@@ -375,6 +386,8 @@ def main(from_um_factor, resolution, courant,
                                             size=mp.Vector3(flux_box_size,flux_box_size,0)))
         # Funny you can encase the sphere (r radius) so closely (2r-sided box)
         
+        measure_ram()
+        
         if near2far:
             near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
                 mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
@@ -395,6 +408,7 @@ def main(from_um_factor, resolution, courant,
                 mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
                                   size=mp.Vector3(flux_box_size,flux_box_size,0),
                                    weight=+1))
+            measure_ram()
         else:
             near2far_box = None
         
@@ -403,11 +417,18 @@ def main(from_um_factor, resolution, courant,
         temp = time()
         sim.init_sim()
         enlapsed.append( time() - temp )
+        measure_ram()
+        
+        step_ram_function = lambda sim : measure_ram()
         
         #% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
         
         temp = time()
-        sim.run(until_after_sources=until_after_sources)
+        sim.run(mp.at_beginning(step_ram_function), 
+                mp.at_time(int(until_after_sources / 2), 
+                           step_ram_function),
+                mp.at_end(step_ram_function),
+                until_after_sources=until_after_sources )
             #     mp.stop_when_fields_decayed(
             # np.mean(wlen_range), # dT = mean period of source
             # mp.Ez, # Component of field to check
@@ -416,25 +437,13 @@ def main(from_um_factor, resolution, courant,
         enlapsed.append( time() - temp )
         
         #% SAVE MID DATA
-        
+
         for p in params_list: params[p] = eval(p)
-        
-        # if parallel:
-        #     f = h5.File(file("MidField.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
-        # else:
-        #     f = h5.File(file("MidField.h5"), "w")
-        # f.create_dataset("Ez", data=field)
-        # for a in params: f["Ez"].attrs[a] = params[a]
-        # f.close()
-        # del f
 
         flux_path =  vm.save_midflux(sim, box_x1, box_x2, box_y1, 
                                      box_y2, box_z1, box_z2, 
                                      near2far_box, params, path)
-        
-        if not split_chunks_evenly:
-            vm.save_chunks(sim, params, path)
-        
+                
         freqs = np.asarray(mp.get_flux_freqs(box_x1))
         box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
         box_x2_flux0 = np.asarray(mp.get_fluxes(box_x2))
@@ -457,6 +466,22 @@ def main(from_um_factor, resolution, courant,
         if vm.parallel_assign(0, n_processes, parallel):
             vs.savetxt(file("MidFlux.txt"), data_mid, 
                        header=header_mid, footer=params)
+
+        if not split_chunks_evenly:
+            vm.save_chunks(sim, params, path)
+            
+        if parallel:
+            f = h5.File(file("MidRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
+            current_process = mp.my_rank()
+            f.create_dataset("RAM", (len(used_ram), np_process), dtype="float")
+            f["RAM"][:, current_process] = used_ram
+            for a in params: f["RAM"].attrs[a] = params[a]
+        else:
+            f = h5.File(file("MidRAM.h5"), "w")
+            f.create_dataset("RAM", data=used_ram)
+            for a in params: f["RAM"].attrs[a] = params[a]
+        f.close()
+        del f
 
         #% PLOT FLUX FOURIER MID DATA
         
@@ -483,6 +508,8 @@ def main(from_um_factor, resolution, courant,
     
     #%% SECOND RUN: SETUP
     
+    measure_ram()
+    
     sim = mp.Simulation(resolution=resolution,
                         cell_size=cell_size,
                         boundary_layers=pml_layers,
@@ -495,6 +522,8 @@ def main(from_um_factor, resolution, courant,
                         chunk_layout=chunk_layout,
                         # symmetries=symmetries,
                         geometry=geometry)
+    
+    measure_ram()
     
     box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
                           mp.FluxRegion(center=mp.Vector3(x=-flux_box_size/2),
@@ -514,6 +543,8 @@ def main(from_um_factor, resolution, courant,
     box_z2 = sim.add_flux(freq_center, freq_width, nfreq, 
                           mp.FluxRegion(center=mp.Vector3(z=+flux_box_size/2),
                                         size=mp.Vector3(flux_box_size,flux_box_size,0)))
+    
+    measure_ram()
 
     if near2far:
         near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
@@ -535,6 +566,7 @@ def main(from_um_factor, resolution, courant,
             mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
                               size=mp.Vector3(flux_box_size,flux_box_size,0),
                                weight=+1))
+        measure_ram()
     else:
         near2far_box = None
 
@@ -543,11 +575,14 @@ def main(from_um_factor, resolution, courant,
     temp = time()
     sim.init_sim()
     enlapsed.append( time() - temp )
+    measure_ram()
     
     #%% LOAD FLUX FROM FILE
     
     vm.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
                     near2far_box, flux_path)
+    
+    measure_ram()
 
     freqs = np.asarray(mp.get_flux_freqs(box_x1))
     box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
@@ -571,11 +606,19 @@ def main(from_um_factor, resolution, courant,
     del box_x1_data, box_x2_data, box_y1_data, box_y2_data
     del box_z1_data, box_z2_data
     if near2far: del near2far_data
+    
+    measure_ram()
 
     #%% SECOND RUN: SIMULATION :D
     
+    step_ram_function = lambda sim : measure_ram()
+    
     temp = time()
-    sim.run(until_after_sources=second_time_factor*until_after_sources) 
+    sim.run(mp.at_beginning(step_ram_function), 
+            mp.at_time(int(second_time_factor * until_after_sources / 2), 
+                       step_ram_function),
+            mp.at_end(step_ram_function),
+            until_after_sources=second_time_factor * until_after_sources )
         #     mp.stop_when_fields_decayed(
         # np.mean(wlen_range), # dT = mean period of source
         # mp.Ez, # Component of field to check
@@ -677,7 +720,7 @@ def main(from_um_factor, resolution, courant,
     #%% SAVE FINAL DATA
     
     for p in params_list: params[p] = eval(p)
-    
+
     data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
     
     header = ["Longitud de onda [nm]", 
@@ -721,10 +764,26 @@ def main(from_um_factor, resolution, courant,
         
         if vm.parallel_assign(1, np_process, parallel):
             vs.savetxt(file("Near2FarResults.txt"), data_near2far, 
-                       header=header, footer=params)
+                       header=header_near2far, footer=params)
         
     if not split_chunks_evenly:
-        vm.save_chunks(sim, params, path)
+        vm.save_chunks(sim, params, path)        
+       
+    if parallel:
+        f = h5.File(file("RAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
+        current_process = mp.my_rank()
+        f.create_dataset("RAM", (len(used_ram), np_process), dtype="float")
+        f["RAM"][:, current_process] = used_ram
+        for a in params: f["RAM"].attrs[a] = params[a]
+    else:
+        f = h5.File(file("RAM.h5"), "w")
+        f.create_dataset("RAM", data=used_ram)
+        for a in params: f["RAM"].attrs[a] = params[a]
+    f.close()
+    del f
+    
+    if flux_needed and vm.parallel_assign(0, np_process, parallel):
+        os.remove(file("MidRAM.h5"))
     
     #%% PLOT ALL TOGETHER
     
@@ -887,8 +946,7 @@ def main(from_um_factor, resolution, courant,
         ax_plain.set_ylabel(r"$P_z$")
         
         plt.savefig(file("AngularAzimuthalAbs.png"))
-    
-    
+        
 #%%
 
 if __name__ == '__main__':
