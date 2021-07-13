@@ -134,7 +134,7 @@ def main(from_um_factor, resolution, courant,
     surface_index = 1 # 1.54 for glass
     
     # Frequency and wavelength
-    wlen_range = np.array([500,650]) # Wavelength range in nm
+    wlen_range = np.array([450,600]) # Wavelength range in nm
     nfreq = 100
     
     # Box dimensions
@@ -787,7 +787,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT ALL TOGETHER
     
-    if vm.parallel_assign(0, np_process, parallel) and surface_index==submerged_index:
+    if vm.parallel_assign(0, np_process, parallel) and surface_index==1:
         plt.figure()
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
@@ -811,7 +811,7 @@ def main(from_um_factor, resolution, courant,
         plt.savefig(file("Meep.png"))
     
         
-    if vm.parallel_assign(0, np_process, parallel) and surface_index==submerged_index:
+    if vm.parallel_assign(0, np_process, parallel) and surface_index==1:
         plt.figure()
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
         plt.xlabel('Wavelength [nm]')
@@ -823,7 +823,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT ONE ABOVE THE OTHER
     
-    if vm.parallel_assign(1, np_process, parallel) and surface_index==submerged_index:
+    if vm.parallel_assign(1, np_process, parallel) and surface_index==1:
         fig, axes = plt.subplots(nrows=2, sharex=True)
         fig.subplots_adjust(hspace=0)
         plt.suptitle('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
