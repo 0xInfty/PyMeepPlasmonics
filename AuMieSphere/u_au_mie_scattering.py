@@ -148,7 +148,7 @@ def main(from_um_factor, resolution, courant,
     
     # Saving directories
     series = "TestRAMSpyder"
-    folder = None
+    folder = "Test/TestRAM/TestRAMGeneral"
     
     # Configuration
     parallel = False
@@ -411,6 +411,7 @@ def main(from_um_factor, resolution, courant,
             measure_ram()
         else:
             near2far_box = None
+            # used_ram.append(used_ram[-1])
         
         #% FIRST RUN: INITIALIZE
         
@@ -505,6 +506,9 @@ def main(from_um_factor, resolution, courant,
             ax[-1,1].set_xlabel("Wavelength [nm]")
             
             plt.savefig(file("MidFlux.png"))
+            del fig, ax, ylims, a, h
+            
+        sim.reset_meep()
     
     #%% SECOND RUN: SETUP
     
@@ -569,6 +573,7 @@ def main(from_um_factor, resolution, courant,
         measure_ram()
     else:
         near2far_box = None
+        # used_ram.append(used_ram[-1])
 
     #%% SECOND RUN: INITIALIZE
     
