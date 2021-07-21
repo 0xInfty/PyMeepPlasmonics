@@ -39,7 +39,7 @@ import v_meep as vm
 import v_save as vs
 import v_utilities as vu
 
-used_ram, measure_ram = vm.ram_manager()
+used_ram, swapped_ram, measure_ram = vm.ram_manager()
 measure_ram()
 
 #%% COMMAND LINE FORMATTER
@@ -147,14 +147,14 @@ def main(from_um_factor, resolution, courant,
     second_time_factor = 10
     
     # Saving directories
-    series = "TestRAMSpyder"
+    series = "TestSWAPSpyder"
     folder = "Test/TestRAM/TestRAMGeneral"
     
     # Configuration
     parallel = False
     n_processes = 1
     split_chunks_evenly = True
-    load_flux = True
+    load_flux = False
     load_chunks = True    
     near2far = False
     """
@@ -477,10 +477,15 @@ def main(from_um_factor, resolution, courant,
             f.create_dataset("RAM", (len(used_ram), np_process), dtype="float")
             f["RAM"][:, current_process] = used_ram
             for a in params: f["RAM"].attrs[a] = params[a]
+            f.create_dataset("SWAP", (len(used_ram), np_process), dtype="int")
+            f["SWAP"][:, current_process] = swapped_ram
+            for a in params: f["SWAP"].attrs[a] = params[a]
         else:
             f = h5.File(file("MidRAM.h5"), "w")
             f.create_dataset("RAM", data=used_ram)
             for a in params: f["RAM"].attrs[a] = params[a]
+            f.create_dataset("SWAP", data=swapped_ram)
+            for a in params: f["SWAP"].attrs[a] = params[a]
         f.close()
         del f
 
@@ -773,17 +778,22 @@ def main(from_um_factor, resolution, courant,
         
     if not split_chunks_evenly:
         vm.save_chunks(sim, params, path)        
-       
+    
     if parallel:
         f = h5.File(file("RAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
         current_process = mp.my_rank()
         f.create_dataset("RAM", (len(used_ram), np_process), dtype="float")
         f["RAM"][:, current_process] = used_ram
         for a in params: f["RAM"].attrs[a] = params[a]
+        f.create_dataset("SWAP", (len(used_ram), np_process), dtype="int")
+        f["SWAP"][:, current_process] = swapped_ram
+        for a in params: f["SWAP"].attrs[a] = params[a]
     else:
         f = h5.File(file("RAM.h5"), "w")
         f.create_dataset("RAM", data=used_ram)
         for a in params: f["RAM"].attrs[a] = params[a]
+        f.create_dataset("SWAP", data=swapped_ram)
+        for a in params: f["SWAP"].attrs[a] = params[a]
     f.close()
     del f
     

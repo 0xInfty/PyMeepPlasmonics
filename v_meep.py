@@ -200,11 +200,14 @@ def parallel_assign(process_number, process_total_number, parallel=True):
 def ram_manager():
 
     used_ram = []
+    swapped_ram = []
     def measure_ram():
         ram = res.getrusage(res.RUSAGE_THREAD).ru_maxrss# / (1024**2)
+        swap = res.getrusage(res.RUSAGE_THREAD).ru_nswap
         used_ram.append(ram)
+        swapped_ram.append(swap)
     
-    return used_ram, measure_ram
+    return used_ram, swapped_ram, measure_ram
 
 #%%
 
