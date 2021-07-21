@@ -20,8 +20,11 @@ import v_utilities as vu
 #%% PARAMETERS
 
 # Saving directories
-folder = ["Test/TestRAM/AllVac", 
-          "Test/TestRAM/AllWat"]
+folder = ["Test/TestResetMeep", 
+          "Test/TestResetMeep",
+          "Test/TestResetMeep"]
+# folder = ["Test/TestRAM/AllVac", 
+#           "Test/TestRAM/AllWat"]
 home = vs.get_home()
 
 # Parameter for the test
@@ -31,20 +34,27 @@ test_param_position = -1
 test_param_label = "Resolution"
 
 # Sorting and labelling data series
-sorting_function = [lambda l : vu.sort_by_number(l, -1)]*4
-series_label = [lambda s : f"Vacuum Resolution {vu.find_numbers(s)[test_param_position]:.0f}",
-                lambda s : f"Water Resolution {vu.find_numbers(s)[test_param_position]:.0f}"]
-series_must = [""]*2 # leave "" per default
-series_mustnt = [""]*2 # leave "" per default
-series_column = [1]*2
+sorting_function = [lambda l : l]*3
+# sorting_function = [lambda l : vu.sort_by_number(l, -1)]*2
+series_label = [lambda s : "Reset Meep",
+                lambda s : "Reset Meep Refined",
+                lambda s : "No Reset"]
+series_must = ["Original", "New", "No"] # leave "" per default
+series_mustnt = [""]*3 # leave "" per default
+# series_must = [""]*2 # leave "" per default
+# series_mustnt = [""]*2 # leave "" per default
+series_column = [1]*3
 
 # Scattering plot options
 plot_title = "Au 103 nm sphere"
-series_legend = ["Vacuum", "Water"]
-series_colors = [plab.cm.Reds, plab.cm.Blues]
-series_linestyles = ["solid"]*2
+series_legend = ["Reset Meep", "Reset Meep Refined", "No Reset"]
+# series_legend = ["Vacuum", "Water"]
+# series_colors = [plab.cm.Reds, plab.cm.Reds]
+series_colors = [plab.cm.Reds, plab.cm.Reds, plab.cm.Blues]
+series_linestyles = ["solid"]*3
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/RAMRes" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/Reset" + n)
+# plot_file = lambda n : os.path.join(home, "DataAnalysis/RAMRes" + n)
 
 #%% LOAD DATA
 
@@ -106,7 +116,6 @@ minor_division = [[fum * 1e3 / res for fum, res in zip(frum, reso)] for frum, re
 width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in params] 
 grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
 memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
-
 
 #%% LOAD MIE DATA
 
@@ -262,6 +271,8 @@ for enl, tpar, par in zip(enlapsed_time, test_param, params):
             else:
                 total_enlapsed_time[-1].append(sum(p["enlapsed"]) + e[0])
 
+#%%
+
 if len(series)>1:
     colors = [*["darkgrey", "k"]*2]
 else:
@@ -331,7 +342,7 @@ fig.axes[0].set_position(box)
 leg = plt.legend(ncol=2, bbox_to_anchor=(.5, -.3), loc="lower center", frameon=False)
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
-#%% RAM MEMORY
+#%% ALL RAM MEMORY
 
 reference = ["Módulos",
              "Parámetros",
@@ -362,10 +373,11 @@ max_ram = [[ tr / (1024)**2 for tr in tram] for tram in max_ram]
 min_ram = [[ tr / (1024)**2 for tr in tram] for tram in min_ram]
 mean_ram = [[ tr / (1024)**2 for tr in tram] for tram in mean_ram]
 
-#%%
+#%% RAM PER SUBPROCESS
 
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-          for sc, s in zip(series_colors, series)]
+colors = [["C0"], ["C4"], ["C3"]]
+# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+#           for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
 
@@ -405,10 +417,11 @@ plt.gca().add_artist(first_legend)
 
 plt.savefig(plot_file("AllRAM.png"), bbox_inches='tight')
 
-#%%
+#%% RAM TOTAL
 
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-          for sc, s in zip(series_colors, series)]
+colors = [["C0"], ["C4"], ["C3"]]
+# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+#           for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
 
@@ -464,7 +477,7 @@ plt.tight_layout()
 
 plt.savefig(plot_file("AllTotalRAM.png"), bbox_inches='tight')
 
-#%%
+#%% COMPARE SIMULATIONS I AND II
 
 crossed_reference = ["Inicial",
                      "mp.Simulation",
@@ -493,68 +506,233 @@ for ref in crossed_reference:
         index_sim_II.append(i)
         reference_sim_II.append(ref)
     except:
-        pass        
+        pass
+    
+common_index = []
+common_reference = []
+for i, ref in enumerate(reference_sim_I):
+    if ref in reference_sim_II:
+        common_index.append(reference_sim_II.index(ref))
+        common_reference.append(ref)
+    
+total_ram_sim_I = [[np.array([tr[i] for i in index_sim_I]) for tr in tram] for tram in total_ram]
+max_ram_sim_I = [[np.array([tr[i] for i in index_sim_I]) for tr in tram] for tram in max_ram]
+min_ram_sim_I = [[np.array([tr[i] for i in index_sim_I]) for tr in tram] for tram in min_ram]
+mean_ram_sim_I = [[np.array([tr[i] for i in index_sim_I]) for tr in tram] for tram in mean_ram]
 
-#%%
+total_ram_sim_II = [[np.array([tr[i] for i in index_sim_II]) for tr in tram] for tram in total_ram]
+max_ram_sim_II = [[np.array([tr[i] for i in index_sim_II]) for tr in tram] for tram in max_ram]
+min_ram_sim_II = [[np.array([tr[i] for i in index_sim_II]) for tr in tram] for tram in min_ram]
+mean_ram_sim_II = [[np.array([tr[i] for i in index_sim_II]) for tr in tram] for tram in mean_ram]
 
-markers = ["o", "D"]
+total_ram_common_sim_II = [[np.array([tr[i] for i in common_index]) for tr in tram] for tram in total_ram_sim_II]
+max_ram_common_sim_II = [[np.array([tr[i] for i in common_index]) for tr in tram] for tram in max_ram_sim_II]
+min_ram_common_sim_II = [[np.array([tr[i] for i in common_index]) for tr in tram] for tram in min_ram_sim_II]
+mean_ram_common_sim_II = [[np.array([tr[i] for i in common_index]) for tr in tram] for tram in mean_ram_sim_II]
 
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-          for sc, s in zip(series_colors, series)]
+#%% RAM SIM I AND II
+
+colors = [["C0"], ["C4"], ["C3"]]
+# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+#           for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
 
 lines = []
 lines_legend = []
+second_lines = []
+second_lines_legend = []
 for i in range(len(series)):
     for j in range(len(series[i])):
-        l = plt.errorbar(reference, mean_ram[i][j] - mean_ram[], 
-                         np.array([mean_ram[i][j] - min_ram[i][j], 
-                                   max_ram[i][j] - mean_ram[i][j]]),
-                         marker="o", color=colors[i][j], linestyle="-",
-                         elinewidth=1.5, capsize=7, capthick=1.5, markersize=7,
+        l = plt.errorbar(common_reference, mean_ram_sim_I[i][j] - mean_ram_sim_I[i][j][0], 
+                         np.array([mean_ram_sim_I[i][j] - min_ram_sim_I[i][j], 
+                                   max_ram_sim_I[i][j] - mean_ram_sim_I[i][j]]),
+                         marker="s", color=colors[i][j], linestyle="-",
+                         elinewidth=1.5, capsize=7, capthick=1.5, markersize=6,
                          linewidth=1, zorder=2)
         lines.append(l)
-        lines_legend.append("Sim I " + series_label[i](series[i][j]))
-for i in range(len(series)):
-    for j in range(len(series[i])):
-        l = plt.errorbar(reference, mean_ram[i][j], 
-                         np.array([mean_ram[i][j] - min_ram[i][j], 
-                                   max_ram[i][j] - mean_ram[i][j]]),
-                         marker="D", color=colors[i][j], linestyle="-",
-                         elinewidth=1.5, capsize=7, capthick=1.5, markersize=7,
+        lines_legend.append(series_label[i](series[i][j]))
+        if j==0 and i==0:
+            second_lines.append(l)
+            second_lines_legend.append("Sim I")
+        l = plt.errorbar(common_reference, mean_ram_common_sim_II[i][j] - mean_ram_common_sim_II[i][j][0], 
+                         np.array([mean_ram_common_sim_II[i][j] - min_ram_common_sim_II[i][j], 
+                                   max_ram_common_sim_II[i][j] - mean_ram_common_sim_II[i][j]]),
+                         marker="D", color=colors[i][j], linestyle="dashed",
+                         elinewidth=1.5, capsize=7, capthick=1.5, markersize=5,
                          linewidth=1, zorder=2)
-        lines.append(l)
-        lines_legend.append("Sim II " + series_label[i](series[i][j]))
-
+        if j==0 and i==0:
+            second_lines.append(l)
+            second_lines_legend.append("Sim II")
+        
 patches = []
-patches.append( plt.axvspan(reference.index("Inicicial"), 
-                            reference.index("Principio"), 
-                            alpha=0.15, color='grey', zorder=1) )
-patches.append( plt.axvspan(reference.index("Principio"), 
-                            reference.index("Final"), 
-                            alpha=0.3, color='grey', zorder=1) )
+patches.append( plt.axvspan(*["Inicial", "Principio"], alpha=0.15, color='peru', zorder=1) )
+patches.append( plt.axvspan(*["Principio", "Final"], alpha=0.3, color='peru', zorder=1) )
 patches_legend = ["Configuration", "Running"]
-
-plt.xlim(0, len(reference))
-plt.xticks(np.arange(len(reference)), reference)
+        
 plt.xticks(rotation=-30, ha="left")
 plt.grid(True)
-plt.ylabel("Occupied RAM Memory [GiB]")
+plt.ylabel("Dedicated RAM Memory Per Subprocess [GiB]")
 
 plt.legend(lines, lines_legend)
+mng = plt.get_current_fig_manager()
+mng.window.showMaximized()
+plt.tight_layout()
+
 first_legend = plt.legend(lines, lines_legend)
 second_legend = plt.legend(patches, patches_legend, loc="center left")
+third_legend = plt.legend(second_lines, second_lines_legend, loc="lower left")
+ax = plt.gca()
+ax.add_artist(first_legend)
+ax.add_artist(second_legend)
+
+plt.savefig(plot_file("AllRAMCommon.png"), bbox_inches='tight')
+
+#%% KEY POINTS OF COMPARISON
+
+key_reference = ["Principio", "Mitad"]
+key_mask = ["Antes", "Durante"]
+
+key_index_sim_I = []
+key_index_sim_II = []
+for ref in key_reference:
+    try:
+        i = reference.index(ref + " (Sim I)")
+        key_index_sim_I.append(i)
+    except:
+        pass
+for ref in key_reference:
+    try:
+        i = reference.index(ref + " (Sim II)")
+        key_index_sim_II.append(i)
+    except:
+        pass
+    
+total_ram_key_sim_I = [[np.array([tr[i] for i in key_index_sim_I]) for tr in tram] for tram in total_ram]
+max_ram_key_sim_I = [[np.array([tr[i] for i in key_index_sim_I]) for tr in tram] for tram in max_ram]
+min_ram_key_sim_I = [[np.array([tr[i] for i in key_index_sim_I]) for tr in tram] for tram in min_ram]
+mean_ram_key_sim_I = [[np.array([tr[i] for i in key_index_sim_I]) for tr in tram] for tram in mean_ram]
+
+total_ram_key_sim_II = [[np.array([tr[i] for i in key_index_sim_II]) for tr in tram] for tram in total_ram]
+max_ram_key_sim_II = [[np.array([tr[i] for i in key_index_sim_II]) for tr in tram] for tram in max_ram]
+min_ram_key_sim_II = [[np.array([tr[i] for i in key_index_sim_II]) for tr in tram] for tram in min_ram]
+mean_ram_key_sim_II = [[np.array([tr[i] for i in key_index_sim_II]) for tr in tram] for tram in mean_ram]
+
+#%%
+
+colors = [["C0"], ["C4"], ["C3"]]
+# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+#           for sc, s in zip(series_colors, series)]
+
+fig = plt.figure()
+
+lines = []
+lines_legend = []
+second_lines = []
+second_lines_legend = []
+k = 0
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l = plt.bar(np.arange(len(key_mask)) + (k+.5)/(2*sum([len(s) for s in series])), 
+                    total_ram_key_sim_I[i][j], color=colors[i][j], 
+                    alpha=1,
+                    width=1/(2*sum([len(s) for s in series])),
+                    zorder=2)
+        lines.append(l)
+        lines_legend.append(series_label[i](series[i][j]))
+        k += 1
+        if j==0 and i==0:
+            second_lines.append(l)
+            second_lines_legend.append("Sim I")
+        l = plt.bar(np.arange(len(key_mask)) + (k+.5)/(2*sum([len(s) for s in series])), 
+                    total_ram_key_sim_II[i][j], color=colors[i][j], 
+                    hatch="*", alpha=1,
+                    width=1/(2*sum([len(s) for s in series])),
+                    zorder=2)
+        if j==0 and i==0:
+            second_lines.append(l)
+            second_lines_legend.append("Sim II")
+        k += 1
+
+plt.ylim(0, 16)
+plt.xlim(0, len(key_reference))
+plt.xticks(np.arange(len(key_reference)), key_mask)
+plt.xticks(rotation=0, ha="left")
+plt.grid(True)
+plt.ylabel("Total RAM Memory [GiB]")
+
+plt.legend(lines, lines_legend)
+first_legend = plt.legend(lines, lines_legend, loc="upper left")
+second_legend = plt.legend(second_lines, second_lines_legend, loc="center left")
 plt.gca().add_artist(first_legend)
+
+second_ax = plt.twinx()
+second_ax.set_ylabel("Total RAM Memory [%]")
+second_ax.set_ylim(0, 100)
+second_ax.set_zorder(0)
 
 mng = plt.get_current_fig_manager()
 mng.window.showMaximized()
 plt.tight_layout()
 
-plt.savefig(plot_file("AllTotalRAM.png"), bbox_inches='tight')
+plt.savefig(plot_file("AllKeyRAMStage.png"), bbox_inches='tight')
+
 #%%
 
-one_used_ram = params[-1][-1]["used_ram"]
+colors = [["C0"], ["C3"], ["C4"]]
+# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+#           for sc, s in zip(series_colors, series)]
+
+fig, axes = plt.subplots(ncols=2, nrows=1, sharey=True, gridspec_kw={"wspace":0})
+
+lines = []
+lines_legend = []
+second_lines = []
+second_lines_legend = []
+k = 0
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l = axes[0].bar(np.arange(len(key_mask)) + (k+.5)/sum([len(s) for s in series]), 
+                        total_ram_key_sim_I[i][j], color=colors[i][j], 
+                        alpha=1, width=1/sum([len(s) for s in series]),
+                        zorder=2)
+        lines.append(l)
+        lines_legend.append(series_label[i](series[i][j]))
+        # k += 1
+        l = axes[1].bar(np.arange(len(key_mask)) + (k+.5)/sum([len(s) for s in series]), 
+                        total_ram_key_sim_II[i][j], color=colors[i][j], 
+                        # hatch="*", 
+                        alpha=1, width=1/sum([len(s) for s in series]),
+                        zorder=2)
+        k += 1
+
+axes[0].set_title("Simulation I")
+axes[1].set_title("Simulation II")
+
+axes[0].set_ylim(0, 16)
+for ax in axes:
+    ax.set_xlim(0, len(key_reference))
+    ax.set_xticks(np.arange(len(key_reference)))
+    ax.set_xticklabels(key_mask, rotation=0, ha="left")
+    ax.grid(True, axis="y")
+axes[0].set_ylabel("Total RAM Memory [GiB]")
+
+axes[0].legend(lines, lines_legend, loc="upper left")
+
+second_ax = axes[1].twinx()
+second_ax.set_ylabel("Total RAM Memory [%]")
+second_ax.set_ylim(0, 100)
+second_ax.set_zorder(0)
+
+mng = plt.get_current_fig_manager()
+mng.window.showMaximized()
+plt.tight_layout()
+
+plt.savefig(plot_file("AllKeyRAMSim.png"), bbox_inches='tight')
+
+#%% RAM ONLY ONE SERIES
+
+one_used_ram = params[0][-1]["used_ram"]
 
 one_total_ram = np.array([sum(ur) for ur in one_used_ram])
 one_max_ram = one_used_ram[:, np.argmax([sum(ur) for ur in one_used_ram.T]) ]
@@ -566,9 +744,11 @@ one_min_ram = one_min_ram / (1024**2)
 one_max_ram = one_max_ram / (1024**2)
 one_mean_ram = one_mean_ram / (1024**2)
 
-#%%
+#%% RAM PER SUBPROCESS FOR ONE SERIES
 
 plt.figure()
+
+plt.suptitle(series[0][-1])
 
 lines = []
 lines.append( plt.plot(reference, one_min_ram, "ob", markersize=7)[0] )
@@ -612,7 +792,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
         plt.plot(sd[:,0], sd[:,sc] / sd[index_argmax, sc], 
                  linestyle=pls, color=spc, label=psl(ss))
 
-plt.plot(data[1][-1][:,0], theory[1][-1] / max(theory[0][-1]), 
+plt.plot(data[0][-1][:,0], theory[0][-1] / max(theory[0][-1]), 
          linestyle="dotted", color='red', label="Mie Theory Vacuum")
 plt.plot(data[-1][-1][:,0], theory[-1][-1] / max(theory[-1][-1]), 
          linestyle="dotted", color='blue', label="Mie Theory Water")
@@ -643,7 +823,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
         plt.plot(sd[:,0], sign * sd[:,sc] * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
                  linestyle=pls, color=spc, label=psl(ss))
             
-plt.plot(data[1][-1][:,0], theory[1][-1] * np.pi * (params[0][-1]["r"] * params[0][-1]["from_um_factor"] * 1e3)**2,
+plt.plot(data[0][-1][:,0], theory[0][-1] * np.pi * (params[0][-1]["r"] * params[0][-1]["from_um_factor"] * 1e3)**2,
          linestyle="dotted", color='red', label="Mie Theory Vacuum")
 plt.plot(data[-1][-1][:,0], theory[-1][-1] * np.pi * (params[-1][-1]["r"] * params[-1][-1]["from_um_factor"] * 1e3)**2,
          linestyle="dotted", color='blue', label="Mie Theory Water")
