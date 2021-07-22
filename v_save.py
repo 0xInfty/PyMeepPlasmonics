@@ -52,7 +52,8 @@ def get_sys_name():
     elif "vall" in string:
         return "MC"
     else:
-        raise ValueError("Your PC must appear inside get_sys_home definition")
+        return "TC"
+        # raise ValueError("Your PC must appear inside get_sys_home definition")
 
 #%%
 
@@ -66,7 +67,8 @@ def get_home():
     elif "vall" in string:
         return "/home/vall/Documents/Thesis/ThesisResults"
     else:
-        raise ValueError("Your PC must appear inside get_home definition")
+        return "/nfs/home/vpais/ThesisResults"
+        # raise ValueError("Your PC must appear inside get_home definition")
 
 #%%
 
@@ -80,7 +82,8 @@ def get_sys_home():
     elif "vall" in string:
         return "/home/vall/Documents/Thesis/ThesisPython"
     else:
-        raise ValueError("Your PC must appear inside get_sys_home definition")
+        return "/nfs/home/vpais/ThesisPython"
+        # raise ValueError("Your PC must appear inside get_sys_home definition")
         
 #%%
 
