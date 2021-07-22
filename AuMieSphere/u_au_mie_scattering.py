@@ -17,7 +17,9 @@ elif "vall" in gethostname():
     syshome = "/home/vall/Documents/Thesis/ThesisPython"
     sysname = "MC"
 else:
-    raise ValueError("Your PC must be registered at the top of this code")
+    syshome = "/nfs/home/vpais/ThesisPython"
+    sysname = "TC"
+    # raise ValueError("Your PC must be registered at the top of this code")
 
 import sys
 sys.path.append(syshome)
@@ -100,7 +102,9 @@ measure_ram()
             type=bool, default=True,
             help="Whether to split chunks evenly or not during parallel run")
 @cli.option("--n-processes", "-np", "n_processes", type=int, default=1,
-            help="Number of nuclei used to run the program in parallel")
+            help="Number of cores used to run the program in parallel")
+@cli.option("--n-nodes", "-nn", "n_nodes", type=int, default=1,
+            help="Number of nodes used to run the program in parallel")
 @cli.option("--load-flux", "-loadf", "load_flux", 
             type=bool, default=True,
             help="Whether to search the midflux database and load, if possible, or not.")
@@ -115,7 +119,7 @@ def main(from_um_factor, resolution, courant,
          displacement, surface_index, wlen_range, nfreq,
          air_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
-         series, folder, parallel, n_processes, split_chunks_evenly,
+         series, folder, parallel, n_processes, n_nodes, split_chunks_evenly,
          load_flux, load_chunks, near2far):
 
     #%% CLASSIC INPUT PARAMETERS    
@@ -212,7 +216,7 @@ def main(from_um_factor, resolution, courant,
                    "wlen_range", "nfreq", "nazimuthal", "npolar", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
-                   "enlapsed", "parallel", "n_processes", 
+                   "enlapsed", "parallel", "n_processes", "n_nodes",
                    "split_chunks_evenly", "near2far",
                    "script", "sysname", "path"]
     

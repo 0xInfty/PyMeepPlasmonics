@@ -249,7 +249,7 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2,
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes", 
+                 "parallel", "n_processes", "n_nodes",
                  "split_chunks_evenly", "near2far"]
     
     database["flux_path"].append( os.path.split(new_flux_path)[-1] )
@@ -280,7 +280,7 @@ def check_midflux(params):
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes", 
+                 "parallel", "n_processes", "n_nodes",
                  "split_chunks_evenly", "near2far"]
     
     database_array = []
@@ -392,7 +392,7 @@ def save_chunks(sim, params, path):
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes", 
+                 "parallel", "n_processes", "n_nodes",
                  "split_chunks_evenly", "near2far"]
     
     database["chunks_path"].append( os.path.split(new_chunks_path)[-1] )
@@ -424,7 +424,7 @@ def check_chunks(params):
                  "submerged_index", "surface_index", "displacement",
                  "cell_width", "pml_width", "source_center", "flux_box_size",
                  "until_after_sources", 
-                 "parallel", "n_processes", 
+                 "parallel", "n_processes", "n_nodes",
                  "split_chunks_evenly", "near2far"]
     
     database_array = []
