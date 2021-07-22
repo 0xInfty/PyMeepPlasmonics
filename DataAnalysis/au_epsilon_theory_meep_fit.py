@@ -21,8 +21,7 @@ epsilon = sys.float_info.epsilon
 
 #%%
 
-r = 60  # Radius of sphere in nm
-material = "Au"
+material = "Ag"
 from_um_factor = 1
 
 plot_file = lambda n : os.path.join(home, "DataAnalysis/MaterialsPaper", n)
@@ -75,40 +74,75 @@ def added_susceptibilities_fit_maker(n_terms):
 
 #%%
 
-def fit_params_r(from_um_factor):
+def fit_params_r(from_um_factor, material):
     
     eV_from_um_factor = from_um_factor/1.23984193 # Conversion factor: eV to 1/um [=1/hc]
     
     params = {}
-    Au_plasma_frq = 9.03*eV_from_um_factor
-    Au_f0 = 0.760
-    params["freq_0"] = 1e-10
-    params["gamma_0"] = 0.053*eV_from_um_factor
-    params["sigma_0"] = Au_f0 * Au_plasma_frq**2 / params["freq_0"]**2
-    Au_f1 = 0.024
-    params["freq_1"] = 0.415*eV_from_um_factor      # 2.988 um
-    params["gamma_1"] = 0.241*eV_from_um_factor
-    params["sigma_1"] = Au_f1 * Au_plasma_frq**2 / params["freq_1"]**2
-    Au_f2 = 0.010
-    params["freq_2"] = 0.830*eV_from_um_factor      # 1.494 um
-    params["gamma_2"] = 0.345*eV_from_um_factor
-    params["sigma_2"] = Au_f2 * Au_plasma_frq**2 / params["freq_2"]**2
-    Au_f3 = 0.071
-    params["freq_3"] = 2.969*eV_from_um_factor      # 0.418 um
-    params["gamma_3"] = 0.870*eV_from_um_factor
-    params["sigma_3"] = Au_f3 * Au_plasma_frq**2 / params["freq_3"]**2
-    Au_f4 = 0.601
-    params["freq_4"] = 4.304*eV_from_um_factor      # 0.288 um
-    params["gamma_4"] = 2.494*eV_from_um_factor
-    params["sigma_4"] = Au_f4 * Au_plasma_frq**2 / params["freq_4"]**2
-    Au_f5 = 4.384
-    params["freq_5"] = 13.32*eV_from_um_factor      # 0.093 um
-    params["gamma_5"] = 2.214*eV_from_um_factor
-    params["sigma_5"] = Au_f5 * Au_plasma_frq**2 / params["freq_5"]**2
+    
+    if material=="Au":
+    
+        Au_plasma_frq = 9.03*eV_from_um_factor
+        Au_f0 = 0.760
+        params["freq_0"] = 1e-10
+        params["gamma_0"] = 0.053*eV_from_um_factor
+        params["sigma_0"] = Au_f0 * Au_plasma_frq**2 / params["freq_0"]**2
+        Au_f1 = 0.024
+        params["freq_1"] = 0.415*eV_from_um_factor      # 2.988 um
+        params["gamma_1"] = 0.241*eV_from_um_factor
+        params["sigma_1"] = Au_f1 * Au_plasma_frq**2 / params["freq_1"]**2
+        Au_f2 = 0.010
+        params["freq_2"] = 0.830*eV_from_um_factor      # 1.494 um
+        params["gamma_2"] = 0.345*eV_from_um_factor
+        params["sigma_2"] = Au_f2 * Au_plasma_frq**2 / params["freq_2"]**2
+        Au_f3 = 0.071
+        params["freq_3"] = 2.969*eV_from_um_factor      # 0.418 um
+        params["gamma_3"] = 0.870*eV_from_um_factor
+        params["sigma_3"] = Au_f3 * Au_plasma_frq**2 / params["freq_3"]**2
+        Au_f4 = 0.601
+        params["freq_4"] = 4.304*eV_from_um_factor      # 0.288 um
+        params["gamma_4"] = 2.494*eV_from_um_factor
+        params["sigma_4"] = Au_f4 * Au_plasma_frq**2 / params["freq_4"]**2
+        Au_f5 = 4.384
+        params["freq_5"] = 13.32*eV_from_um_factor      # 0.093 um
+        params["gamma_5"] = 2.214*eV_from_um_factor
+        params["sigma_5"] = Au_f5 * Au_plasma_frq**2 / params["freq_5"]**2
+    
+    elif material=="Ag":
+    
+        Ag_plasma_frq = 9.01*eV_from_um_factor
+        Ag_f0 = 0.845
+        params["freq_0"] = 1e-10
+        params["gamma_0"] = 0.048*eV_from_um_factor
+        params["sigma_0"] = Ag_f0 * Ag_plasma_frq**2 / Ag_f0**2
+        Ag_f1 = 0.065
+        params["freq_1"] = 0.816*eV_from_um_factor      # 1.519 um
+        params["gamma_1"] = 3.886*eV_from_um_factor
+        params["sigma_1"] = Ag_f1 * Ag_plasma_frq**2 / params["freq_1"]**2
+        Ag_f2 = 0.124
+        params["freq_2"] = 4.481*eV_from_um_factor      # 0.273 um
+        params["gamma_2"] = 0.452*eV_from_um_factor
+        params["sigma_2"] = Ag_f2 * Ag_plasma_frq**2 / params["freq_2"]**2
+        Ag_f3 = 0.011
+        params["freq_3"] = 8.185*eV_from_um_factor      # 0.152 um
+        params["gamma_3"] = 0.065*eV_from_um_factor
+        params["sigma_3"] = Ag_f3 * Ag_plasma_frq**2 / params["freq_3"]**2
+        Ag_f4 = 0.840
+        params["freq_4"] = 9.083*eV_from_um_factor      # 0.137 um
+        params["gamma_4"] = 0.916*eV_from_um_factor
+        params["sigma_4"] = Ag_f4 * Ag_plasma_frq**2 / params["freq_4"]**2
+        Ag_f5 = 5.646
+        params["freq_5"] = 20.29*eV_from_um_factor      # 0.061 um
+        params["gamma_5"] = 2.419*eV_from_um_factor
+        params["sigma_5"] = Ag_f5 * Ag_plasma_frq**2 / params["freq_5"]**2
+        
+    else:
+        
+        raise ValueError("Material not recognized. Choose 'Au' or 'Ag'")
     
     return params
     
-params_r = fit_params_r(from_um_factor)
+params_r = fit_params_r(from_um_factor, material)
 
 #%%
 
@@ -155,7 +189,7 @@ for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)),
 
 #%%
 
-filename = "Au_JC_ComplexN_RIinfo.txt"
+filename = f"{material}_JC_ComplexN_RIinfo.txt"
 path = os.path.join(syshome, "MaterialsData", filename)
 data_n_jc = np.loadtxt(path)
     
@@ -490,15 +524,20 @@ for ax, f, t, y in zip(axes, functions, titles, ylabels):
 for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)), 
                               max(max_value)+.1*(max(max_value)-min(min_value))])
 
-vs.saveplot( plot_file("DrudeLorentzJCFit.png"), overwrite=True )
+vs.saveplot( plot_file(f"{material}DrudeLorentzJCFit.png"), overwrite=True )
 
 #%%
 
 for ax in axes: 
     ax.set_ylim([-50,50])
-    ax.set_xlim([.4, .8])
+    if material=="Au":
+        ax.set_xlim([.4, .8])
+    elif material=="Ag":
+        ax.set_xlim([.25, .8])
+    else:
+        raise ValueError("Material not recognized for zoom in plot")
     
-vs.saveplot( plot_file("DrudeLorentzJCFitZoom.png"), overwrite=True )
+vs.saveplot( plot_file(f"{material}DrudeLorentzJCFitZoom.png"), overwrite=True )
 
 #%%
 
@@ -534,12 +573,17 @@ for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)),
                              max(max_value)+.1*(max(max_value)-min(min_value))])
 # for ax in axes: ax.set_ylim([-50,50])
 
-vs.saveplot( plot_file("DrudeLorentzJCResiduals.png"), overwrite=True )
+vs.saveplot( plot_file(f"{material}DrudeLorentzJCResiduals.png"), overwrite=True )
 
 #%%
 
 for ax in axes: 
     ax.set_ylim([-50,50])
-    ax.set_xlim([.4, .8])
+    if material=="Au":
+        ax.set_xlim([.4, .8])
+    elif material=="Ag":
+        ax.set_xlim([.25, .8])
+    else:
+        raise ValueError("Material not recognized for zoom in plot")
     
-vs.saveplot( plot_file("DrudeLorentzJCResidualsZoom.png"), overwrite=True )
+vs.saveplot( plot_file(f"{material}DrudeLorentzJCResidualsZoom.png"), overwrite=True )

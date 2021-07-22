@@ -112,7 +112,7 @@ pms_r_mie_data = []
 for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
     wlens = wd[:,0]
     freqs = 1e3*fuf/wlens
-    medium = vm.import_medium("Au", fuf)
+    medium = vmt.import_medium("Au", fuf)
     scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
                                 1e3*fuf/f,
                                 d,
@@ -128,7 +128,7 @@ pms_jc_meep_mie_data = []
 for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
     wlens = np.linspace(400, 800, len(wd[:,0]))
     epsilon_function = vmt.epsilon_function_from_meep(paper="JC")
-    medium = vm.import_medium("Au", fuf, paper="JC")
+    medium = vmt.import_medium("Au", fuf, paper="JC")
     scatt_eff_theory = [ps.MieQ(np.sqrt(epsilon_function(wl)), 
                                 wl,
                                 d,
