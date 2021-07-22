@@ -9,22 +9,30 @@
 #mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -res 2 --from-um-factor 10e-3 -s "RefRRes2" -f "AuMieMediums/AllWaterTest/9)BoxDimensions/RefIdeal/3)NewRef" -r 51.5 -pp "R" --wlen-range "np.array([500,650])" --index 1.33
 #mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestChunks" -s "AllWatChunksEvenlyFalseNP6" -res 2 --split-chunks-evenly False --index 1.33 --wlen-range "[500, 650]"
 ############
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacRes2" -res 2 --wlen-range "[450, 600]" --load-flux False
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacRes3" -res 3 --wlen-range "[450, 600]" --load-flux False
-#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacRes4" -res 4 --wlen-range "[450, 600]" --load-flux False
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatRes2" -res 2 --wlen-range "[500, 650]" --index 1.33 --load-flux False
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatRes3" -res 3 --wlen-range "[500, 650]" --index 1.33 --load-flux False
-#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatRes4" -res 4 --wlen-range "[500, 650]" --index 1.33 --load-flux False
+#python ../AuMieSphere/u_au_mie_scattering.py --parallel False -f "Test/TestRAM" -s "TestRAMConsole" -res 2 --wlen-range "[450, 600]" --load-flux False
+#mpirun --use-hwthread-cpus -np 1 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 1 --parallel True -f "Test/TestRAM" -s "TestRAMParallel1" -res 2 --load-flux False
+#mpirun --use-hwthread-cpus -np 2 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 2 --parallel True -f "Test/TestRAM" -s "TestRAMParallel2" -res 2 --load-flux False
+#mpirun --use-hwthread-cpus -np 3 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 3 --parallel True -f "Test/TestRAM" -s "TestRAMParallel3" -res 2 --load-flux False
+#mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestRAM" -s "TestRAMParallel4" -res 2 --load-flux False
+#mpirun --use-hwthread-cpus -np 5 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 5 --parallel True -f "Test/TestRAM" -s "TestRAMParallel5" -res 2 --load-flux False
+#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "TestRAMParallel6" -res 2 --load-flux False
+#mpirun --use-hwthread-cpus -np 7 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 7 --parallel True -f "Test/TestRAM" -s "TestRAMParallel7" -res 2 --load-flux False
+#mpirun --use-hwthread-cpus -np 8 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 8 --parallel True -f "Test/TestRAM" -s "TestRAMParallel8" -res 2 --load-flux False
+#############
+#mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestRAM" -s "AllVacRes2" -res 2 --wlen-range "[450, 600]" --load-flux False
+#mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestRAM" -s "AllWatRes2" -res 2 --wlen-range "[500, 650]" --index 1.33 --load-flux False
+#mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestRAM" -s "AllVacRes3" -res 3 --wlen-range "[450, 600]" --load-flux False
+#mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestRAM" -s "AllWatRes3" -res 3 --wlen-range "[500, 650]" --index 1.33 --load-flux False
+#mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestRAM" -s "AllVacRes4" -res 4 --wlen-range "[450, 600]" --load-flux False
+#mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestRAM" -s "AllWatRes4" -res 4 --wlen-range "[500, 650]" --index 1.33 --load-flux False
 ############
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacNear2FarTrueRes2" -res 2 --near2far True --wlen-range "[450, 600]" --load-flux False
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacNear2FarFalseRes2" -res 2 --near2far False --wlen-range "[450, 600]" --load-flux False
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacNear2FarTrueRes3" -res 3 --near2far True --wlen-range "[450, 600]" --load-flux False
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacNear2FarFalseRes3" -res 3 --near2far False --wlen-range "[450, 600]" --load-flux False
-#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacNear2FarTrueRes4" -res 4 --near2far True --wlen-range "[450, 600]" --load-flux False
-#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacNear2FarFalseRes4" -res 4 --near2far False --wlen-range "[450, 600]" --load-flux False
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatNear2FarTrueRes2" -res 2 --near2far True --wlen-range "[500, 650]" --index 1.33 --load-flux False --flux-r-factor 0.3
-mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatNear2FarFalseRes2" -res 2 --near2far False --wlen-range "[500, 650]" --index 1.33 --load-flux False --flux-r-factor 0.3
-#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatNear2FarTrueRes3" -res 3 --near2far True --wlen-range "[500, 650]" --index 1.33 --load-flux False --flux-r-factor 0.3
-#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatNear2FarFalseRes3" -res 3 --near2far False --wlen-range "[500, 650]" --index 1.33 --load-flux False --flux-r-factor 0.3
-#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatNear2FarTrueRes4" -res 4 --near2far True --wlen-range "[500, 650]" --index 1.33 --load-flux False --flux-r-factor 0.3
-#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatNear2FarFalseRes4" -res 4 --near2far False --wlen-range "[500, 650]" --index 1.33 --load-flux False --flux-r-factor 0.3
+#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacNear2FarTrueRes2" -res 2 --near2far True --wlen-range "[450, 600]" --load-flux False
+#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllVacNear2FarFalseRes2" -res 2 --near2far False --wlen-range "[450, 600]" --load-flux False
+#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatNear2FarTrueRes2" -res 2 --near2far True --wlen-range "[500, 650]" --index 1.33 --load-flux False --flux-r-factor 0.3
+#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "AllWatNear2FarFalseRes2" -res 2 --near2far False --wlen-range "[500, 650]" --index 1.33 --load-flux False --flux-r-factor 0.3
+##############
+#mpirun --use-hwthread-cpus -np 6 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 6 --parallel True -f "Test/TestRAM" -s "TestSWAP" -res 4
+mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestRAM" -s "TestSWAP" -res 4
+##############
+#mpirun --use-hwthread-cpus -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestNP4" -s "TestHWThreadsTrue" -res 2 --load-flux False
+#mpirun -np 4 python -m mpi4py ../AuMieSphere/u_au_mie_scattering.py -np 4 --parallel True -f "Test/TestNP4" -s "TestHWThreadsFalse" -res 2 --load-flux False
