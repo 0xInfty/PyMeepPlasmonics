@@ -1,0 +1,593 @@
+vall@vall-GF63-Thin-9RCX:~  \ $ ssh vpais@h2.tupac.gob.ar  
+vpais@h2.tupac.gob.ar's password: 
+Last login: Thu Jul 22 11:10:57 2021 from 186.134.2.112
+
+
+        ooooooooooooo                                            
+        8'   888   `8                                            
+             888      oooo  oooo  oo.ooooo.   .oooo.    .ooooo.  
+             888      `888  `888   888' `88b `P  )88b  d88' `"Y8 
+             888       888   888   888   888  .oP"888  888       
+             888       888   888   888   888 d8(  888  888   .o8 
+            o888o      `V88V"V8P'  888bod8P' `Y888""8o `Y8bod8P' 
+                                   888                           
+                                  o888o
+
+    Centro de Simulación Computacional para Aplicaciones Tecnológicas
+        Consejo Nacional de Investigaciones Científicas y Técnicas
+
+
+Le recordamos leer el contenido del archivo LEEME dentro de su home.
+
+Ante cualquier duda registrar su consulta en
+http://tupac.conicet.gov.ar/redmine
+
+Sólo en caso de no poder utilizar el sistema de pedidos escribir
+un correo a tupac@dc.uba.ar
+--------------------------------------------------------------------------------
+- MOTD generado automáticamente el Thu Jul 22 00:02:25 -03 2021
+
+--------------------------------------------------------------------------------
+- La cuenta "vpais" expira el:  Nov 13, 2021
+
+--------------------------------------------------------------------------------
+ Para ver las carpetas compartidas a las que tiene acceso ejecute:
+        cat ~/.motd_compartidas
+
+--------------------------------------------------------------------------------
+ Para ver las estadisticas de uso de slurm ejecute:
+        cat ~/.motd_slurm
+
+[vpais@headnode02 ~]$ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+--2021-07-22 11:13:57--  https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+Resolving repo.continuum.io... 104.18.200.79, 104.18.201.79, 2606:4700::6812:c94f, ...
+Connecting to repo.continuum.io|104.18.200.79|:443... connected.
+HTTP request sent, awaiting response... 301 Moved Permanently
+Location: https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh [following]
+--2021-07-22 11:13:57--  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+Resolving repo.anaconda.com... 104.16.130.3, 104.16.131.3, 2606:4700::6810:8203, ...
+Connecting to repo.anaconda.com|104.16.130.3|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 66709754 (64M) [application/x-sh]
+Saving to: “miniconda.sh”
+
+100%[====================================================================================================================================================================================================================>] 66.709.754  7,85M/s   in 7,6s    
+
+2021-07-22 11:14:05 (8,33 MB/s) - “miniconda.sh” saved [66709754/66709754]
+
+[vpais@headnode02 ~]$ bash miniconda.sh -b -p miniconda
+PREFIX=/nfs/home/vpais/miniconda
+Unpacking payload ...
+Collecting package metadata (current_repodata.json): done                                                                                                                                                                                                     
+Solving environment: failed with initial frozen solve. Retrying with flexible solve.
+Solving environment: failed with repodata from current_repodata.json, will retry with next repodata source.
+Collecting package metadata (repodata.json): done
+Solving environment: failed with initial frozen solve. Retrying with flexible solve.
+Solving environment: | 
+Found conflicts! Looking for incompatible packages.
+This can take several minutes.  Press CTRL-C to abort.
+failed                                                                                                                                                                                                                                                        
+
+UnsatisfiableError: The following specifications were found to be incompatible with each other:
+
+Output in format: Requested package -> Available versions
+
+Package pyopenssl conflicts for:
+conda==4.10.3=py39h06a4308_0 -> pyopenssl[version='>=16.2.0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> pyopenssl[version='>=0.14']
+pyopenssl==20.0.1=pyhd3eb1b0_1
+requests==2.25.1=pyhd3eb1b0_0 -> urllib3[version='>=1.21.1,<1.27'] -> pyopenssl[version='>=0.14']
+
+Package xz conflicts for:
+six==1.16.0=pyhd3eb1b0_0 -> python -> xz[version='>=5.2.5,<6.0a0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> xz[version='>=5.2.5,<6.0a0']
+idna==2.10=pyhd3eb1b0_0 -> python -> xz[version='>=5.2.5,<6.0a0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> xz[version='>=5.2.5,<6.0a0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+pycparser==2.20=py_2 -> python -> xz[version='>=5.2.5,<6.0a0']
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> xz[version='>=5.2.5,<6.0a0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> xz[version='>=5.2.5,<6.0a0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> xz[version='>=5.2.5,<6.0a0']
+xz==5.2.5=h7b6447c_0
+python==3.9.5=h12debd9_4 -> xz[version='>=5.2.5,<6.0a0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> xz[version='>=5.2.5,<6.0a0']
+
+Package libstdcxx-ng conflicts for:
+python==3.9.5=h12debd9_4 -> libstdcxx-ng[version='>=7.5.0']
+six==1.16.0=pyhd3eb1b0_0 -> python -> libstdcxx-ng[version='>=7.5.0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+idna==2.10=pyhd3eb1b0_0 -> python -> libstdcxx-ng[version='>=7.5.0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> libstdcxx-ng[version='>=7.5.0']
+ncurses==6.2=he6710b0_1 -> libstdcxx-ng[version='>=7.3.0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> libstdcxx-ng[version='>=7.5.0']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> libstdcxx-ng[version='>=7.5.0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> libstdcxx-ng[version='>=7.5.0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+cffi==1.14.6=py39h400218f_0 -> libffi[version='>=3.3,<3.4.0a0'] -> libstdcxx-ng[version='>=7.3.0|>=7.5.0']
+libffi==3.3=he6710b0_2 -> libstdcxx-ng[version='>=7.3.0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> libstdcxx-ng[version='>=7.5.0']
+libstdcxx-ng==9.3.0=hd4cf53a_17
+readline==8.1=h27cfd23_0 -> ncurses[version='>=6.2,<7.0a0'] -> libstdcxx-ng[version='>=7.3.0']
+python==3.9.5=h12debd9_4 -> libffi[version='>=3.3,<3.4.0a0'] -> libstdcxx-ng[version='>=7.3.0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> libstdcxx-ng[version='>=7.5.0']
+pycparser==2.20=py_2 -> python -> libstdcxx-ng[version='>=7.5.0']
+
+Package sqlite conflicts for:
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> sqlite[version='>=3.35.4,<4.0a0']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+sqlite==3.36.0=hc218d9a_0
+pycparser==2.20=py_2 -> python -> sqlite[version='>=3.35.4,<4.0a0']
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> sqlite[version='>=3.35.4,<4.0a0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+six==1.16.0=pyhd3eb1b0_0 -> python -> sqlite[version='>=3.35.4,<4.0a0']
+idna==2.10=pyhd3eb1b0_0 -> python -> sqlite[version='>=3.35.4,<4.0a0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> sqlite[version='>=3.35.4,<4.0a0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> sqlite[version='>=3.35.4,<4.0a0']
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> sqlite[version='>=3.35.4,<4.0a0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+python==3.9.5=h12debd9_4 -> sqlite[version='>=3.35.4,<4.0a0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> sqlite[version='>=3.35.4,<4.0a0']
+
+Package python conflicts for:
+requests==2.25.1=pyhd3eb1b0_0 -> certifi[version='>=2017.4.17'] -> python[version='>=3.6,<4.0|>=3.9,<3.10.0a0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> cryptography[version='>=2.8'] -> python[version='>=3.9,<3.10.0a0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0']
+cffi==1.14.6=py39h400218f_0 -> pycparser -> python
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python
+six==1.16.0=pyhd3eb1b0_0 -> python
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0']
+requests==2.25.1=pyhd3eb1b0_0 -> python
+idna==2.10=pyhd3eb1b0_0 -> python
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0']
+python==3.9.5=h12debd9_4
+conda==4.10.3=py39h06a4308_0 -> pyopenssl[version='>=16.2.0'] -> python
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0']
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0']
+pip==21.1.3=py39h06a4308_0 -> wheel -> python
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0']
+pycparser==2.20=py_2 -> python
+conda-package-handling==1.7.3=py39h27cfd23_1 -> six -> python[version='>=2.7']
+urllib3==1.26.6=pyhd3eb1b0_1 -> brotlipy[version='>=0.6.0'] -> python[version='>=3.9,<3.10.0a0']
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0']
+
+Package readline conflicts for:
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> readline[version='>=8.0,<9.0a0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> readline[version='>=8.0,<9.0a0']
+readline==8.1=h27cfd23_0
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+sqlite==3.36.0=hc218d9a_0 -> readline[version='>=8.0,<9.0a0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> readline[version='>=8.0,<9.0a0']
+python==3.9.5=h12debd9_4 -> readline[version='>=8.0,<9.0a0']
+six==1.16.0=pyhd3eb1b0_0 -> python -> readline[version='>=8.0,<9.0a0']
+idna==2.10=pyhd3eb1b0_0 -> python -> readline[version='>=8.0,<9.0a0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+pycparser==2.20=py_2 -> python -> readline[version='>=8.0,<9.0a0']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> readline[version='>=8.0,<9.0a0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> readline[version='>=8.0,<9.0a0']
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> readline[version='>=8.0,<9.0a0']
+
+Package conda-package-handling conflicts for:
+conda==4.10.3=py39h06a4308_0 -> conda-package-handling[version='>=1.3.0']
+conda-package-handling==1.7.3=py39h27cfd23_1
+
+Package _libgcc_mutex conflicts for:
+ncurses==6.2=he6710b0_1 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+libgcc-ng==9.3.0=h5101ec6_17 -> _libgcc_mutex[version='*|0.1',build=main]
+brotlipy==0.7.0=py39h27cfd23_1003 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+conda-package-handling==1.7.3=py39h27cfd23_1 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+zlib==1.2.11=h7b6447c_3 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+cryptography==3.4.7=py39hd23ed53_0 -> libgcc-ng -> _libgcc_mutex[version='*|0.1',build=main]
+_libgcc_mutex==0.1=main
+tk==8.6.10=hbc83047_0 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+readline==8.1=h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+libffi==3.3=he6710b0_2 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+pycosat==0.6.3=py39h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+openssl==1.1.1k=h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+yaml==0.2.5=h7b6447c_0 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+cffi==1.14.6=py39h400218f_0 -> libgcc-ng[version='>=7.5.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+sqlite==3.36.0=hc218d9a_0 -> libgcc-ng[version='>=7.5.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+python==3.9.5=h12debd9_4 -> libgcc-ng[version='>=7.5.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+_openmp_mutex==4.5=1_gnu -> _libgcc_mutex==0.1=main
+xz==5.2.5=h7b6447c_0 -> libgcc-ng[version='>=7.3.0'] -> _libgcc_mutex[version='*|0.1',build=main]
+libgomp==9.3.0=h5101ec6_17 -> _libgcc_mutex==0.1=main
+
+Package openssl conflicts for:
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> openssl[version='>=1.1.1k,<1.1.2a']
+python==3.9.5=h12debd9_4 -> openssl[version='>=1.1.1k,<1.1.2a']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> cryptography[version='>=2.8'] -> openssl[version='>=1.1.1k,<1.1.2a']
+pycparser==2.20=py_2 -> python -> openssl[version='>=1.1.1k,<1.1.2a']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+cryptography==3.4.7=py39hd23ed53_0 -> openssl[version='>=1.1.1k,<1.1.2a']
+six==1.16.0=pyhd3eb1b0_0 -> python -> openssl[version='>=1.1.1k,<1.1.2a']
+idna==2.10=pyhd3eb1b0_0 -> python -> openssl[version='>=1.1.1k,<1.1.2a']
+openssl==1.1.1k=h27cfd23_0
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> openssl[version='>=1.1.1k,<1.1.2a']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> openssl[version='>=1.1.1k,<1.1.2a']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> openssl[version='>=1.1.1k,<1.1.2a']
+urllib3==1.26.6=pyhd3eb1b0_1 -> cryptography[version='>=1.3.4'] -> openssl[version='>=1.1.1k,<1.1.2a']
+
+Package setuptools conflicts for:
+setuptools==52.0.0=py39h06a4308_0
+pip==21.1.3=py39h06a4308_0 -> setuptools
+conda==4.10.3=py39h06a4308_0 -> setuptools[version='>=31.0.1']
+
+Package yaml conflicts for:
+conda==4.10.3=py39h06a4308_0 -> ruamel_yaml[version='>=0.11.14,<0.16'] -> yaml[version='>=0.2.5,<0.3.0a0']
+yaml==0.2.5=h7b6447c_0
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> yaml[version='>=0.2.5,<0.3.0a0']
+
+Package zlib conflicts for:
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+zlib==1.2.11=h7b6447c_3
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> zlib[version='>=1.2.11,<1.3.0a0']
+tk==8.6.10=hbc83047_0 -> zlib[version='>=1.2.11,<1.3.0a0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> zlib[version='>=1.2.11,<1.3.0a0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> zlib[version='>=1.2.11,<1.3.0a0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+sqlite==3.36.0=hc218d9a_0 -> zlib[version='>=1.2.11,<1.3.0a0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+python==3.9.5=h12debd9_4 -> zlib[version='>=1.2.11,<1.3.0a0']
+six==1.16.0=pyhd3eb1b0_0 -> python -> zlib[version='>=1.2.11,<1.3.0a0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+idna==2.10=pyhd3eb1b0_0 -> python -> zlib[version='>=1.2.11,<1.3.0a0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> zlib[version='>=1.2.11,<1.3.0a0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+pycparser==2.20=py_2 -> python -> zlib[version='>=1.2.11,<1.3.0a0']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> zlib[version='>=1.2.11,<1.3.0a0']
+
+Package six conflicts for:
+conda==4.10.3=py39h06a4308_0 -> conda-package-handling[version='>=1.3.0'] -> six[version='>=1.5.2']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> six[version='>=1.5.2']
+six==1.16.0=pyhd3eb1b0_0
+conda-package-handling==1.7.3=py39h27cfd23_1 -> six
+urllib3==1.26.6=pyhd3eb1b0_1 -> pyopenssl[version='>=0.14'] -> six[version='>=1.5.2']
+
+Package _openmp_mutex conflicts for:
+pycosat==0.6.3=py39h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+readline==8.1=h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+_openmp_mutex==4.5=1_gnu
+libffi==3.3=he6710b0_2 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+python==3.9.5=h12debd9_4 -> libgcc-ng[version='>=7.5.0'] -> _openmp_mutex[version='>=4.5']
+openssl==1.1.1k=h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+yaml==0.2.5=h7b6447c_0 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+cffi==1.14.6=py39h400218f_0 -> libgcc-ng[version='>=7.5.0'] -> _openmp_mutex[version='>=4.5']
+cryptography==3.4.7=py39hd23ed53_0 -> libgcc-ng -> _openmp_mutex[version='>=4.5']
+xz==5.2.5=h7b6447c_0 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+sqlite==3.36.0=hc218d9a_0 -> libgcc-ng[version='>=7.5.0'] -> _openmp_mutex[version='>=4.5']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+zlib==1.2.11=h7b6447c_3 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+brotlipy==0.7.0=py39h27cfd23_1003 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+ncurses==6.2=he6710b0_1 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+tk==8.6.10=hbc83047_0 -> libgcc-ng[version='>=7.3.0'] -> _openmp_mutex[version='>=4.5']
+libgcc-ng==9.3.0=h5101ec6_17 -> _openmp_mutex[version='>=4.5']
+
+Package libgcc-ng conflicts for:
+cryptography==3.4.7=py39hd23ed53_0 -> libgcc-ng
+six==1.16.0=pyhd3eb1b0_0 -> python -> libgcc-ng[version='>=7.5.0']
+tk==8.6.10=hbc83047_0 -> libgcc-ng[version='>=7.3.0']
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> libgcc-ng[version='>=7.5.0']
+sqlite==3.36.0=hc218d9a_0 -> libgcc-ng[version='>=7.5.0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> libgcc-ng[version='>=7.5.0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> cryptography[version='>=2.8'] -> libgcc-ng[version='>=7.5.0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> libgcc-ng[version='>=7.3.0']
+cryptography==3.4.7=py39hd23ed53_0 -> cffi[version='>=1.12'] -> libgcc-ng[version='>=7.3.0|>=7.5.0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libgcc-ng[version='>=7.5.0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libgcc-ng[version='>=7.5.0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> cffi[version='>=1.0.0'] -> libgcc-ng[version='>=7.5.0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> libgcc-ng[version='>=7.3.0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libgcc-ng[version='>=7.5.0']
+openssl==1.1.1k=h27cfd23_0 -> libgcc-ng[version='>=7.3.0']
+idna==2.10=pyhd3eb1b0_0 -> python -> libgcc-ng[version='>=7.5.0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> libgcc-ng[version='>=7.5.0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> libgcc-ng[version='>=7.5.0']
+cffi==1.14.6=py39h400218f_0 -> libgcc-ng[version='>=7.5.0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libgcc-ng[version='>=7.5.0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> libgcc-ng[version='>=7.3.0']
+xz==5.2.5=h7b6447c_0 -> libgcc-ng[version='>=7.3.0']
+cffi==1.14.6=py39h400218f_0 -> libffi[version='>=3.3,<3.4.0a0'] -> libgcc-ng[version='>=7.3.0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> libgcc-ng[version='>=7.5.0']
+yaml==0.2.5=h7b6447c_0 -> libgcc-ng[version='>=7.3.0']
+readline==8.1=h27cfd23_0 -> libgcc-ng[version='>=7.3.0']
+ncurses==6.2=he6710b0_1 -> libgcc-ng[version='>=7.3.0']
+python==3.9.5=h12debd9_4 -> libffi[version='>=3.3,<3.4.0a0'] -> libgcc-ng[version='>=7.3.0']
+pycosat==0.6.3=py39h27cfd23_0 -> libgcc-ng[version='>=7.3.0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> brotlipy[version='>=0.6.0'] -> libgcc-ng[version='>=7.3.0|>=7.5.0']
+python==3.9.5=h12debd9_4 -> libgcc-ng[version='>=7.5.0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> libgcc-ng[version='>=7.5.0']
+zlib==1.2.11=h7b6447c_3 -> libgcc-ng[version='>=7.3.0']
+sqlite==3.36.0=hc218d9a_0 -> readline[version='>=8.0,<9.0a0'] -> libgcc-ng[version='>=7.3.0']
+pycparser==2.20=py_2 -> python -> libgcc-ng[version='>=7.5.0']
+libgcc-ng==9.3.0=h5101ec6_17
+conda==4.10.3=py39h06a4308_0 -> conda-package-handling[version='>=1.3.0'] -> libgcc-ng[version='>=7.3.0|>=7.5.0']
+libffi==3.3=he6710b0_2 -> libgcc-ng[version='>=7.3.0']
+
+Package ncurses conflicts for:
+sqlite==3.36.0=hc218d9a_0 -> readline[version='>=8.0,<9.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+python==3.9.5=h12debd9_4 -> ncurses[version='>=6.2,<7.0a0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> ncurses[version='>=6.2,<7.0a0']
+six==1.16.0=pyhd3eb1b0_0 -> python -> ncurses[version='>=6.2,<7.0a0']
+idna==2.10=pyhd3eb1b0_0 -> python -> ncurses[version='>=6.2,<7.0a0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> ncurses[version='>=6.2,<7.0a0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+pycparser==2.20=py_2 -> python -> ncurses[version='>=6.2,<7.0a0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+ncurses==6.2=he6710b0_1
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> ncurses[version='>=6.2,<7.0a0']
+readline==8.1=h27cfd23_0 -> ncurses[version='>=6.2,<7.0a0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> ncurses[version='>=6.2,<7.0a0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ncurses[version='>=6.2,<7.0a0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> ncurses[version='>=6.2,<7.0a0']
+
+Package tzdata conflicts for:
+pycparser==2.20=py_2 -> python -> tzdata
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+tzdata==2021a=h52ac0ba_0
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> tzdata
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> tzdata
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> tzdata
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> tzdata
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+python==3.9.5=h12debd9_4 -> tzdata
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+six==1.16.0=pyhd3eb1b0_0 -> python -> tzdata
+idna==2.10=pyhd3eb1b0_0 -> python -> tzdata
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> tzdata
+requests==2.25.1=pyhd3eb1b0_0 -> python -> tzdata
+
+Package libffi conflicts for:
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> libffi[version='>=3.3,<3.4.0a0']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> libffi[version='>=3.3,<3.4.0a0']
+pycparser==2.20=py_2 -> python -> libffi[version='>=3.3,<3.4.0a0']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libffi[version='>=3.3,<3.4.0a0']
+idna==2.10=pyhd3eb1b0_0 -> python -> libffi[version='>=3.3,<3.4.0a0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> libffi[version='>=3.3,<3.4.0a0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libffi[version='>=3.3,<3.4.0a0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> libffi[version='>=3.3,<3.4.0a0']
+cffi==1.14.6=py39h400218f_0 -> libffi[version='>=3.3,<3.4.0a0']
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> libffi[version='>=3.3,<3.4.0a0']
+cryptography==3.4.7=py39hd23ed53_0 -> cffi[version='>=1.12'] -> libffi[version='>=3.3,<3.4.0a0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libffi[version='>=3.3,<3.4.0a0']
+libffi==3.3=he6710b0_2
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libffi[version='>=3.3,<3.4.0a0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> libffi[version='>=3.3,<3.4.0a0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> cffi[version='>=1.0.0'] -> libffi[version='>=3.3,<3.4.0a0']
+python==3.9.5=h12debd9_4 -> libffi[version='>=3.3,<3.4.0a0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> libffi[version='>=3.3,<3.4.0a0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> libffi[version='>=3.3,<3.4.0a0']
+six==1.16.0=pyhd3eb1b0_0 -> python -> libffi[version='>=3.3,<3.4.0a0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> libffi[version='>=3.3,<3.4.0a0']
+
+Package ld_impl_linux-64 conflicts for:
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+python==3.9.5=h12debd9_4 -> ld_impl_linux-64
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> ld_impl_linux-64
+idna==2.10=pyhd3eb1b0_0 -> python -> ld_impl_linux-64
+ld_impl_linux-64==2.35.1=h7274673_9
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+pycparser==2.20=py_2 -> python -> ld_impl_linux-64
+six==1.16.0=pyhd3eb1b0_0 -> python -> ld_impl_linux-64
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+requests==2.25.1=pyhd3eb1b0_0 -> python -> ld_impl_linux-64
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> ld_impl_linux-64
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> ld_impl_linux-64
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> ld_impl_linux-64
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> ld_impl_linux-64
+
+Package tk conflicts for:
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> python -> tk[version='>=8.6.10,<8.7.0a0']
+certifi==2021.5.30=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+pip==21.1.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+cffi==1.14.6=py39h400218f_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+requests==2.25.1=pyhd3eb1b0_0 -> python -> tk[version='>=8.6.10,<8.7.0a0']
+conda-package-handling==1.7.3=py39h27cfd23_1 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+wheel==0.36.2=pyhd3eb1b0_0 -> python -> tk[version='>=8.6.10,<8.7.0a0']
+pysocks==1.7.1=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+setuptools==52.0.0=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+tqdm==4.61.2=pyhd3eb1b0_1 -> python[version='>=2.7'] -> tk[version='>=8.6.10,<8.7.0a0']
+pycosat==0.6.3=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+cryptography==3.4.7=py39hd23ed53_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+python==3.9.5=h12debd9_4 -> tk[version='>=8.6.10,<8.7.0a0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> python[version='>=3.6,<4.0'] -> tk[version='>=8.6.10,<8.7.0a0']
+tk==8.6.10=hbc83047_0
+six==1.16.0=pyhd3eb1b0_0 -> python -> tk[version='>=8.6.10,<8.7.0a0']
+pycparser==2.20=py_2 -> python -> tk[version='>=8.6.10,<8.7.0a0']
+ruamel_yaml==0.15.100=py39h27cfd23_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+conda==4.10.3=py39h06a4308_0 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+idna==2.10=pyhd3eb1b0_0 -> python -> tk[version='>=8.6.10,<8.7.0a0']
+brotlipy==0.7.0=py39h27cfd23_1003 -> python[version='>=3.9,<3.10.0a0'] -> tk[version='>=8.6.10,<8.7.0a0']
+
+Package certifi conflicts for:
+pip==21.1.3=py39h06a4308_0 -> setuptools -> certifi[version='>=2016.9.26']
+conda==4.10.3=py39h06a4308_0 -> requests[version='>=2.18.4,<3'] -> certifi[version='>=2016.9.26|>=2017.4.17']
+certifi==2021.5.30=py39h06a4308_0
+setuptools==52.0.0=py39h06a4308_0 -> certifi[version='>=2016.9.26']
+urllib3==1.26.6=pyhd3eb1b0_1 -> certifi
+requests==2.25.1=pyhd3eb1b0_0 -> certifi[version='>=2017.4.17']
+requests==2.25.1=pyhd3eb1b0_0 -> urllib3[version='>=1.21.1,<1.27'] -> certifi
+
+Package libgomp conflicts for:
+libgcc-ng==9.3.0=h5101ec6_17 -> _openmp_mutex[version='>=4.5'] -> libgomp[version='>=7.5.0']
+_openmp_mutex==4.5=1_gnu -> libgomp[version='>=7.5.0']
+libgomp==9.3.0=h5101ec6_17
+
+Package pycparser conflicts for:
+cryptography==3.4.7=py39hd23ed53_0 -> cffi[version='>=1.12'] -> pycparser
+brotlipy==0.7.0=py39h27cfd23_1003 -> cffi[version='>=1.0.0'] -> pycparser
+cffi==1.14.6=py39h400218f_0 -> pycparser
+pycparser==2.20=py_2
+
+Package pysocks conflicts for:
+pysocks==1.7.1=py39h06a4308_0
+requests==2.25.1=pyhd3eb1b0_0 -> urllib3[version='>=1.21.1,<1.27'] -> pysocks[version='>=1.5.6,<2.0,!=1.5.7']
+urllib3==1.26.6=pyhd3eb1b0_1 -> pysocks[version='>=1.5.6,<2.0,!=1.5.7']
+
+Package idna conflicts for:
+urllib3==1.26.6=pyhd3eb1b0_1 -> idna[version='>=2.0.0']
+requests==2.25.1=pyhd3eb1b0_0 -> urllib3[version='>=1.21.1,<1.27'] -> idna[version='>=2.0.0']
+idna==2.10=pyhd3eb1b0_0
+conda==4.10.3=py39h06a4308_0 -> requests[version='>=2.18.4,<3'] -> idna[version='>=2.5,<3']
+requests==2.25.1=pyhd3eb1b0_0 -> idna[version='>=2.5,<3']
+
+Package urllib3 conflicts for:
+requests==2.25.1=pyhd3eb1b0_0 -> urllib3[version='>=1.21.1,<1.27']
+conda==4.10.3=py39h06a4308_0 -> requests[version='>=2.18.4,<3'] -> urllib3[version='>=1.21.1,<1.27']
+urllib3==1.26.6=pyhd3eb1b0_1
+
+Package ca-certificates conflicts for:
+ca-certificates==2021.7.5=h06a4308_1
+cryptography==3.4.7=py39hd23ed53_0 -> openssl[version='>=1.1.1k,<1.1.2a'] -> ca-certificates
+python==3.9.5=h12debd9_4 -> openssl[version='>=1.1.1k,<1.1.2a'] -> ca-certificates
+openssl==1.1.1k=h27cfd23_0 -> ca-certificates
+
+Package wheel conflicts for:
+wheel==0.36.2=pyhd3eb1b0_0
+pip==21.1.3=py39h06a4308_0 -> wheel
+
+Package cryptography conflicts for:
+conda==4.10.3=py39h06a4308_0 -> pyopenssl[version='>=16.2.0'] -> cryptography[version='>=2.8']
+urllib3==1.26.6=pyhd3eb1b0_1 -> pyopenssl[version='>=0.14'] -> cryptography[version='>=2.8']
+urllib3==1.26.6=pyhd3eb1b0_1 -> cryptography[version='>=1.3.4']
+requests==2.25.1=pyhd3eb1b0_0 -> urllib3[version='>=1.21.1,<1.27'] -> cryptography[version='>=1.3.4']
+cryptography==3.4.7=py39hd23ed53_0
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> cryptography[version='>=2.8']
+
+Package ruamel_yaml conflicts for:
+conda==4.10.3=py39h06a4308_0 -> ruamel_yaml[version='>=0.11.14,<0.16']
+ruamel_yaml==0.15.100=py39h27cfd23_0
+
+Package cffi conflicts for:
+cffi==1.14.6=py39h400218f_0
+cryptography==3.4.7=py39hd23ed53_0 -> cffi[version='>=1.12']
+brotlipy==0.7.0=py39h27cfd23_1003 -> cffi[version='>=1.0.0']
+urllib3==1.26.6=pyhd3eb1b0_1 -> brotlipy[version='>=0.6.0'] -> cffi[version='>=1.0.0|>=1.12']
+pyopenssl==20.0.1=pyhd3eb1b0_1 -> cryptography[version='>=2.8'] -> cffi[version='>=1.12']
+
+Package tqdm conflicts for:
+conda==4.10.3=py39h06a4308_0 -> conda-package-handling[version='>=1.3.0'] -> tqdm
+tqdm==4.61.2=pyhd3eb1b0_1
+conda-package-handling==1.7.3=py39h27cfd23_1 -> tqdm
+
+Package brotlipy conflicts for:
+urllib3==1.26.6=pyhd3eb1b0_1 -> brotlipy[version='>=0.6.0']
+requests==2.25.1=pyhd3eb1b0_0 -> urllib3[version='>=1.21.1,<1.27'] -> brotlipy[version='>=0.6.0']
+brotlipy==0.7.0=py39h27cfd23_1003
+
+Package requests conflicts for:
+conda==4.10.3=py39h06a4308_0 -> requests[version='>=2.18.4,<3']
+requests==2.25.1=pyhd3eb1b0_0
+
+Package chardet conflicts for:
+conda==4.10.3=py39h06a4308_0 -> requests[version='>=2.18.4,<3'] -> chardet[version='>=3.0.2,<5']
+chardet==4.0.0=py39h06a4308_1003
+requests==2.25.1=pyhd3eb1b0_0 -> chardet[version='>=3.0.2,<5']
+
+Package pycosat conflicts for:
+pycosat==0.6.3=py39h27cfd23_0
+conda==4.10.3=py39h06a4308_0 -> pycosat[version='>=0.6.3']The following specifications were found to be incompatible with your system:
+
+  - feature:/linux-64::__glibc==2.12=0
+  - feature:|@/linux-64::__glibc==2.12=0
+  - brotlipy==0.7.0=py39h27cfd23_1003 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - cffi==1.14.6=py39h400218f_0 -> libgcc-ng[version='>=7.5.0'] -> __glibc[version='>=2.17']
+  - conda-package-handling==1.7.3=py39h27cfd23_1 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - cryptography==3.4.7=py39hd23ed53_0 -> libgcc-ng -> __glibc[version='>=2.17']
+  - libffi==3.3=he6710b0_2 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - libgcc-ng==9.3.0=h5101ec6_17 -> __glibc[version='>=2.17']
+  - libstdcxx-ng==9.3.0=hd4cf53a_17 -> __glibc[version='>=2.17']
+  - ncurses==6.2=he6710b0_1 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - openssl==1.1.1k=h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - pycosat==0.6.3=py39h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - python==3.9.5=h12debd9_4 -> libgcc-ng[version='>=7.5.0'] -> __glibc[version='>=2.17']
+  - readline==8.1=h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - ruamel_yaml==0.15.100=py39h27cfd23_0 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - sqlite==3.36.0=hc218d9a_0 -> libgcc-ng[version='>=7.5.0'] -> __glibc[version='>=2.17']
+  - tk==8.6.10=hbc83047_0 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - xz==5.2.5=h7b6447c_0 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - yaml==0.2.5=h7b6447c_0 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+  - zlib==1.2.11=h7b6447c_3 -> libgcc-ng[version='>=7.3.0'] -> __glibc[version='>=2.17']
+
+Your installed version is: 2.12
+
+
+[vpais@headnode02 ~]$ conda create -n pmp -c conda-forge pymeep=*=mpi_mpich_*
+-bash: conda: command not found
+[vpais@headnode02 ~]$ export PATH=/nfs/home/vpais/miniconda:$PATH
+[vpais@headnode02 ~]$ conda create -n pmp -c conda-forge pymeep=*=mpi_mpich_*
+-bash: conda: command not found
+[vpais@headnode02 ~]$ 

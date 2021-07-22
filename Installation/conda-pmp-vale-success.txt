@@ -1,0 +1,505 @@
+vall@vall-GF63-Thin-9RCX:~  \ $ ssh vpais@h2.tupac.gob.ar  
+vpais@h2.tupac.gob.ar's password: 
+Last login: Thu Jul 22 11:19:37 2021 from 186.134.2.112
+
+
+        ooooooooooooo                                            
+        8'   888   `8                                            
+             888      oooo  oooo  oo.ooooo.   .oooo.    .ooooo.  
+             888      `888  `888   888' `88b `P  )88b  d88' `"Y8 
+             888       888   888   888   888  .oP"888  888       
+             888       888   888   888   888 d8(  888  888   .o8 
+            o888o      `V88V"V8P'  888bod8P' `Y888""8o `Y8bod8P' 
+                                   888                           
+                                  o888o
+
+    Centro de Simulación Computacional para Aplicaciones Tecnológicas
+        Consejo Nacional de Investigaciones Científicas y Técnicas
+
+
+Le recordamos leer el contenido del archivo LEEME dentro de su home
+
+Ante cualquier duda registrar su consulta en
+http://tupac.conicet.gov.ar/redmine
+
+Sólo en caso de no poder utilizar el sistema de pedidos escribir
+un correo a tupac@dc.uba.ar
+--------------------------------------------------------------------------------
+- MOTD generado automáticamente el Thu Jul 22 00:02:25 -03 2021
+
+--------------------------------------------------------------------------------
+- La cuenta "vpais" expira el:  Nov 13, 2021
+
+--------------------------------------------------------------------------------
+ Para ver las carpetas compartidas a las que tiene acceso ejecute:
+        cat ~/.motd_compartidas
+
+--------------------------------------------------------------------------------
+ Para ver las estadisticas de uso de slurm ejecute:
+        cat ~/.motd_slurm
+
+[vpais@headnode02 ~]$ bash miniconda.sh -b -p miniconda                                                         
+PREFIX=/nfs/home/vpais/miniconda
+Unpacking payload ...
+Collecting package metadata (current_repodata.json): done                                                                                                                                                                                                     
+Solving environment: done
+
+## Package Plan ##
+
+  environment location: /nfs/home/vpais/miniconda
+
+  added / updated specs:
+    - _libgcc_mutex==0.1=main
+    - brotlipy==0.7.0=py39h27cfd23_1003
+    - ca-certificates==2020.12.8=h06a4308_0
+    - certifi==2020.12.5=py39h06a4308_0
+    - cffi==1.14.4=py39h261ae71_0
+    - chardet==3.0.4=py39h06a4308_1003
+    - conda-package-handling==1.7.2=py39h27cfd23_1
+    - conda==4.9.2=py39h06a4308_0
+    - cryptography==3.3.1=py39h3c74f83_0
+    - idna==2.10=py_0
+    - ld_impl_linux-64==2.33.1=h53a641e_7
+    - libedit==3.1.20191231=h14c3975_1
+    - libffi==3.3=he6710b0_2
+    - libgcc-ng==9.1.0=hdf63c60_0
+    - libstdcxx-ng==9.1.0=hdf63c60_0
+    - ncurses==6.2=he6710b0_1
+    - openssl==1.1.1i=h27cfd23_0
+    - pip==20.3.1=py39h06a4308_0
+    - pycosat==0.6.3=py39h27cfd23_0
+    - pycparser==2.20=py_2
+    - pyopenssl==20.0.0=pyhd3eb1b0_1
+    - pysocks==1.7.1=py39h06a4308_0
+    - python==3.9.1=hdb3f193_2
+    - readline==8.0=h7b6447c_0
+    - requests==2.25.0=pyhd3eb1b0_0
+    - ruamel_yaml==0.15.80=py39h27cfd23_0
+    - setuptools==51.0.0=py39h06a4308_2
+    - six==1.15.0=py39h06a4308_0
+    - sqlite==3.33.0=h62c20be_0
+    - tk==8.6.10=hbc83047_0
+    - tqdm==4.54.1=pyhd3eb1b0_0
+    - tzdata==2020d=h14c3975_0
+    - urllib3==1.25.11=py_0
+    - wheel==0.36.1=pyhd3eb1b0_0
+    - xz==5.2.5=h7b6447c_0
+    - yaml==0.2.5=h7b6447c_0
+    - zlib==1.2.11=h7b6447c_3
+
+
+The following NEW packages will be INSTALLED:
+
+  _libgcc_mutex      pkgs/main/linux-64::_libgcc_mutex-0.1-main
+  brotlipy           pkgs/main/linux-64::brotlipy-0.7.0-py39h27cfd23_1003
+  ca-certificates    pkgs/main/linux-64::ca-certificates-2020.12.8-h06a4308_0
+  certifi            pkgs/main/linux-64::certifi-2020.12.5-py39h06a4308_0
+  cffi               pkgs/main/linux-64::cffi-1.14.4-py39h261ae71_0
+  chardet            pkgs/main/linux-64::chardet-3.0.4-py39h06a4308_1003
+  conda              pkgs/main/linux-64::conda-4.9.2-py39h06a4308_0
+  conda-package-han~ pkgs/main/linux-64::conda-package-handling-1.7.2-py39h27cfd23_1
+  cryptography       pkgs/main/linux-64::cryptography-3.3.1-py39h3c74f83_0
+  idna               pkgs/main/noarch::idna-2.10-py_0
+  ld_impl_linux-64   pkgs/main/linux-64::ld_impl_linux-64-2.33.1-h53a641e_7
+  libedit            pkgs/main/linux-64::libedit-3.1.20191231-h14c3975_1
+  libffi             pkgs/main/linux-64::libffi-3.3-he6710b0_2
+  libgcc-ng          pkgs/main/linux-64::libgcc-ng-9.1.0-hdf63c60_0
+  libstdcxx-ng       pkgs/main/linux-64::libstdcxx-ng-9.1.0-hdf63c60_0
+  ncurses            pkgs/main/linux-64::ncurses-6.2-he6710b0_1
+  openssl            pkgs/main/linux-64::openssl-1.1.1i-h27cfd23_0
+  pip                pkgs/main/linux-64::pip-20.3.1-py39h06a4308_0
+  pycosat            pkgs/main/linux-64::pycosat-0.6.3-py39h27cfd23_0
+  pycparser          pkgs/main/noarch::pycparser-2.20-py_2
+  pyopenssl          pkgs/main/noarch::pyopenssl-20.0.0-pyhd3eb1b0_1
+  pysocks            pkgs/main/linux-64::pysocks-1.7.1-py39h06a4308_0
+  python             pkgs/main/linux-64::python-3.9.1-hdb3f193_2
+  readline           pkgs/main/linux-64::readline-8.0-h7b6447c_0
+  requests           pkgs/main/noarch::requests-2.25.0-pyhd3eb1b0_0
+  ruamel_yaml        pkgs/main/linux-64::ruamel_yaml-0.15.80-py39h27cfd23_0
+  setuptools         pkgs/main/linux-64::setuptools-51.0.0-py39h06a4308_2
+  six                pkgs/main/linux-64::six-1.15.0-py39h06a4308_0
+  sqlite             pkgs/main/linux-64::sqlite-3.33.0-h62c20be_0
+  tk                 pkgs/main/linux-64::tk-8.6.10-hbc83047_0
+  tqdm               pkgs/main/noarch::tqdm-4.54.1-pyhd3eb1b0_0
+  tzdata             pkgs/main/noarch::tzdata-2020d-h14c3975_0
+  urllib3            pkgs/main/noarch::urllib3-1.25.11-py_0
+  wheel              pkgs/main/noarch::wheel-0.36.1-pyhd3eb1b0_0
+  xz                 pkgs/main/linux-64::xz-5.2.5-h7b6447c_0
+  yaml               pkgs/main/linux-64::yaml-0.2.5-h7b6447c_0
+  zlib               pkgs/main/linux-64::zlib-1.2.11-h7b6447c_3
+
+
+Preparing transaction: done
+Executing transaction: done
+installation finished.
+[vpais@headnode02 ~]$ conda create -n pmp -c conda-forge pymeep=*=mpi_mpich_*
+-bash: conda: command not found
+[vpais@headnode02 ~]$ export PATH=/nfs/home/vpais/miniconda:$PATH            
+[vpais@headnode02 ~]$ conda create -n pmp -c conda-forge pymeep=*=mpi_mpich_*
+-bash: conda: command not found
+[vpais@headnode02 ~]$ cd /nfs/home/vpais
+[vpais@headnode02 ~]$ export PATH=/nfs/home/vpais/miniconda/bin:$PATH        
+[vpais@headnode02 ~]$ conda create -n pmp -c conda-forge pymeep=*=mpi_mpich_*
+Collecting package metadata (current_repodata.json): done
+Solving environment: done
+
+
+==> WARNING: A newer version of conda exists. <==
+  current version: 4.9.2
+  latest version: 4.10.3
+
+Please update conda by running
+
+    $ conda update -n base -c defaults conda
+
+
+
+## Package Plan ##
+
+  environment location: /nfs/home/vpais/miniconda/envs/pmp
+
+  added / updated specs:
+    - pymeep[build=mpi_mpich_*]
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    _libgcc_mutex-0.1          |      conda_forge           3 KB  conda-forge
+    _openmp_mutex-4.5          |            1_gnu          22 KB  conda-forge
+    c-ares-1.17.1              |       h7f98852_1         109 KB  conda-forge
+    ca-certificates-2021.5.30  |       ha878542_0         136 KB  conda-forge
+    cached-property-1.5.2      |       hd8ed1ab_1           4 KB  conda-forge
+    cached_property-1.5.2      |     pyha770c72_1          11 KB  conda-forge
+    certifi-2021.5.30          |   py39hf3d152e_0         141 KB  conda-forge
+    fftw-3.3.9                 |mpi_mpich_h245ceca_1         6.5 MB  conda-forge
+    gsl-2.6                    |       he838d99_2         3.2 MB  conda-forge
+    h5py-3.3.0                 |mpi_mpich_py39hee24839_0         1.4 MB  conda-forge
+    harminv-1.4.1              |    hbf3b5f1_1007          53 KB  conda-forge
+    hdf5-1.10.6                |mpi_mpich_h996c276_1014         3.2 MB  conda-forge
+    krb5-1.19.1                |       hcc1bbae_0         1.4 MB  conda-forge
+    ld_impl_linux-64-2.36.1    |       hea4e1c9_1         668 KB  conda-forge
+    libblas-3.9.0              |       9_openblas          11 KB  conda-forge
+    libcblas-3.9.0             |       9_openblas          11 KB  conda-forge
+    libctl-4.5.0               |       h7f98852_2         113 KB  conda-forge
+    libcurl-7.77.0             |       h2574ce0_0         334 KB  conda-forge
+    libedit-3.1.20191231       |       he28a2e2_2         121 KB  conda-forge
+    libev-4.33                 |       h516909a_1         104 KB  conda-forge
+    libffi-3.3                 |       h58526e2_2          51 KB  conda-forge
+    libgcc-ng-9.3.0            |      h2828fa1_19         7.8 MB  conda-forge
+    libgdsii-0.21              |       h4bd325d_4          85 KB  conda-forge
+    libgfortran-ng-9.3.0       |      hff62375_19          22 KB  conda-forge
+    libgfortran5-9.3.0         |      hff62375_19         2.0 MB  conda-forge
+    libgomp-9.3.0              |      h2828fa1_19         376 KB  conda-forge
+    liblapack-3.9.0            |       9_openblas          11 KB  conda-forge
+    libnghttp2-1.43.0          |       h812cca2_0         808 KB  conda-forge
+    libopenblas-0.3.15         |pthreads_h8fe5266_1         9.2 MB  conda-forge
+    libssh2-1.9.0              |       ha56f1ee_6         226 KB  conda-forge
+    libstdcxx-ng-9.3.0         |      h6de172a_19         4.0 MB  conda-forge
+    mpb-1.11.1                 |mpi_mpich_h7dcaacd_3          66 KB  conda-forge
+    mpi-1.0                    |            mpich           4 KB  conda-forge
+    mpi4py-3.0.3               |   py39h6438238_7         728 KB  conda-forge
+    mpich-3.4.2                |     h846660c_100        10.4 MB  conda-forge
+    ncurses-6.2                |       h58526e2_4         985 KB  conda-forge
+    numpy-1.21.1               |   py39hdbf815f_0         6.2 MB  conda-forge
+    openssl-1.1.1k             |       h7f98852_0         2.1 MB  conda-forge
+    pip-21.1.3                 |     pyhd8ed1ab_0         1.1 MB  conda-forge
+    pymeep-1.19.0              |mpi_mpich_py39h1234567_1         1.8 MB  conda-forge
+    python-3.9.6               |h49503c6_1_cpython        27.5 MB  conda-forge
+    python_abi-3.9             |           2_cp39           4 KB  conda-forge
+    readline-8.1               |       h46c0cb4_0         295 KB  conda-forge
+    setuptools-49.6.0          |   py39hf3d152e_3         943 KB  conda-forge
+    sqlite-3.36.0              |       h9cd32fc_0         1.4 MB  conda-forge
+    tk-8.6.10                  |       h21135ba_1         3.2 MB  conda-forge
+    tzdata-2021a               |       he74cb21_1         121 KB  conda-forge
+    wheel-0.36.2               |     pyhd3deb0d_0          31 KB  conda-forge
+    xz-5.2.5                   |       h516909a_1         343 KB  conda-forge
+    zlib-1.2.11                |    h516909a_1010         106 KB  conda-forge
+    ------------------------------------------------------------
+                                           Total:        99.4 MB
+
+The following NEW packages will be INSTALLED:
+
+  _libgcc_mutex      conda-forge/linux-64::_libgcc_mutex-0.1-conda_forge
+  _openmp_mutex      conda-forge/linux-64::_openmp_mutex-4.5-1_gnu
+  c-ares             conda-forge/linux-64::c-ares-1.17.1-h7f98852_1
+  ca-certificates    conda-forge/linux-64::ca-certificates-2021.5.30-ha878542_0
+  cached-property    conda-forge/noarch::cached-property-1.5.2-hd8ed1ab_1
+  cached_property    conda-forge/noarch::cached_property-1.5.2-pyha770c72_1
+  certifi            conda-forge/linux-64::certifi-2021.5.30-py39hf3d152e_0
+  fftw               conda-forge/linux-64::fftw-3.3.9-mpi_mpich_h245ceca_1
+  gsl                conda-forge/linux-64::gsl-2.6-he838d99_2
+  h5py               conda-forge/linux-64::h5py-3.3.0-mpi_mpich_py39hee24839_0
+  harminv            conda-forge/linux-64::harminv-1.4.1-hbf3b5f1_1007
+  hdf5               conda-forge/linux-64::hdf5-1.10.6-mpi_mpich_h996c276_1014
+  krb5               conda-forge/linux-64::krb5-1.19.1-hcc1bbae_0
+  ld_impl_linux-64   conda-forge/linux-64::ld_impl_linux-64-2.36.1-hea4e1c9_1
+  libblas            conda-forge/linux-64::libblas-3.9.0-9_openblas
+  libcblas           conda-forge/linux-64::libcblas-3.9.0-9_openblas
+  libctl             conda-forge/linux-64::libctl-4.5.0-h7f98852_2
+  libcurl            conda-forge/linux-64::libcurl-7.77.0-h2574ce0_0
+  libedit            conda-forge/linux-64::libedit-3.1.20191231-he28a2e2_2
+  libev              conda-forge/linux-64::libev-4.33-h516909a_1
+  libffi             conda-forge/linux-64::libffi-3.3-h58526e2_2
+  libgcc-ng          conda-forge/linux-64::libgcc-ng-9.3.0-h2828fa1_19
+  libgdsii           conda-forge/linux-64::libgdsii-0.21-h4bd325d_4
+  libgfortran-ng     conda-forge/linux-64::libgfortran-ng-9.3.0-hff62375_19
+  libgfortran5       conda-forge/linux-64::libgfortran5-9.3.0-hff62375_19
+  libgomp            conda-forge/linux-64::libgomp-9.3.0-h2828fa1_19
+  liblapack          conda-forge/linux-64::liblapack-3.9.0-9_openblas
+  libnghttp2         conda-forge/linux-64::libnghttp2-1.43.0-h812cca2_0
+  libopenblas        conda-forge/linux-64::libopenblas-0.3.15-pthreads_h8fe5266_1
+  libssh2            conda-forge/linux-64::libssh2-1.9.0-ha56f1ee_6
+  libstdcxx-ng       conda-forge/linux-64::libstdcxx-ng-9.3.0-h6de172a_19
+  mpb                conda-forge/linux-64::mpb-1.11.1-mpi_mpich_h7dcaacd_3
+  mpi                conda-forge/linux-64::mpi-1.0-mpich
+  mpi4py             conda-forge/linux-64::mpi4py-3.0.3-py39h6438238_7
+  mpich              conda-forge/linux-64::mpich-3.4.2-h846660c_100
+  ncurses            conda-forge/linux-64::ncurses-6.2-h58526e2_4
+  numpy              conda-forge/linux-64::numpy-1.21.1-py39hdbf815f_0
+  openssl            conda-forge/linux-64::openssl-1.1.1k-h7f98852_0
+  pip                conda-forge/noarch::pip-21.1.3-pyhd8ed1ab_0
+  pymeep             conda-forge/linux-64::pymeep-1.19.0-mpi_mpich_py39h1234567_1
+  python             conda-forge/linux-64::python-3.9.6-h49503c6_1_cpython
+  python_abi         conda-forge/linux-64::python_abi-3.9-2_cp39
+  readline           conda-forge/linux-64::readline-8.1-h46c0cb4_0
+  setuptools         conda-forge/linux-64::setuptools-49.6.0-py39hf3d152e_3
+  sqlite             conda-forge/linux-64::sqlite-3.36.0-h9cd32fc_0
+  tk                 conda-forge/linux-64::tk-8.6.10-h21135ba_1
+  tzdata             conda-forge/noarch::tzdata-2021a-he74cb21_1
+  wheel              conda-forge/noarch::wheel-0.36.2-pyhd3deb0d_0
+  xz                 conda-forge/linux-64::xz-5.2.5-h516909a_1
+  zlib               conda-forge/linux-64::zlib-1.2.11-h516909a_1010
+
+
+Proceed ([y]/n)? y
+
+
+Downloading and Extracting Packages
+ncurses-6.2          | 985 KB    | ################################################################################################################################################################################################################### | 100% 
+libev-4.33           | 104 KB    | ################################################################################################################################################################################################################### | 100% 
+h5py-3.3.0           | 1.4 MB    | ################################################################################################################################################################################################################### | 100% 
+_libgcc_mutex-0.1    | 3 KB      | ################################################################################################################################################################################################################### | 100% 
+pymeep-1.19.0        | 1.8 MB    | ################################################################################################################################################################################################################### | 100% 
+libopenblas-0.3.15   | 9.2 MB    | ################################################################################################################################################################################################################### | 100% 
+tzdata-2021a         | 121 KB    | ################################################################################################################################################################################################################### | 100% 
+libssh2-1.9.0        | 226 KB    | ################################################################################################################################################################################################################### | 100% 
+mpich-3.4.2          | 10.4 MB   | ################################################################################################################################################################################################################### | 100% 
+libedit-3.1.20191231 | 121 KB    | ################################################################################################################################################################################################################### | 100% 
+gsl-2.6              | 3.2 MB    | ################################################################################################################################################################################################################### | 100% 
+libgfortran-ng-9.3.0 | 22 KB     | ################################################################################################################################################################################################################### | 100% 
+libgfortran5-9.3.0   | 2.0 MB    | ################################################################################################################################################################################################################### | 100% 
+certifi-2021.5.30    | 141 KB    | ################################################################################################################################################################################################################### | 100% 
+readline-8.1         | 295 KB    | ################################################################################################################################################################################################################### | 100% 
+c-ares-1.17.1        | 109 KB    | ################################################################################################################################################################################################################### | 100% 
+sqlite-3.36.0        | 1.4 MB    | ################################################################################################################################################################################################################### | 100% 
+ld_impl_linux-64-2.3 | 668 KB    | ################################################################################################################################################################################################################### | 100% 
+mpi-1.0              | 4 KB      | ################################################################################################################################################################################################################### | 100% 
+wheel-0.36.2         | 31 KB     | ################################################################################################################################################################################################################### | 100% 
+numpy-1.21.1         | 6.2 MB    | ################################################################################################################################################################################################################### | 100% 
+pip-21.1.3           | 1.1 MB    | ################################################################################################################################################################################################################### | 100% 
+harminv-1.4.1        | 53 KB     | ################################################################################################################################################################################################################### | 100% 
+ca-certificates-2021 | 136 KB    | ################################################################################################################################################################################################################### | 100% 
+libnghttp2-1.43.0    | 808 KB    | ################################################################################################################################################################################################################### | 100% 
+libgcc-ng-9.3.0      | 7.8 MB    | ################################################################################################################################################################################################################### | 100% 
+libffi-3.3           | 51 KB     | ################################################################################################################################################################################################################### | 100% 
+libcurl-7.77.0       | 334 KB    | ################################################################################################################################################################################################################### | 100% 
+libgdsii-0.21        | 85 KB     | ################################################################################################################################################################################################################### | 100% 
+python_abi-3.9       | 4 KB      | ################################################################################################################################################################################################################### | 100% 
+xz-5.2.5             | 343 KB    | ################################################################################################################################################################################################################### | 100% 
+libstdcxx-ng-9.3.0   | 4.0 MB    | ################################################################################################################################################################################################################### | 100% 
+zlib-1.2.11          | 106 KB    | ################################################################################################################################################################################################################### | 100% 
+openssl-1.1.1k       | 2.1 MB    | ################################################################################################################################################################################################################### | 100% 
+krb5-1.19.1          | 1.4 MB    | ################################################################################################################################################################################################################### | 100% 
+tk-8.6.10            | 3.2 MB    | ################################################################################################################################################################################################################### | 100% 
+libcblas-3.9.0       | 11 KB     | ################################################################################################################################################################################################################### | 100% 
+libblas-3.9.0        | 11 KB     | ################################################################################################################################################################################################################### | 100% 
+libgomp-9.3.0        | 376 KB    | ################################################################################################################################################################################################################### | 100% 
+setuptools-49.6.0    | 943 KB    | ################################################################################################################################################################################################################### | 100% 
+liblapack-3.9.0      | 11 KB     | ################################################################################################################################################################################################################### | 100% 
+fftw-3.3.9           | 6.5 MB    | ################################################################################################################################################################################################################### | 100% 
+hdf5-1.10.6          | 3.2 MB    | ################################################################################################################################################################################################################### | 100% 
+mpb-1.11.1           | 66 KB     | ################################################################################################################################################################################################################### | 100% 
+libctl-4.5.0         | 113 KB    | ################################################################################################################################################################################################################### | 100% 
+mpi4py-3.0.3         | 728 KB    | ################################################################################################################################################################################################################### | 100% 
+python-3.9.6         | 27.5 MB   | ################################################################################################################################################################################################################### | 100% 
+_openmp_mutex-4.5    | 22 KB     | ################################################################################################################################################################################################################### | 100% 
+cached_property-1.5. | 11 KB     | ################################################################################################################################################################################################################### | 100% 
+cached-property-1.5. | 4 KB      | ################################################################################################################################################################################################################### | 100% 
+Preparing transaction: done
+Verifying transaction: done
+Executing transaction: done
+#
+# To activate this environment, use
+#
+#     $ conda activate pmp
+#
+# To deactivate an active environment, use
+#
+#     $ conda deactivate
+
+[vpais@headnode02 ~]$ conda activate pmp
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+[vpais@headnode02 ~]$ conda init bash
+no change     /nfs/home/vpais/miniconda/condabin/conda
+no change     /nfs/home/vpais/miniconda/bin/conda
+no change     /nfs/home/vpais/miniconda/bin/conda-env
+no change     /nfs/home/vpais/miniconda/bin/activate
+no change     /nfs/home/vpais/miniconda/bin/deactivate
+no change     /nfs/home/vpais/miniconda/etc/profile.d/conda.sh
+no change     /nfs/home/vpais/miniconda/etc/fish/conf.d/conda.fish
+no change     /nfs/home/vpais/miniconda/shell/condabin/Conda.psm1
+no change     /nfs/home/vpais/miniconda/shell/condabin/conda-hook.ps1
+no change     /nfs/home/vpais/miniconda/lib/python3.9/site-packages/xontrib/conda.xsh
+no change     /nfs/home/vpais/miniconda/etc/profile.d/conda.csh
+modified      /nfs/home/vpais/.bashrc
+
+==> For changes to take effect, close and re-open your current shell. <==
+
+[vpais@headnode02 ~]$ logout
+Connection to h2.tupac.gob.ar closed.
+vall@vall-GF63-Thin-9RCX:~  \ $ ssh vpais@h2.tupac.gob.ar  
+vpais@h2.tupac.gob.ar's password: 
+Last login: Thu Jul 22 11:49:14 2021 from 186.134.2.112
+
+
+        ooooooooooooo                                            
+        8'   888   `8                                            
+             888      oooo  oooo  oo.ooooo.   .oooo.    .ooooo.  
+             888      `888  `888   888' `88b `P  )88b  d88' `"Y8 
+             888       888   888   888   888  .oP"888  888       
+             888       888   888   888   888 d8(  888  888   .o8 
+            o888o      `V88V"V8P'  888bod8P' `Y888""8o `Y8bod8P' 
+                                   888                           
+                                  o888o
+
+    Centro de Simulación Computacional para Aplicaciones Tecnológicas
+        Consejo Nacional de Investigaciones Científicas y Técnicas
+
+
+Le recordamos leer el contenido del archivo LEEME dentro de su home
+
+Ante cualquier duda registrar su consulta en
+http://tupac.conicet.gov.ar/redmine
+
+Sólo en caso de no poder utilizar el sistema de pedidos escribir
+un correo a tupac@dc.uba.ar
+--------------------------------------------------------------------------------
+- MOTD generado automáticamente el Thu Jul 22 00:02:25 -03 2021
+
+--------------------------------------------------------------------------------
+- La cuenta "vpais" expira el:  Nov 13, 2021
+
+--------------------------------------------------------------------------------
+ Para ver las carpetas compartidas a las que tiene acceso ejecute:
+        cat ~/.motd_compartidas
+
+--------------------------------------------------------------------------------
+ Para ver las estadisticas de uso de slurm ejecute:
+        cat ~/.motd_slurm
+
+(base) [vpais@headnode02 ~]$ conda
+usage: conda [-h] [-V] command ...
+
+conda is a tool for managing and deploying applications, environments and packages.
+
+Options:
+
+positional arguments:
+  command
+    clean        Remove unused packages and caches.
+    compare      Compare packages between conda environments.
+    config       Modify configuration values in .condarc. This is modeled after the git config command. Writes to the user .condarc file (/nfs/home/vpais/.condarc) by default.
+    create       Create a new conda environment from a list of specified packages.
+    help         Displays a list of available conda commands and their help strings.
+    info         Display information about current conda install.
+    init         Initialize conda for shell interaction. [Experimental]
+    install      Installs a list of packages into a specified conda environment.
+    list         List linked packages in a conda environment.
+    package      Low-level conda package utility. (EXPERIMENTAL)
+    remove       Remove a list of packages from a specified conda environment.
+    uninstall    Alias for conda remove.
+    run          Run an executable in a conda environment. [Experimental]
+    search       Search for packages and display associated information. The input is a MatchSpec, a query language for conda packages. See examples below.
+    update       Updates conda packages to the latest compatible version.
+    upgrade      Alias for conda update.
+
+optional arguments:
+  -h, --help     Show this help message and exit.
+  -V, --version  Show the conda version number and exit.
+
+conda commands available from other packages:
+  env
+(base) [vpais@headnode02 ~]$ conda activate pmp
+(pmp) [vpais@headnode02 ~]$ python
+Python 3.9.6 | packaged by conda-forge | (default, Jul 11 2021, 03:39:48) 
+[GCC 9.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import meep as mp
+Using MPI version 3.1, 1 processes
+>>> import h5py as h5
+>>> import numpy as np
+>>> import matplotlib.pyplot as plt
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ModuleNotFoundError: No module named 'matplotlib'
+>>> import resource
+>>> import os
+>>> import socket
+>>> import re
+>>> import click
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ModuleNotFoundError: No module named 'click'
+>>> quit()
+
+Elapsed run time = 379.4314 s
+(pmp) [vpais@headnode02 ~]$ pip install click
+Collecting click
+  Downloading click-8.0.1-py3-none-any.whl (97 kB)
+     |████████████████████████████████| 97 kB 256 kB/s 
+Installing collected packages: click
+Successfully installed click-8.0.1
+(pmp) [vpais@headnode02 ~]$ pip install matplotlib
+Collecting matplotlib
+  Downloading matplotlib-3.4.2-cp39-cp39-manylinux1_x86_64.whl (10.3 MB)
+     |████████████████████████████████| 10.3 MB 509 kB/s 
+Requirement already satisfied: numpy>=1.16 in ./miniconda/envs/pmp/lib/python3.9/site-packages (from matplotlib) (1.21.1)
+Collecting pillow>=6.2.0
+  Downloading Pillow-8.3.1-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl (3.0 MB)
+     |████████████████████████████████| 3.0 MB 539 kB/s 
+Collecting pyparsing>=2.2.1
+  Downloading pyparsing-2.4.7-py2.py3-none-any.whl (67 kB)
+     |████████████████████████████████| 67 kB 400 kB/s 
+Collecting kiwisolver>=1.0.1
+  Downloading kiwisolver-1.3.1-cp39-cp39-manylinux1_x86_64.whl (1.2 MB)
+     |████████████████████████████████| 1.2 MB 177 kB/s 
+Collecting cycler>=0.10
+  Downloading cycler-0.10.0-py2.py3-none-any.whl (6.5 kB)
+Collecting python-dateutil>=2.7
+  Downloading python_dateutil-2.8.2-py2.py3-none-any.whl (247 kB)
+     |████████████████████████████████| 247 kB 399 kB/s 
+Collecting six
+  Downloading six-1.16.0-py2.py3-none-any.whl (11 kB)
+Installing collected packages: six, python-dateutil, pyparsing, pillow, kiwisolver, cycler, matplotlib
+Successfully installed cycler-0.10.0 kiwisolver-1.3.1 matplotlib-3.4.2 pillow-8.3.1 pyparsing-2.4.7 python-dateutil-2.8.2 six-1.16.0
+(pmp) [vpais@headnode02 ~]$ 
