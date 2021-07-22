@@ -8,9 +8,13 @@
 
 #SBATCH -p free-rider   # Partición a la que enviar el trabajo
 
-#SBATCH --job-name=au-mie-scattering      # Nombre de la tarea
-#SBATCH --output=au-mie-scattering-%j.out # Archivo donde escribir la salida STDOUT
-#SBATCH --error=au-mie-scattering-%j.err  # Archivo donde escribir la salida STDERR
+#SBATCH -t 5            # Tiempo estimado (En minutos) para la ejecución
+                        # de la tarea. Pasado ese tiempo, el slurm enviará
+                        # la señal de terminación.
+
+#SBATCH --job-name=au-mie-scatt      # Nombre de la tarea
+#SBATCH --output=au-mie-scatt-%j.out # Archivo donde escribir la salida STDOUT
+#SBATCH --error=au-mie-scatt-%j.err  # Archivo donde escribir la salida STDERR
 
 # #SBATCH --test-only   # Ejemplo de linea comentada.
                         # El comando --test-only valida que el script sea legible
@@ -20,4 +24,4 @@
 # Ejecucion de la aplicacion
 # srun mpi-test
 
-srun python -m mpi4py /nfs/home/vpais/ThesisPython/AuMieSphere/u_au_mie_scattering.py -np 64 --parallel True
+srun /nfs/home/vpais/ThesisPython/AuMieSphere/au-mie-scatt.sh
