@@ -25,48 +25,48 @@ conda activate pmp
 cd /nfs/home/vpais/ThesisPython
 
 # Test 1 node splitting evenly. Must find a problem that takes approximately 1 hour.
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 2 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes2" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 4 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes4" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 8 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes8" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 16 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes16" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 32 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes32" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 64 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes64" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 128 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes128" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 256 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes256" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 512 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes512" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 1024 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes1024" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 2 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes2" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 4 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes4" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 8 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes8" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 16 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes16" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 32 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes32" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 64 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes64" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 128 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes128" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 256 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes256" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 512 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes512" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 1024 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes1024" --load-flux False
  
 # Test 1 node in my classical resolutions. This should go at lightspeed in comparison.
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 2 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes2" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 3 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes3" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 4 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes4" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 5 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes5" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 6 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes6" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 7 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes7" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 8 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes8" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 9 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes9" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 10 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes10" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 11 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes11" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 12 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes12" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 13 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes13" --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 14 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes14" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 2 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes2" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 3 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes3" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 4 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes4" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 5 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes5" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 6 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes6" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 7 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes7" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 8 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes8" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 9 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes9" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 10 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes10" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 11 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes11" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 12 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes12" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 13 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes13" --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 14 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitTrueRes" -s "1NodeRes14" --load-flux False
 
 # Test 1 node in my classical resolutions but splitting by load. This should go at lightspeed in comparison.
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 2 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes2" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 3 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes3" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 4 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes4" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 5 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes5" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 6 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes6" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 7 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes7" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 8 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes8" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 9 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes9" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 10 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes10" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 11 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes11" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 12 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes12" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 13 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes13" --split-chunks-evenly False --load-flux False
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 14 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes14" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 2 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes2" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 3 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes3" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 4 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes4" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 5 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes5" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 6 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes6" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 7 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes7" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 8 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes8" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 9 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes9" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 10 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes10" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 11 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes11" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 12 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes12" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 13 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes13" --split-chunks-evenly False --load-flux False
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 14 --from-um-factor 20e-3 -f "AuMieSphere/AuMie/15)TUPAC/1NodeSplitFalseRes" -s "1NodeRes14" --split-chunks-evenly False --load-flux False
 
 # Test 1 node splitting evenly but at higher resolutions. Must find a problem that takes approximately 1 hour.
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 2048 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes2048"
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 4096 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes4096"
-srun python ./AuMieSphere/u_au_mie_scattering.py -np 64 -nn 1 --parallel True -res 16384 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes16384"
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 2048 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes2048"
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 4096 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes4096"
+srun python ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 16384 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes16384"
