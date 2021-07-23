@@ -286,59 +286,64 @@ def check_midflux(params):
     
     database = vs.retrieve_footer(dir_file)
     
-    database_array = []
-    for key in midflux_key_params:
-        if key in params.keys():
-            if isinstance(database[key][0], bool):
-                aux_data = [int(data) for data in database[key]]
-                database_array.append(aux_data)
-            else:
-                try:
-                    if len(list(database[key][0])) > 1:
-                        for i in range( len(list( database[key][0] )) ):
-                            aux_data = [data[i] for data in database[key]]
-                            database_array.append(aux_data)
-                    else:
-                        database_array.append(database[key])
-                except:
-                    database_array.append(database[key])
-    database_array = np.array(database_array)
-    
-    desired_array = []
-    for key in midflux_key_params:
-        if key in params.keys():
-            if isinstance(params[key], bool):
-                desired_array.append(int(params[key]))
-            else:
-                try:
-                    if len(list(params[key])) > 1:
-                        for i in range( len(list( params[key] )) ):
-                            desired_array.append(params[key][i])
-                    else:
-                        desired_array.append(params[key])
-                except:
-                    desired_array.append(params[key])
-    desired_array = np.array(desired_array)
-    
-    boolean_array = []
-    for array in database_array.T:
-        boolean_array.append( np.all( array - desired_array.T == np.zeros(desired_array.T.shape) ) )
-    index = [i for i, boolean in enumerate(boolean_array) if boolean]
-    
-    if len(index) == 0:
-        print("No coincidences where found at the midflux database!")
-    elif len(index) == 1:
-        print(f"You could use midflux data from '{database['path'][index[0]]}'")
-    else:
-        print("More than one coincidence was found at the midflux database!")
-        print(f"You could use midflux data from '{database['path'][index[0]]}'")
-        
     try:
-        flux_path_list = [os.path.join(home, "FluxData", database['flux_path'][i]) for i in index]
-    except:
-        flux_path_list = [None]
-    
-    return flux_path_list
+        database_array = []
+        for key in midflux_key_params:
+            if key in params.keys():
+                if isinstance(database[key][0], bool):
+                    aux_data = [int(data) for data in database[key]]
+                    database_array.append(aux_data)
+                else:
+                    try:
+                        if len(list(database[key][0])) > 1:
+                            for i in range( len(list( database[key][0] )) ):
+                                aux_data = [data[i] for data in database[key]]
+                                database_array.append(aux_data)
+                        else:
+                            database_array.append(database[key])
+                    except:
+                        database_array.append(database[key])
+        database_array = np.array(database_array)
+        
+        desired_array = []
+        for key in midflux_key_params:
+            if key in params.keys():
+                if isinstance(params[key], bool):
+                    desired_array.append(int(params[key]))
+                else:
+                    try:
+                        if len(list(params[key])) > 1:
+                            for i in range( len(list( params[key] )) ):
+                                desired_array.append(params[key][i])
+                        else:
+                            desired_array.append(params[key])
+                    except:
+                        desired_array.append(params[key])
+        desired_array = np.array(desired_array)
+        
+        boolean_array = []
+        for array in database_array.T:
+            boolean_array.append( np.all( array - desired_array.T == np.zeros(desired_array.T.shape) ) )
+        index = [i for i, boolean in enumerate(boolean_array) if boolean]
+        
+        if len(index) == 0:
+            print("No coincidences where found at the midflux database!")
+        elif len(index) == 1:
+            print(f"You could use midflux data from '{database['path'][index[0]]}'")
+        else:
+            print("More than one coincidence was found at the midflux database!")
+            print(f"You could use midflux data from '{database['path'][index[0]]}'")
+            
+        try:
+            flux_path_list = [os.path.join(home, "FluxData", database['flux_path'][i]) for i in index]
+        except:
+            flux_path_list = [None]
+        
+        return flux_path_list
+
+    except IndexError:
+        print("Midflux database must be empty!")
+        return [None]
 
 #%%
 
@@ -414,76 +419,81 @@ def check_chunks(params):
     
     database = vs.retrieve_footer(dir_file)
     
-    database_array = []
-    database_strings = {}
-    for key in chunks_key_params:
-        if key in params.keys():
-            if isinstance(database[key][0], bool):
-                aux_data = [int(data) for data in database[key]]
-                database_array.append(aux_data)
-            elif isinstance(database[key][0], str):
-                database_strings[key] = database[key]
-            else:
-                try:
-                    if len(list(database[key][0])) > 1:
-                        for i in range( len(list( database[key][0] )) ):
-                            aux_data = [data[i] for data in database[key]]
-                            database_array.append(aux_data)
-                    else:
-                        database_array.append(database[key])
-                except:
-                    database_array.append(database[key])
-    database_array = np.array(database_array)
-    
-    desired_array = []
-    desired_strings = {}
-    for key in chunks_key_params:
-        if key in params.keys():
-            if isinstance(params[key], bool):
-                desired_array.append(int(params[key]))
-            elif isinstance(params[key], str):
-                desired_strings[key] = params[key]
-            else:
-                try:
-                    if len(list(params[key])) > 1:
-                        for i in range( len(list( params[key] )) ):
-                            desired_array.append(params[key][i])
-                    else:
-                        desired_array.append(params[key])
-                except:
-                    desired_array.append(params[key])
-    desired_array = np.array(desired_array)
-    
-    boolean_array = []
-    for array in database_array.T:
-        boolean_array.append( np.all( array - desired_array.T == np.zeros(desired_array.T.shape) ) )
-    index = [i for i, boolean in enumerate(boolean_array) if boolean]
-    
-    for key, values_list in database_strings.items():
-        for i, value in enumerate(values_list):
-            if value == desired_strings[key]:
-                index.append(i)
-    
-    index_in_common = []
-    for i in index:
-        if index.count(i) == len(list(desired_strings.keys())) + 1:
-            if i not in index_in_common:
-                index_in_common.append(i)
-    
-    if len(index_in_common) == 0:
-        print("No coincidences where found at the chunks database!")
-    elif len(index_in_common) == 1:
-        print(f"You could use chunks data from '{database['path'][index[0]]}'")
-    else:
-        print("More than one coincidence was found at the chunks database!")
-        print(f"You could use chunks data from '{database['path'][index[0]]}'")
-        
     try:
-        chunks_path_list = [os.path.join(home, "ChunksData", database['chunks_path'][i]) for i in index_in_common]
-    except:
-        chunks_path_list = [None]
-    
-    return chunks_path_list
+        database_array = []
+        database_strings = {}
+        for key in chunks_key_params:
+            if key in params.keys():
+                if isinstance(database[key][0], bool):
+                    aux_data = [int(data) for data in database[key]]
+                    database_array.append(aux_data)
+                elif isinstance(database[key][0], str):
+                    database_strings[key] = database[key]
+                else:
+                    try:
+                        if len(list(database[key][0])) > 1:
+                            for i in range( len(list( database[key][0] )) ):
+                                aux_data = [data[i] for data in database[key]]
+                                database_array.append(aux_data)
+                        else:
+                            database_array.append(database[key])
+                    except:
+                        database_array.append(database[key])
+        database_array = np.array(database_array)
+        
+        desired_array = []
+        desired_strings = {}
+        for key in chunks_key_params:
+            if key in params.keys():
+                if isinstance(params[key], bool):
+                    desired_array.append(int(params[key]))
+                elif isinstance(params[key], str):
+                    desired_strings[key] = params[key]
+                else:
+                    try:
+                        if len(list(params[key])) > 1:
+                            for i in range( len(list( params[key] )) ):
+                                desired_array.append(params[key][i])
+                        else:
+                            desired_array.append(params[key])
+                    except:
+                        desired_array.append(params[key])
+        desired_array = np.array(desired_array)
+        
+        boolean_array = []
+        for array in database_array.T:
+            boolean_array.append( np.all( array - desired_array.T == np.zeros(desired_array.T.shape) ) )
+        index = [i for i, boolean in enumerate(boolean_array) if boolean]
+        
+        for key, values_list in database_strings.items():
+            for i, value in enumerate(values_list):
+                if value == desired_strings[key]:
+                    index.append(i)
+        
+        index_in_common = []
+        for i in index:
+            if index.count(i) == len(list(desired_strings.keys())) + 1:
+                if i not in index_in_common:
+                    index_in_common.append(i)
+        
+        if len(index_in_common) == 0:
+            print("No coincidences where found at the chunks database!")
+        elif len(index_in_common) == 1:
+            print(f"You could use chunks data from '{database['path'][index[0]]}'")
+        else:
+            print("More than one coincidence was found at the chunks database!")
+            print(f"You could use chunks data from '{database['path'][index[0]]}'")
+            
+        try:
+            chunks_path_list = [os.path.join(home, "ChunksData", database['chunks_path'][i]) for i in index_in_common]
+        except:
+            chunks_path_list = [None]
+        
+        return chunks_path_list
+
+    except IndexError:
+        print("Chunks database must be empty!")
+        return [None]
 
 #%%
 
