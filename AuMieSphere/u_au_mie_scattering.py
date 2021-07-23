@@ -12,13 +12,10 @@ script = "au_mie_scattering"
 from socket import gethostname
 if "Nano" in gethostname():
     syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
-    sysname = "SC"
 elif "vall" in gethostname():
     syshome = "/home/vall/Documents/Thesis/ThesisPython"
-    sysname = "MC"
 else:
     syshome = "/nfs/home/vpais/ThesisPython"
-    sysname = "TC"
     # raise ValueError("Your PC must be registered at the top of this code")
 
 import sys
@@ -101,9 +98,11 @@ measure_ram()
 @cli.option("--split-chunks-evenly", "-chev", "split_chunks_evenly", 
             type=bool, default=True,
             help="Whether to split chunks evenly or not during parallel run")
-@cli.option("--n-processes", "-np", "n_processes", type=int, default=1,
+@cli.option("--n-processes", "-np", "n_processes", type=int, default=0,
             help="Number of cores used to run the program in parallel")
-@cli.option("--n-nodes", "-nn", "n_nodes", type=int, default=1,
+@cli.option("--n-cores", "-nc", "n_cores", type=int, default=0,
+            help="Number of cores used to run the program in parallel")
+@cli.option("--n-nodes", "-nn", "n_nodes", type=int, default=0,
             help="Number of nodes used to run the program in parallel")
 @cli.option("--load-flux", "-loadf", "load_flux", 
             type=bool, default=True,
@@ -119,7 +118,8 @@ def main(from_um_factor, resolution, courant,
          displacement, surface_index, wlen_range, nfreq,
          air_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
-         series, folder, parallel, n_processes, n_nodes, split_chunks_evenly,
+         series, folder, 
+         parallel, n_processes, n_cores, n_nodes, split_chunks_evenly,
          load_flux, load_chunks, near2far):
 
     #%% CLASSIC INPUT PARAMETERS    
@@ -216,7 +216,7 @@ def main(from_um_factor, resolution, courant,
                    "wlen_range", "nfreq", "nazimuthal", "npolar", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
-                   "enlapsed", "parallel", "n_processes", "n_nodes",
+                   "enlapsed", "parallel", "n_processes", "n_cores", "n_nodes",
                    "split_chunks_evenly", "near2far",
                    "script", "sysname", "path"]
     
@@ -286,6 +286,18 @@ def main(from_um_factor, resolution, courant,
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
         
+    if parallel:
+        parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
+        max_index = np.argmax(parallel_specs)
+        for index, item in enumerate(parallel_specs): 
+            if item == 0: parallel_specs[index] = 1
+        parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
+                                              max(parallel_specs))
+        n_processes, n_cores, n_nodes = parallel_specs
+        del parallel_specs, max_index, index, item
+    else:
+        n_processes, n_cores, n_nodes = (1, 1, 1)
+    
     #%% FIRST RUN
     
     measure_ram()

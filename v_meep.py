@@ -30,6 +30,23 @@ sysname = vs.get_sys_name()
 syshome = vs.get_sys_home()
 home = vs.get_home()
 
+midflux_key_params = ["from_um_factor", "resolution", "courant", 
+                      "wlen_range", "cutoff", "nfreq", 
+                      "submerged_index", "surface_index", "displacement",
+                      "cell_width", "pml_width", "source_center", "flux_box_size",
+                      "until_after_sources", 
+                      "parallel", "n_processes", "n_cores", "n_nodes",
+                      "split_chunks_evenly", "near2far"]
+
+chunks_key_params = ["from_um_factor", "resolution", "courant", 
+                     "wlen_range", "cutoff", "nfreq", 
+                     "r", "material", "paper", "reference",
+                     "submerged_index", "surface_index", "displacement",
+                     "cell_width", "pml_width", "source_center", "flux_box_size",
+                     "until_after_sources", 
+                     "parallel", "n_processes", "n_cores", "n_nodes",
+                     "split_chunks_evenly", "near2far"]
+
 #%%
 
 def verify_stability_freq_res(medium, resolution, courant=0.5, print_log=True):
@@ -244,17 +261,10 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2,
     database = vs.retrieve_footer(dir_file)
     if parallel_assign(1, n_processes, parallel):
         vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
-    key_params = ["from_um_factor", "resolution", "courant", 
-                 "wlen_range", "cutoff", "nfreq", 
-                 "submerged_index", "surface_index", "displacement",
-                 "cell_width", "pml_width", "source_center", "flux_box_size",
-                 "until_after_sources", 
-                 "parallel", "n_processes", "n_nodes",
-                 "split_chunks_evenly", "near2far"]
     
     database["flux_path"].append( os.path.split(new_flux_path)[-1] )
     database["path"].append(path)
-    for key in key_params:
+    for key in midflux_key_params:
         try:
             if isinstance(params[key], np.ndarray):
                 database[key].append(list(params[key]))
@@ -275,16 +285,9 @@ def check_midflux(params):
     dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
     
     database = vs.retrieve_footer(dir_file)
-    key_params = ["from_um_factor", "resolution", "courant", 
-                 "wlen_range", "cutoff", "nfreq", 
-                 "submerged_index", "surface_index", "displacement",
-                 "cell_width", "pml_width", "source_center", "flux_box_size",
-                 "until_after_sources", 
-                 "parallel", "n_processes", "n_nodes",
-                 "split_chunks_evenly", "near2far"]
     
     database_array = []
-    for key in key_params:
+    for key in midflux_key_params:
         if key in params.keys():
             if isinstance(database[key][0], bool):
                 aux_data = [int(data) for data in database[key]]
@@ -302,7 +305,7 @@ def check_midflux(params):
     database_array = np.array(database_array)
     
     desired_array = []
-    for key in key_params:
+    for key in midflux_key_params:
         if key in params.keys():
             if isinstance(params[key], bool):
                 desired_array.append(int(params[key]))
@@ -386,18 +389,10 @@ def save_chunks(sim, params, path):
     database = vs.retrieve_footer(dir_file)
     if parallel_assign(1, n_processes, parallel):
         vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
-    key_params = ["from_um_factor", "resolution", "courant", 
-                 "wlen_range", "cutoff", "nfreq", 
-                 "r", "material", "paper", "reference",
-                 "submerged_index", "surface_index", "displacement",
-                 "cell_width", "pml_width", "source_center", "flux_box_size",
-                 "until_after_sources", 
-                 "parallel", "n_processes", "n_nodes",
-                 "split_chunks_evenly", "near2far"]
     
     database["chunks_path"].append( os.path.split(new_chunks_path)[-1] )
     database["path"].append(path)
-    for key in key_params:
+    for key in chunks_key_params:
         try:
             if isinstance(params[key], np.ndarray):
                 database[key].append(list(params[key]))
@@ -418,18 +413,10 @@ def check_chunks(params):
     dir_file = os.path.join(home, "ChunksData/ChunksDataDirectory.txt")
     
     database = vs.retrieve_footer(dir_file)
-    key_params = ["from_um_factor", "resolution", "courant", 
-                 "wlen_range", "cutoff", "nfreq", 
-                 "r", "material", "paper", "reference",
-                 "submerged_index", "surface_index", "displacement",
-                 "cell_width", "pml_width", "source_center", "flux_box_size",
-                 "until_after_sources", 
-                 "parallel", "n_processes", "n_nodes",
-                 "split_chunks_evenly", "near2far"]
     
     database_array = []
     database_strings = {}
-    for key in key_params:
+    for key in chunks_key_params:
         if key in params.keys():
             if isinstance(database[key][0], bool):
                 aux_data = [int(data) for data in database[key]]
@@ -450,7 +437,7 @@ def check_chunks(params):
     
     desired_array = []
     desired_strings = {}
-    for key in key_params:
+    for key in chunks_key_params:
         if key in params.keys():
             if isinstance(params[key], bool):
                 desired_array.append(int(params[key]))
