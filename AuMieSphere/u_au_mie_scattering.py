@@ -70,7 +70,7 @@ measure_ram()
             type=float, default=1,
             help="Reflective index of surface medium")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
-            type=vu.NUMPY_ARRAY, default="np.array([450,600])",
+            type=vu.NUMPY_ARRAY, default="[450,600]",
             help="Wavelength range expressed in nm")
 @cli.option("--nfreq", "-nfreq", "nfreq", 
             type=int, default=100,
