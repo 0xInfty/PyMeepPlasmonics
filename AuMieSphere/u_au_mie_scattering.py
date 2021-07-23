@@ -70,7 +70,7 @@ measure_ram()
             type=float, default=1,
             help="Reflective index of surface medium")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
-            type=vu.NUMPY_ARRAY, default=np.array([450,600]),
+            type=cli.Tuple([float, float]), default=(450,600),
             help="Wavelength range expressed in nm")
 @cli.option("--nfreq", "-nfreq", "nfreq", 
             type=int, default=100,
@@ -189,6 +189,7 @@ def main(from_um_factor, resolution, courant,
     displacement = displacement / ( from_um_factor * 1e3 ) # Now in Meep units
     
     # Frequency and wavelength
+    wlen_range = np.array(wlen_range)
     wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Now in Meep units
     freq_range = 1/wlen_range # Hz range in Meep units from highest to lowest
     freq_center = np.mean(freq_range)
