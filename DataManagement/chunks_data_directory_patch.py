@@ -100,6 +100,11 @@ ff = h5.File(os.path.join(home, "ChunksData", chunks_dir["chunks_path"][-1], "La
 
 #%%
 
+for k in keys:
+    chunks_dir[k] = chunks_dir[k][:-1]
+
+#%%
+
 vs.savetxt(chunks_file, np.array([]), footer=chunks_dir, overwrite=True)
 
 #%%

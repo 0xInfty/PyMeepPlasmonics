@@ -73,6 +73,11 @@ n = len(flux_dir[keys[0]])
 flux_dir["n_cores"] = []
 for i in range(n):
     flux_dir["n_cores"].append( min([4, flux_dir["n_processes"][i]]) )
+    
+#%%
+
+for k in keys:
+    flux_dir[k] = flux_dir[k][:-1]
 
 #%%
 
