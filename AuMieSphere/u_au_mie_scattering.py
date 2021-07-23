@@ -55,6 +55,8 @@ measure_ram()
             help="Courant factor: time discretization from space discretization")
 @cli.option("--radius", "-r", "r", default=51.5, type=float,
             help="Radius of sphere expressed in nm")
+@cli.option("--material", "-mat", default="Au", type=str,
+            help="Material of spherical nanoparticle")
 @cli.option("--paper", "-pp", "paper", type=str, default="R",
             help="Source of inner material experimental data. Options: 'JC'/'R'/'P'")
 @cli.option("--reference", "-ref", "reference", type=str, default="Meep",
@@ -93,7 +95,7 @@ measure_ram()
             help="Series name used to create a folder and save files")
 @cli.option("--folder", "-f", type=str, default=None,
             help="Series folder used to save files")
-@cli.option("--parallel", "-par", type=bool, default=False,
+@cli.option("--parallel", "-par", type=bool, default=True,
             help="Whether the program is being run in parallel or in serial")
 @cli.option("--split-chunks-evenly", "-chev", "split_chunks_evenly", 
             type=bool, default=True,
@@ -114,7 +116,7 @@ measure_ram()
             type=bool, default=False,
             help="Whether to calculate angular pattern or not.")
 def main(from_um_factor, resolution, courant, 
-         r, paper, reference, submerged_index, 
+         r, material, paper, reference, submerged_index, 
          displacement, surface_index, wlen_range, nfreq,
          air_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
@@ -138,7 +140,7 @@ def main(from_um_factor, resolution, courant,
     surface_index = 1 # 1.54 for glass
     
     # Frequency and wavelength
-    wlen_range = np.array([450,600]) # Wavelength range in nm
+    wlen_range = np.array([350,500]) # Wavelength range in nm
     nfreq = 100
     
     # Box dimensions
@@ -151,12 +153,14 @@ def main(from_um_factor, resolution, courant,
     second_time_factor = 10
     
     # Saving directories
-    series = "TestSWAPSpyder"
-    folder = "Test/TestRAM/TestRAMGeneral"
+    series = "SilverRes4"
+    folder = "Test/TestSilver"
     
     # Configuration
     parallel = False
     n_processes = 1
+    n_cores = 1
+    n_nodes = 1
     split_chunks_evenly = True
     load_flux = False
     load_chunks = True    
@@ -164,9 +168,6 @@ def main(from_um_factor, resolution, courant,
     """
 
     #%% MORE INPUT PARAMETERS
-
-    # Nanoparticle specifications: Sphere in Vacuum :)
-    material = "Au" # Gold: "Au"    
     
     # Frequency and wavelength
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
@@ -197,14 +198,7 @@ def main(from_um_factor, resolution, courant,
     pml_width = pml_wlen_factor * max(wlen_range) # 0.5 * max(wlen_range)
     air_width = air_r_factor * r # 0.5 * max(wlen_range)
     flux_box_size = 2 * ( 1 + flux_r_factor ) * r
-    
-    # Computation
-    enlapsed = []
-    if parallel:
-        np_process = mp.count_processors()
-    else:
-        np_process = 1
-    
+       
     # Saving directories
     if series is None:
         series = "Test"
@@ -286,13 +280,23 @@ def main(from_um_factor, resolution, courant,
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
         
+    # Computation
+    enlapsed = []
+    
     parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
     max_index = np.argmax(parallel_specs)
     for index, item in enumerate(parallel_specs): 
         if item == 0: parallel_specs[index] = 1
     parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
                                           max(parallel_specs))
+    n_processes, n_cores, n_nodes = parallel_specs
     parallel = max(parallel_specs) > 1
+    del parallel_specs, max_index, index, item
+            
+    if parallel:
+        np_process = mp.count_processors()
+    else:
+        np_process = 1
     
     #%% FIRST RUN
     
