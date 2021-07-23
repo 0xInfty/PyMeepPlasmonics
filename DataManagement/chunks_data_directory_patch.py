@@ -66,6 +66,17 @@ chunks_dir["flux_box_size"] = list(flux_box_size)
 
 #%%
 
+keys = list(chunks_dir.keys())
+n = len(chunks_dir[keys[0]])
+
+#%%
+
+chunks_dir["n_cores"] = []
+for i in range(n):
+    chunks_dir["n_cores"].append( min([4, chunks_dir["n_processes"][i]]) )
+
+#%%
+
 index = []
 for i in range(len(chunks_dir["path"])-1):
     if chunks_dir["path"][i+1] != chunks_dir["path"][i]:
@@ -90,3 +101,11 @@ ff = h5.File(os.path.join(home, "ChunksData", chunks_dir["chunks_path"][-1], "La
 #%%
 
 vs.savetxt(chunks_file, np.array([]), footer=chunks_dir, overwrite=True)
+
+#%%
+
+blank_chunks_dir = {}
+for k in keys: blank_chunks_dir[k] = []
+
+vs.savetxt(os.path.join(home, "ChunksData/ChunksDataDirBlank.txt"), 
+           np.array([]), footer=blank_chunks_dir, overwrite=True)

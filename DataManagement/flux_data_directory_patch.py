@@ -21,6 +21,8 @@ flux_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
 
 flux_dir = vs.retrieve_footer(flux_file)
 
+#%%
+
 data_files = flux_dir["path"]
 
 found_files = []
@@ -63,4 +65,23 @@ flux_dir["flux_box_size"] = list(flux_box_size)
 
 #%%
 
+keys = list(flux_dir.keys())
+n = len(flux_dir[keys[0]])
+
+#%%
+
+flux_dir["n_cores"] = []
+for i in range(n):
+    flux_dir["n_cores"].append( min([4, flux_dir["n_processes"][i]]) )
+
+#%%
+
 vs.savetxt(flux_file, np.array([]), footer=flux_dir, overwrite=True)
+
+#%%
+
+blank_flux_file = {}
+for k in keys: blank_flux_file[k] = []
+
+vs.savetxt(os.path.join(home, "FluxData/FluxDataDirBlank.txt"),
+           np.array([]), footer=blank_flux_file, overwrite=True)

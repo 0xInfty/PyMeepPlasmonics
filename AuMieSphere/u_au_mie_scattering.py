@@ -286,17 +286,13 @@ def main(from_um_factor, resolution, courant,
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
         
-    if parallel:
-        parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
-        max_index = np.argmax(parallel_specs)
-        for index, item in enumerate(parallel_specs): 
-            if item == 0: parallel_specs[index] = 1
-        parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
-                                              max(parallel_specs))
-        n_processes, n_cores, n_nodes = parallel_specs
-        del parallel_specs, max_index, index, item
-    else:
-        n_processes, n_cores, n_nodes = (1, 1, 1)
+    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
+    max_index = np.argmax(parallel_specs)
+    for index, item in enumerate(parallel_specs): 
+        if item == 0: parallel_specs[index] = 1
+    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
+                                          max(parallel_specs))
+    parallel = max(parallel_specs) > 1
     
     #%% FIRST RUN
     
