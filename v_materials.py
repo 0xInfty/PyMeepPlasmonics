@@ -508,7 +508,6 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo",
         raise ValueError("Experimental data couldn't be found. Sorry!")
     
     file = data_files[0]
-    print(f"Data loaded from '{file}'")
     data = np.loadtxt(file)
     
     meep_wlen = data[:,0] / (1e3 * from_um_factor)
@@ -518,9 +517,11 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo",
     if 'N' in file:
         epsilon_function = epsilon_interpoler_from_n(
             meep_wlen, data[:,1] + 1j*data[:,2])
+        print(f"Refractive index data loaded from '{file}'")
     elif "eps" in file.lower():
         epsilon_function = epsilon_interpoler_from_epsilon(
             meep_wlen, data[:,1] + 1j*data[:,2])
+        print(f"Epsilon data loaded from '{file}'")
     else:
         raise ValueError("Experimental data couldn't be recognized. Sorry!")
     
