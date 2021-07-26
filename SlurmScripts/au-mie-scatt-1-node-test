@@ -32,7 +32,6 @@ srun -l /bin/hostname | sort -n | awk '{print $2}' > $MACHINEFILE
 
 # Run using generated Machine file:
 # mpirun -np $SLURM_NTASKS -machinefile $MACHINEFILE mpi-app
-SLURM_NTASKS=64
 
 # Test 1 node splitting evenly. Must find a problem that takes approximately 1 hour.
 mpirun -np $SLURM_NTASKS -machinefile $MACHINEFILE python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 64 -res 2 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes2" --load-flux False
