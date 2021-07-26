@@ -23,6 +23,7 @@ epsilon = sys.float_info.epsilon
 
 material = "Ag"
 from_um_factor = 1
+max_wlen = 750 # nm
 
 plot_file = lambda n : os.path.join(home, "DataAnalysis/MaterialsPaper", n)
 
@@ -163,6 +164,8 @@ titles = ["Absolute value", "Real part", "Imaginary part"]
 ylabels = [r"|$\epsilon$|", r"Re($\epsilon$)", r"Im($\epsilon$)"]
 long_wlen = [*[wlens_r]*2]
 long_epsilon = [epsilon_function_r(wlens_r), fitted_epsilon_r(freqs_r)]
+# long_epsilon = [long_epsilon[0]/np.max(np.abs((long_epsilon[0]))),
+#                 -long_epsilon[1]/np.max(np.abs((long_epsilon[1])))]
 labels = ["Interpolation for Rakic", "Fit function using Meep parameters"]
 styles = ["-C0", "--r"]
 
@@ -198,6 +201,12 @@ wlen_range_jc = np.array([min(wlens_jc), max(wlens_jc)])
 freqs_jc = 1/wlens_jc
 
 epsilon_data_jc = np.power(data_n_jc[:,1] + 1j*data_n_jc[:,2], 2)
+
+#%%
+
+epsilon_data_jc = epsilon_data_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
+freqs_jc = freqs_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
+wlens_jc = wlens_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
 
 #%%
 
@@ -448,6 +457,111 @@ def added_susceptibilities_fit_12(freq,
     
     return fit
 
+def added_susceptibilities_fit_13(freq, 
+                                  freq_0, gamma_0, sigma_0,
+                                  freq_1, gamma_1, sigma_1,
+                                  freq_2, gamma_2, sigma_2,
+                                  freq_3, gamma_3, sigma_3,
+                                  freq_4, gamma_4, sigma_4,
+                                  freq_5, gamma_5, sigma_5,
+                                  freq_6, gamma_6, sigma_6,
+                                  freq_7, gamma_7, sigma_7,
+                                  freq_8, gamma_8, sigma_8,
+                                  freq_9, gamma_9, sigma_9,
+                                  freq_10, gamma_10, sigma_10,
+                                  freq_11, gamma_11, sigma_11,
+                                  freq_12, gamma_12, sigma_12,
+                                  freq_13, gamma_13, sigma_13):
+    
+    fit = drude_susceptibility_fit(freq, freq_0, gamma_0, sigma_0)
+    fit += lorentz_susceptibility_fit(freq, freq_1, gamma_1, sigma_1)
+    fit += lorentz_susceptibility_fit(freq, freq_2, gamma_2, sigma_2)
+    fit += lorentz_susceptibility_fit(freq, freq_3, gamma_3, sigma_3)
+    fit += lorentz_susceptibility_fit(freq, freq_4, gamma_4, sigma_4)
+    fit += lorentz_susceptibility_fit(freq, freq_5, gamma_5, sigma_5)
+    fit += lorentz_susceptibility_fit(freq, freq_6, gamma_6, sigma_6)
+    fit += lorentz_susceptibility_fit(freq, freq_7, gamma_7, sigma_7)
+    fit += lorentz_susceptibility_fit(freq, freq_8, gamma_8, sigma_8)
+    fit += lorentz_susceptibility_fit(freq, freq_9, gamma_9, sigma_9)
+    fit += lorentz_susceptibility_fit(freq, freq_10, gamma_10, sigma_10)
+    fit += lorentz_susceptibility_fit(freq, freq_11, gamma_11, sigma_11)
+    fit += lorentz_susceptibility_fit(freq, freq_12, gamma_12, sigma_12)
+    fit += lorentz_susceptibility_fit(freq, freq_13, gamma_13, sigma_13)
+    
+    return fit
+
+def added_susceptibilities_fit_14(freq, 
+                                  freq_0, gamma_0, sigma_0,
+                                  freq_1, gamma_1, sigma_1,
+                                  freq_2, gamma_2, sigma_2,
+                                  freq_3, gamma_3, sigma_3,
+                                  freq_4, gamma_4, sigma_4,
+                                  freq_5, gamma_5, sigma_5,
+                                  freq_6, gamma_6, sigma_6,
+                                  freq_7, gamma_7, sigma_7,
+                                  freq_8, gamma_8, sigma_8,
+                                  freq_9, gamma_9, sigma_9,
+                                  freq_10, gamma_10, sigma_10,
+                                  freq_11, gamma_11, sigma_11,
+                                  freq_12, gamma_12, sigma_12,
+                                  freq_13, gamma_13, sigma_13,
+                                  freq_14, gamma_14, sigma_14):
+    
+    fit = drude_susceptibility_fit(freq, freq_0, gamma_0, sigma_0)
+    fit += lorentz_susceptibility_fit(freq, freq_1, gamma_1, sigma_1)
+    fit += lorentz_susceptibility_fit(freq, freq_2, gamma_2, sigma_2)
+    fit += lorentz_susceptibility_fit(freq, freq_3, gamma_3, sigma_3)
+    fit += lorentz_susceptibility_fit(freq, freq_4, gamma_4, sigma_4)
+    fit += lorentz_susceptibility_fit(freq, freq_5, gamma_5, sigma_5)
+    fit += lorentz_susceptibility_fit(freq, freq_6, gamma_6, sigma_6)
+    fit += lorentz_susceptibility_fit(freq, freq_7, gamma_7, sigma_7)
+    fit += lorentz_susceptibility_fit(freq, freq_8, gamma_8, sigma_8)
+    fit += lorentz_susceptibility_fit(freq, freq_9, gamma_9, sigma_9)
+    fit += lorentz_susceptibility_fit(freq, freq_10, gamma_10, sigma_10)
+    fit += lorentz_susceptibility_fit(freq, freq_11, gamma_11, sigma_11)
+    fit += lorentz_susceptibility_fit(freq, freq_12, gamma_12, sigma_12)
+    fit += lorentz_susceptibility_fit(freq, freq_13, gamma_13, sigma_13)
+    fit += lorentz_susceptibility_fit(freq, freq_14, gamma_14, sigma_14)
+    
+    return fit
+
+def added_susceptibilities_fit_15(freq, 
+                                  freq_0, gamma_0, sigma_0,
+                                  freq_1, gamma_1, sigma_1,
+                                  freq_2, gamma_2, sigma_2,
+                                  freq_3, gamma_3, sigma_3,
+                                  freq_4, gamma_4, sigma_4,
+                                  freq_5, gamma_5, sigma_5,
+                                  freq_6, gamma_6, sigma_6,
+                                  freq_7, gamma_7, sigma_7,
+                                  freq_8, gamma_8, sigma_8,
+                                  freq_9, gamma_9, sigma_9,
+                                  freq_10, gamma_10, sigma_10,
+                                  freq_11, gamma_11, sigma_11,
+                                  freq_12, gamma_12, sigma_12,
+                                  freq_13, gamma_13, sigma_13,
+                                  freq_14, gamma_14, sigma_14,
+                                  freq_15, gamma_15, sigma_15):
+    
+    fit = drude_susceptibility_fit(freq, freq_0, gamma_0, sigma_0)
+    fit += lorentz_susceptibility_fit(freq, freq_1, gamma_1, sigma_1)
+    fit += lorentz_susceptibility_fit(freq, freq_2, gamma_2, sigma_2)
+    fit += lorentz_susceptibility_fit(freq, freq_3, gamma_3, sigma_3)
+    fit += lorentz_susceptibility_fit(freq, freq_4, gamma_4, sigma_4)
+    fit += lorentz_susceptibility_fit(freq, freq_5, gamma_5, sigma_5)
+    fit += lorentz_susceptibility_fit(freq, freq_6, gamma_6, sigma_6)
+    fit += lorentz_susceptibility_fit(freq, freq_7, gamma_7, sigma_7)
+    fit += lorentz_susceptibility_fit(freq, freq_8, gamma_8, sigma_8)
+    fit += lorentz_susceptibility_fit(freq, freq_9, gamma_9, sigma_9)
+    fit += lorentz_susceptibility_fit(freq, freq_10, gamma_10, sigma_10)
+    fit += lorentz_susceptibility_fit(freq, freq_11, gamma_11, sigma_11)
+    fit += lorentz_susceptibility_fit(freq, freq_12, gamma_12, sigma_12)
+    fit += lorentz_susceptibility_fit(freq, freq_13, gamma_13, sigma_13)
+    fit += lorentz_susceptibility_fit(freq, freq_14, gamma_14, sigma_14)
+    fit += lorentz_susceptibility_fit(freq, freq_15, gamma_15, sigma_15)
+    
+    return fit
+
 #%%
 
 added_susceptibilities_fits = [added_susceptibilities_fit_0,
@@ -462,10 +576,13 @@ added_susceptibilities_fits = [added_susceptibilities_fit_0,
                                added_susceptibilities_fit_9,
                                added_susceptibilities_fit_10,
                                added_susceptibilities_fit_11,
-                               added_susceptibilities_fit_12]
+                               added_susceptibilities_fit_12,
+                               added_susceptibilities_fit_13,
+                               added_susceptibilities_fit_14,
+                               added_susceptibilities_fit_15]
 
 min_fit_grade = 0
-max_fit_grade = 8
+max_fit_grade = 15
 
 #%%
 
@@ -516,28 +633,29 @@ for ax, f, t, y in zip(axes, functions, titles, ylabels):
         ax.plot(wl, f(eps), lst, color=col, label=l)
         ax.xaxis.set_label_text(r"Wavelength [$\mu$m]")
         ax.yaxis.set_label_text(y)
-        ax.legend()
-        ax.set_xlim(*wlen_range_jc)
+        ax.legend(ncol=2)
+        ax.set_xlim(min(wlens_jc), max(wlens_jc))
         max_value.append(max(f(eps)))
         min_value.append(min(f(eps)))
         
 for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)), 
                               max(max_value)+.1*(max(max_value)-min(min_value))])
 
-vs.saveplot( plot_file(f"{material}DrudeLorentzJCFit.png"), overwrite=True )
+vs.saveplot( plot_file(f"{material}DrudeLorentzJCFit{max(wlens_jc)*from_um_factor*1e3:.0f}.png"), overwrite=True )
 
 #%%
 
 for ax in axes: 
-    ax.set_ylim([-50,50])
     if material=="Au":
+        ax.set_ylim([-50,50])
         ax.set_xlim([.4, .8])
     elif material=="Ag":
-        ax.set_xlim([.25, .8])
+        ax.set_ylim([-12,12])
+        ax.set_xlim([.25, .5])
     else:
         raise ValueError("Material not recognized for zoom in plot")
     
-vs.saveplot( plot_file(f"{material}DrudeLorentzJCFitZoom.png"), overwrite=True )
+vs.saveplot( plot_file(f"{material}DrudeLorentzJCFit{max(wlens_jc)*from_um_factor*1e3:.0f}Zoom.png"), overwrite=True )
 
 #%%
 
@@ -564,8 +682,7 @@ for ax, f, t, y in zip(axes, functions, titles, ylabels):
         ax.xaxis.set_label_text(r"Wavelength [$\mu$m]")
         ax.yaxis.set_label_text(y)
         ax.legend(ncol=2)
-        # ax.set_xlim(*[.4,.8])
-        ax.set_xlim(*wlen_range_jc)
+        ax.set_xlim(min(wlens_jc), max(wlens_jc))
         max_value.append(max(f(res)))
         min_value.append(min(f(res)))
         
@@ -573,17 +690,18 @@ for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)),
                              max(max_value)+.1*(max(max_value)-min(min_value))])
 # for ax in axes: ax.set_ylim([-50,50])
 
-vs.saveplot( plot_file(f"{material}DrudeLorentzJCResiduals.png"), overwrite=True )
+vs.saveplot( plot_file(f"{material}DrudeLorentzJCResiduals{max(wlens_jc)*from_um_factor*1e3:.0f}.png"), overwrite=True )
 
 #%%
 
 for ax in axes: 
-    ax.set_ylim([-50,50])
     if material=="Au":
+        ax.set_ylim([-50,50])
         ax.set_xlim([.4, .8])
     elif material=="Ag":
-        ax.set_xlim([.25, .8])
+        ax.set_ylim([-12,12])
+        ax.set_xlim([.25, .5])
     else:
         raise ValueError("Material not recognized for zoom in plot")
     
-vs.saveplot( plot_file(f"{material}DrudeLorentzJCResidualsZoom.png"), overwrite=True )
+vs.saveplot( plot_file(f"{material}DrudeLorentzJCResiduals{max(wlens_jc)*from_um_factor*1e3:.0f}Zoom.png"), overwrite=True )
