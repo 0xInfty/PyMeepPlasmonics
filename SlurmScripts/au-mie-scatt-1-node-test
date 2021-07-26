@@ -12,9 +12,9 @@
 
 #SBATCH --job-name=au-mie-1-node                             # Task name
 
-#SBATCH --output=SlurmScripts/ErrorLogs/au-mie-1-node-%j.out # Output file
+#SBATCH --output="ErrorLogs/au-mie-1-node-%j.out" # Output file
 
-#SBATCH --error=SlurmScripts/ErrorLogs/au-mie-1-node-%j.err  # Error file
+#SBATCH --error="ErrorLogs/au-mie-1-node-%j.err"  # Error file
 
 # #SBATCH --test-only   # Check if legible and return posible start time
 
