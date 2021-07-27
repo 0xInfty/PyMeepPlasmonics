@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# SLURM script to make intra-node test with the 103 nm gold nanosphere in visible spectrum
+
+#SBATCH --ntasks=8                # Total number of cores
+
+#SBATCH --nodes=1                 # Total number of nodes
+
+#SBATCH -p free-rider             # Partition
+
+#SBATCH -t 10                     # Maximum time reserved for execution, expressed in minutes
+
+#SBATCH --job-name=meep-tut                  # Task name
+
+#SBATCH --output="ErrorLogs/meep-tut-%j.out" # Output file
+
+#SBATCH --error="ErrorLogs/meep-tut-%j.err"  # Error file
+
+# #SBATCH --test-only   # Check if legible and return posible start time
+
+# ## Environment!
+export PATH=/nfs/home/vpais/miniconda/bin:$PATH
+conda init bash
+source ~/.bash_profile
+source ~/.bashrc
+conda activate pmp
+cd /nfs/home/vpais/ThesisPython
+
+# ## Parallel way 1
+
+srun python -m mpi4py ./MeepTutorial/straight-waveguide.py
+
+# ## Parallel way 2
+
+# Generate Machinefile for mpi such that hosts are in the same order as if run via srun
+#MACHINEFILE="SlurmScripts/ConfigFiles/nodes.$SLURM_JOB_ID"
+#srun -l /bin/hostname | sort -n | awk '{print $2}' > $MACHINEFILE
+
+# Run using generated Machine file:
+# mpirun -np $SLURM_NTASKS -machinefile $MACHINEFILE mpi-app
+
