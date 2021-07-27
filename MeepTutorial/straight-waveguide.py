@@ -72,4 +72,4 @@ plt.plot((cell.x/2-7)*resolution,
 plt.axis('off')
 plt.show()
 if mp.am_master():
-    plt.savefig("/nfs/home/vpais/ThesisResults.png")
+    plt.savefig(f"/nfs/home/vpais/ThesisResults/Test/MeepTutTUPAC/NP{mp.count_processors():.0f}.png")
