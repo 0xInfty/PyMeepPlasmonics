@@ -273,14 +273,7 @@ def main(from_um_factor, resolution, courant,
                                  cell_width, cell_width)),
                     *geometry]
     # A certain material surface underneath it
-    
-    home = vs.get_home()
-    sysname = vs.get_sys_name()
-    path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and vm.parallel_assign(0, n_processes, parallel):
-        os.makedirs(path)
-    file = lambda f : os.path.join(path, f)
-        
+          
     # Computation
     enlapsed = []
     
@@ -298,6 +291,13 @@ def main(from_um_factor, resolution, courant,
         np_process = mp.count_processors()
     else:
         np_process = 1
+        
+    home = vs.get_home()
+    sysname = vs.get_sys_name()
+    path = os.path.join(home, folder, series)
+    if not os.path.isdir(path) and vm.parallel_assign(0, n_processes, parallel):
+        os.makedirs(path)
+    file = lambda f : os.path.join(path, f)
     
     #%% FIRST RUN
     
