@@ -36,7 +36,6 @@ import PyMieScatt as ps
 import v_materials as vmt
 import v_meep as vm
 import v_save as vs
-import v_utilities as vu
 
 used_ram, swapped_ram, measure_ram = vm.ram_manager()
 measure_ram()
@@ -274,7 +273,6 @@ def main(from_um_factor, resolution, courant,
                     *geometry]
     # A certain material surface underneath it
           
-    # Computation
     enlapsed = []
     
     parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
