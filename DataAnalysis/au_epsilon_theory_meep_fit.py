@@ -23,7 +23,7 @@ epsilon = sys.float_info.epsilon
 
 material = "Ag"
 from_um_factor = 1
-max_wlen = 750 # nm
+max_wlen = 850 # nm
 
 plot_file = lambda n : os.path.join(home, "DataAnalysis/MaterialsPaper", n)
 
@@ -115,7 +115,7 @@ def fit_params_r(from_um_factor, material):
         Ag_f0 = 0.845
         params["freq_0"] = 1e-10
         params["gamma_0"] = 0.048*eV_from_um_factor
-        params["sigma_0"] = Ag_f0 * Ag_plasma_frq**2 / Ag_f0**2
+        params["sigma_0"] = Ag_f0 * Ag_plasma_frq**2 / params["freq_0"]**2
         Ag_f1 = 0.065
         params["freq_1"] = 0.816*eV_from_um_factor      # 1.519 um
         params["gamma_1"] = 3.886*eV_from_um_factor
@@ -204,9 +204,10 @@ epsilon_data_jc = np.power(data_n_jc[:,1] + 1j*data_n_jc[:,2], 2)
 
 #%%
 
-epsilon_data_jc = epsilon_data_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
-freqs_jc = freqs_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
-wlens_jc = wlens_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
+if max_wlen is not None:
+    epsilon_data_jc = epsilon_data_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
+    freqs_jc = freqs_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
+    wlens_jc = wlens_jc[wlens_jc < max_wlen / (from_um_factor * 1e3)]
 
 #%%
 
@@ -610,7 +611,7 @@ for n in range(min_fit_grade, max_fit_grade+1):
     
     fitted_epsilon_jc.append( results[-1].best_fit )
 
-#%%
+#%% PLOT FIT
 
 functions = [np.abs, np.real, np.imag]
 titles = ["Absolute value", "Real part", "Imaginary part"]
@@ -643,7 +644,7 @@ for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)),
 
 vs.saveplot( plot_file(f"{material}DrudeLorentzJCFit{max(wlens_jc)*from_um_factor*1e3:.0f}.png"), overwrite=True )
 
-#%%
+#%% PLOT FIT ZOOM
 
 for ax in axes: 
     if material=="Au":
@@ -657,7 +658,7 @@ for ax in axes:
     
 vs.saveplot( plot_file(f"{material}DrudeLorentzJCFit{max(wlens_jc)*from_um_factor*1e3:.0f}Zoom.png"), overwrite=True )
 
-#%%
+#%% PLOT RESIDUALS
 
 functions = [np.abs, np.real, np.imag]
 titles = ["Absolute value", "Real part", "Imaginary part"]
@@ -692,7 +693,7 @@ for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)),
 
 vs.saveplot( plot_file(f"{material}DrudeLorentzJCResiduals{max(wlens_jc)*from_um_factor*1e3:.0f}.png"), overwrite=True )
 
-#%%
+#%% PLOT RESIDUALS ZOOM
 
 for ax in axes: 
     if material=="Au":
