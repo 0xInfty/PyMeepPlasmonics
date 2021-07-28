@@ -281,6 +281,56 @@ def import_medium(name, from_um_factor=1, paper="R"):
         
         return Ag
     
+    elif name=="Ag" and paper=="JC":
+        
+    #------------------------------------------------------------------
+    # Metal from my own fit
+    # Wavelength range: 0.1879 - 0.8211 um
+    # Gold (Au)
+    # Fit to P.B. Johnson and R.W. Christy, Physical Review B, Vol. 6, pp. 4370-9, 1972
+    # Reduced range to improve convergence
+    
+        Ag_JC_range = mp.FreqRange(min=from_um_factor*1e3/821.1, 
+                                   max=from_um_factor*1e3/187.9)
+        
+        freq_0 = 1.000000082740371e-10 * from_um_factor
+        gamma_0 = 0.008487871792800084 * from_um_factor
+        sigma_0 = 5.545340096443978e+21
+        
+        freq_1 = 0.0008857703799738381 * from_um_factor
+        gamma_1 = 5.681495075323141 * from_um_factor
+        sigma_1 = 7.73865735861863
+        
+        freq_2 = 3.5889483054274587 * from_um_factor
+        gamma_2 = 0.5142171316339426 * from_um_factor
+        sigma_2 = 0.3602917089945181
+        
+        freq_3 = 96.93018042700993 * from_um_factor
+        gamma_3 = 0.0002454108091400897 * from_um_factor
+        sigma_3 = 2.2055854266028954
+        
+        freq_4 = 4.243182517437894 * from_um_factor
+        gamma_4 = 1.0115197559416669 * from_um_factor
+        sigma_4 = 0.5560036781232447
+        
+        freq_5 = 5.375891811139136 * from_um_factor
+        gamma_5 = 1.6462280921732821 * from_um_factor
+        sigma_5 = 0.7492696272872168
+        
+        Ag_JC_susc = [mp.DrudeSusceptibility(frequency=freq_0, gamma=gamma_0, sigma=sigma_0),
+                      mp.LorentzianSusceptibility(frequency=freq_1, gamma=gamma_1, sigma=sigma_1),
+                      mp.LorentzianSusceptibility(frequency=freq_2, gamma=gamma_2, sigma=sigma_2),
+                      mp.LorentzianSusceptibility(frequency=freq_3, gamma=gamma_3, sigma=sigma_3),
+                      mp.LorentzianSusceptibility(frequency=freq_4, gamma=gamma_4, sigma=sigma_4),
+                      mp.LorentzianSusceptibility(frequency=freq_5, gamma=gamma_5, sigma=sigma_5)]
+        
+        Ag_JC = mp.Medium(epsilon=1.0,#6.1599, 
+                          E_susceptibilities=Ag_JC_susc, 
+                          valid_freq_range=Ag_JC_range)
+        Ag_JC.from_um_factor = from_um_factor
+        
+        return Ag_JC
+    
     elif name=="Ag" and paper=="P":
 
     #------------------------------------------------------------------
@@ -435,10 +485,9 @@ def epsilon_function_from_meep(material="Au", paper="JC", from_um_factor=1e-3):
     
     return epsilon_function
 
-def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo", 
-                               from_um_factor=1e-3, plot=False):
+def epsilon_data_from_file(material="Au", paper="JC", reference="RIinfo"):
     """
-    Generates an interpolation function for epsilon from experimental data.
+    Loads experimental data for epsilon from file.
     
     Parameters
     ----------
@@ -450,19 +499,13 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo",
     reference="RIinfo" : str
         Reference from which the data was extracted, for example a web page. 
         Available: 'RIinfo' for 'www.refractiveindex.info'
-    from_um_factor=1e-3 : float, optional
-        Meep factor of length scale implying 1 Meep length unit is 
-        from_um_factor length units in μm. If provided, the function takes 
-        wavelength in Meep units instead of nm.
-    plot=False : bool
-        Parameter that enables a plot of the interpolation and the data used.
         
     Returns
     -------
-    epsilon_function : function
-        Epsilon function that takes wavelength in nm or Meep units as argument 
-        and returns complex dielectric constant or relative permitivitty 
-        epsilon = epsilon' + i epsilon'', dimensionless.
+    wavelength : np.array
+        Wavelength values in nm.
+    epsilon : np.array
+        Complex epsilon data, epsilon = epsilon' + i epsilon'', dimensionless.
     
     Raises
     ------
@@ -510,34 +553,76 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo",
     file = data_files[0]
     data = np.loadtxt(file)
     
-    meep_wlen = data[:,0] / (1e3 * from_um_factor)
-    # Change wavelength units if necessary
-    # Going from nm to Meep units
-    
+    wavelength = data[:,0]
+        
     if 'N' in file:
-        epsilon_function = epsilon_interpoler_from_n(
-            meep_wlen, data[:,1] + 1j*data[:,2])
+        epsilon = np.power(data[:,1] + 1j*data[:,2], 2)
         print(f"Refractive index data loaded from '{file}'")
     elif "eps" in file.lower():
-        epsilon_function = epsilon_interpoler_from_epsilon(
-            meep_wlen, data[:,1] + 1j*data[:,2])
+        epsilon = data[:,1] + 1j*data[:,2]
         print(f"Epsilon data loaded from '{file}'")
     else:
         raise ValueError("Experimental data couldn't be recognized. Sorry!")
+    
+    return wavelength, epsilon
+
+def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo", 
+                               from_um_factor=1e-3, plot=False):
+    """
+    Generates an interpolation function for epsilon from experimental data.
+    
+    Parameters
+    ----------
+    material="Au" : str
+        Material's chemical symbol. Available: 'Au' for gold.
+    paper="JC" : str
+        Paper source of experimental data. Available: 'JC' for Johnson 
+        and Christy, 'R' for Rakic.
+    reference="RIinfo" : str
+        Reference from which the data was extracted, for example a web page. 
+        Available: 'RIinfo' for 'www.refractiveindex.info'
+    from_um_factor=1e-3 : float, optional
+        Meep factor of length scale implying 1 Meep length unit is 
+        from_um_factor length units in μm. If provided, the function takes 
+        wavelength in Meep units instead of nm.
+    plot=False : bool
+        Parameter that enables a plot of the interpolation and the data used.
+        
+    Returns
+    -------
+    epsilon_function : function
+        Epsilon function that takes wavelength in nm or Meep units as argument 
+        and returns complex dielectric constant or relative permitivitty 
+        epsilon = epsilon' + i epsilon'', dimensionless.
+    
+    Raises
+    ------
+    ValueError : "Material should either be..."
+        When the desired material isn't available.
+    ValueError : "Reference paper should either be..."
+        When the desired paper reference of experimental data isn't available.
+    ValueError : "Data should either be from..."
+        When the desired data source isn't available.
+    ValueError : "Experimental data couldn't be found. Sorry!"
+        When the combination of parameters causes the data not to be found.
+    """
+    
+    wavelength, epsilon_data = epsilon_data_from_file(material, paper, reference)
+    
+    meep_wlen = wavelength / (1e3 * from_um_factor)
+    # Change wavelength units if necessary
+    # Going from nm to Meep units
+    
+    epsilon_function = epsilon_interpoler_from_epsilon(meep_wlen, epsilon_data)
     
     meep_wlen_range = [min(meep_wlen), max(meep_wlen)]
     epsilon_function._wlen_range_ = np.array(meep_wlen_range)
     epsilon_function._from_um_factor_ = from_um_factor
             
     if plot:
-        wlen = data[:,0]
-        wlen_range = [min(data[:,0]), max(data[:,0])]
+        wlen_range = [min(wavelength), max(wavelength)]
         wlen_long = np.linspace(*wlen_range, 500)
         
-        if "eps" in file.lower():
-            epsilon = data[:,1] + 1j*data[:,2]
-        else:
-            epsilon = np.power(data[:,1] + 1j*data[:,2], 2)
         epsilon_interpolated = epsilon_function(wlen_long)
                 
         functions = [np.abs, np.real, np.imag]
@@ -553,18 +638,19 @@ def epsilon_function_from_file(material="Au", paper="JC", reference="RIinfo",
         min_value = []
         for ax, f, t, y in zip(axes, functions, titles, ylabels):
             ax.set_title(t)
-            ax.plot(wlen, f(epsilon), "ob", label="Data")
+            ax.plot(wavelength, f(epsilon_data), "ob", label="Data")
             ax.plot(wlen_long, f(epsilon_interpolated), "-r", label="Interpolation")
             ax.xaxis.set_label_text("Wavelength [nm]")
             ax.yaxis.set_label_text(y)
             ax.legend()
             ax.set_xlim(*wlen_range)
-            max_value.append(max([max(f(epsilon)), max(f(epsilon_interpolated))]))
-            min_value.append(min([min(f(epsilon)), min(f(epsilon_interpolated))]))
+            max_value.append(max([max(f(epsilon_data)), max(f(epsilon_interpolated))]))
+            min_value.append(min([min(f(epsilon_data)), min(f(epsilon_interpolated))]))
                 
         for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)), 
                                      max(max_value)+.1*(max(max_value)-min(min_value))])
-        axes[0].text(-.1, -.13, file, transform=axes[0].transAxes)
+        axes[0].text(-.1, -.13, f"{material}{paper}{reference}", 
+                     transform=axes[0].transAxes)
     
     return epsilon_function
 
@@ -627,6 +713,348 @@ def epsilon_function(material="Au", paper="JC", reference="RIinfo",
         
     
     return epsilon_function
+
+#%% REFRACTIVE INDEX INTERPOLATION
+
+def n_interpoler_from_n(wlen, complex_n):
+    """
+    Generates an interpolation function for N from experimental N data.
+
+    Parameters
+    ----------
+    wlen : np.array, list
+        Wavelength in nm.
+    complex_n : np.array, list
+        Complex refractive index N = n + ik, dimensionless.
+
+    Returns
+    -------
+    N_function : function
+        Refractive index N interpoler that takes wavelength in nm as argument 
+        and returns complex refractive index N = n + i k, dimensionless.
+    """
+
+    n_function = interp1d(wlen, np.real(complex_n), kind="cubic")
+    k_function = interp1d(wlen, np.imag(complex_n), kind="cubic")
+    N_function = lambda wl : n_function(wl) + 1j * k_function(wl)
+    
+    return N_function
+
+def n_interpoler_from_epsilon(wlen, complex_epsilon):
+    """
+    Generates an interpolation function for N from experimental epsilon data.
+
+    Parameters
+    ----------
+    wlen : np.array, list
+        Wavelength in nm.
+    complex_epsilon : np.array, list
+        Complex dielectric constant or relative permitivitty 
+        epsilon = epsilon' + i epsilon'', dimensionless.
+
+    Returns
+    -------
+    N_function : function
+        Refractive index N interpoler that takes wavelength in nm as argument 
+        and returns complex refractive index N = n + i k, dimensionless.
+    """
+
+    real_function = interp1d(wlen, np.real(complex_epsilon), kind="cubic")
+    imag_function = interp1d(wlen, np.imag(complex_epsilon), kind="cubic")
+    epsilon_function = lambda wl : real_function(wl) + 1j * imag_function(wl)
+    N_function = lambda wl : np.sqrt(epsilon_function(wl))
+    
+    return N_function
+
+def n_function_from_meep(material="Au", paper="JC", from_um_factor=1e-3):
+    
+    """
+    Generates a function for isotropic N from Meep Drude-Lorentz fit data.
+    
+    Parameters
+    ----------
+    material="Au" : str
+        Material's chemical symbol. Available: 'Au' for gold.
+    paper="JC" : str
+        Paper source of experimental data. Available: 'JC' for Johnson 
+        and Christy, 'R' for Rakic, 'P' for Palik.
+    from_um_factor=1e-3 : float, optional
+        Meep factor of length scale implying 1 Meep length unit is 
+        from_um_factor length units in μm. If provided, the function takes 
+        wavelength in Meep units instead of nm.
+        
+    Returns
+    -------
+    N_function : function
+        Refractive index N interpoler that takes wavelength in nm as argument 
+        and returns complex refractive index N = n + i k, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Material should either be..."
+        When the desired material isn't available.
+    ValueError : "Reference paper should either be..."
+        When the desired paper reference of experimental data isn't available.
+    ValueError : "Data should either be from..."
+        When the desired data source isn't available.
+    ValueError : "Experimental data couldn't be found. Sorry!"
+        When the combination of parameters causes the data not to be found.
+    """
+
+    
+    available_materials = {"Au": "gold", "Ag": "silver"}
+    available_papers = {"JC": "Johnson & Christy", "R": "Rakic", "P": "Palik"}
+    
+    if material not in available_materials.keys():
+        error = "Data should either be from "
+        error += vu.enumerate_string(vu.join_strings_dict(available_materials), 
+                                     "or", True)
+        raise ValueError(error)
+    if paper not in available_papers.keys():
+        error = "Reference paper for experimental data should either be "
+        error += vu.enumerate_string(vu.join_strings_dict(available_papers), 
+                                     "or", True)
+        raise ValueError(error)
+        
+    medium = import_medium(material, 
+                           paper=paper) # This one has from_um_factor=1
+    
+    print(f"Data loaded using Meep and '{paper}'")
+    epsilon_function = lambda wlen : medium.epsilon(1/(wlen*from_um_factor))[0,0]
+    # To pass it to the medium, I transform wavelength from nm (or Meep units) to um
+    N_function = lambda wlen : np.sqrt(epsilon_function(wlen))
+    
+    wlen_range = 1/(np.flip(np.array([*medium.valid_freq_range]))*from_um_factor)
+    N_function._wlen_range_ = wlen_range
+    N_function._from_um_factor_ = from_um_factor
+    
+    return N_function
+
+def n_data_from_file(material="Au", paper="JC", reference="RIinfo"):
+    """
+    Loads experimental data for epsilon from file.
+    
+    Parameters
+    ----------
+    material="Au" : str
+        Material's chemical symbol. Available: 'Au' for gold.
+    paper="JC" : str
+        Paper source of experimental data. Available: 'JC' for Johnson 
+        and Christy, 'R' for Rakic.
+    reference="RIinfo" : str
+        Reference from which the data was extracted, for example a web page. 
+        Available: 'RIinfo' for 'www.refractiveindex.info'
+        
+    Returns
+    -------
+    wavelength : np.array
+        Wavelength values in nm.
+    N : np.array
+        Refractive index N data N = n + i k, dimensionless.
+    
+    Raises
+    ------
+    ValueError : "Material should either be..."
+        When the desired material isn't available.
+    ValueError : "Reference paper should either be..."
+        When the desired paper reference of experimental data isn't available.
+    ValueError : "Data should either be from..."
+        When the desired data source isn't available.
+    ValueError : "Experimental data couldn't be found. Sorry!"
+        When the combination of parameters causes the data not to be found.
+    """
+    
+    available_materials = {"Au": "gold", "Ag": "silver"}
+    available_papers = {"JC": "Johnson & Christy",
+                        "R": "Rakic"}
+    available_references = {"RIinfo": "www.refractiveindex.info"}
+    
+    if material not in available_materials.keys():
+        error = "Data should either be from "
+        error += vu.enumerate_string(vu.join_strings_dict(available_materials), 
+                                     "or", True)
+        raise ValueError(error)
+    if paper not in available_papers.keys():
+        error = "Reference paper for experimental data should either be "
+        error += vu.enumerate_string(vu.join_strings_dict(available_papers), 
+                                     "or", True)
+        raise ValueError(error)
+    if reference not in available_references.keys():
+        error = "Experimental data should either be extracted from "
+        error += vu.enumerate_string(vu.join_strings_dict(available_references), 
+                                     "or", True)
+        raise ValueError(error)
+    
+    data_series = os.listdir(os.path.join(syshome, 'MaterialsData'))
+    
+    try:
+        data_files = []
+        for df in data_series:
+            if (f"_{paper}_") in df and material in df and reference in df:
+                data_files.append( os.path.join(syshome, 'MaterialsData', df) )
+    except:
+        raise ValueError("Experimental data couldn't be found. Sorry!")
+    
+    file = data_files[0]
+    data = np.loadtxt(file)
+    
+    wavelength = data[:,0]
+        
+    if 'N' in file:
+        N = data[:,1] + 1j*data[:,2]
+        print(f"Refractive index data loaded from '{file}'")
+    elif "eps" in file.lower():
+        N = np.sqrt(data[:,1] + 1j*data[:,2])
+        print(f"Epsilon data loaded from '{file}'")
+    else:
+        raise ValueError("Experimental data couldn't be recognized. Sorry!")
+    
+    return wavelength, N
+
+def n_function_from_file(material="Au", paper="JC", reference="RIinfo", 
+                         from_um_factor=1e-3, plot=False):
+    """
+    Generates an interpolation function for N from experimental data.
+    
+    Parameters
+    ----------
+    material="Au" : str
+        Material's chemical symbol. Available: 'Au' for gold.
+    paper="JC" : str
+        Paper source of experimental data. Available: 'JC' for Johnson 
+        and Christy, 'R' for Rakic.
+    reference="RIinfo" : str
+        Reference from which the data was extracted, for example a web page. 
+        Available: 'RIinfo' for 'www.refractiveindex.info'
+    from_um_factor=1e-3 : float, optional
+        Meep factor of length scale implying 1 Meep length unit is 
+        from_um_factor length units in μm. If provided, the function takes 
+        wavelength in Meep units instead of nm.
+    plot=False : bool
+        Parameter that enables a plot of the interpolation and the data used.
+        
+    Returns
+    -------
+    N_function : function
+        Refractive index N interpoler that takes wavelength in nm or Meep units 
+        as argument  and returns complex refractive index N = n + i k, 
+        dimensionless.
+    
+    Raises
+    ------
+    ValueError : "Material should either be..."
+        When the desired material isn't available.
+    ValueError : "Reference paper should either be..."
+        When the desired paper reference of experimental data isn't available.
+    ValueError : "Data should either be from..."
+        When the desired data source isn't available.
+    ValueError : "Experimental data couldn't be found. Sorry!"
+        When the combination of parameters causes the data not to be found.
+    """
+    
+    wavelength, N_data = n_data_from_file(material, paper, reference)
+    
+    meep_wlen = wavelength / (1e3 * from_um_factor)
+    # Change wavelength units if necessary
+    # Going from nm to Meep units
+    
+    N_function = n_interpoler_from_n(meep_wlen, N_data)
+    
+    meep_wlen_range = [min(meep_wlen), max(meep_wlen)]
+    N_function._wlen_range_ = np.array(meep_wlen_range)
+    N_function._from_um_factor_ = from_um_factor
+            
+    if plot:
+        wlen_range = [min(wavelength), max(wavelength)]
+        wlen_long = np.linspace(*wlen_range, 500)
+        
+        N_interpolated = N_function(wlen_long)
+                
+        functions = [np.abs, np.real, np.imag]
+        titles = ["Absolute value", "Real part", "Imaginary part"]
+        ylabels = [r"|N| [nm$^3$]", r"Re(N) [nm$^3$]", r"Im(N) [nm$^3$]"]
+        
+        nplots = len(functions)
+        fig = plt.figure(figsize=(nplots*6.4, 6.4))
+        axes = fig.subplots(ncols=nplots)
+        
+        max_value = []
+        min_value = []
+        for ax, f, t, y in zip(axes, functions, titles, ylabels):
+            ax.set_title(t)
+            ax.plot(wavelength, f(N_data), "ob", label="Data")
+            ax.plot(wlen_long, f(N_interpolated), "-r", label="Interpolation")
+            ax.xaxis.set_label_text("Wavelength [nm]")
+            ax.yaxis.set_label_text(y)
+            ax.legend()
+            ax.set_xlim(*wlen_range)
+            max_value.append(max([max(f(N_data)), max(f(N_data))]))
+            min_value.append(min([min(f(N_data)), min(f(N_data))]))
+                
+        for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)), 
+                                      max(max_value)+.1*(max(max_value)-min(min_value))])
+        axes[0].text(-.1, -.13, f"{material}{paper}{reference}", 
+                      transform=axes[0].transAxes)
+    
+    return N_function
+
+def n_function(material="Au", paper="JC", reference="RIinfo", 
+               from_um_factor=1e-3):
+    """
+    Generates an interpolation function for N from experimental data.
+    
+    Parameters
+    ----------
+    material="Au" : str
+        Material's chemical symbol. Available: 'Au' for gold.
+    paper="JC" : str
+        Reference paper of experimental data. Available: 'JC' for Johnson and 
+        Christy, 'R' for Rakic, 'P' for Palik.
+    reference="RIinfo" : str
+        Reference from which the data was extracted, for example a web page. 
+        Available: 'RIinfo' for 'www.refractiveindex.info' and 'Meep' for Meep 
+        materials library that uses a Drude-Lorentz model to fit data.
+    from_um_factor=1e-3 : float, optional
+        Meep factor of length scale implying 1 Meep length unit is 
+        from_um_factor length units in μm. If provided, the function takes 
+        wavelength in Meep units instead of nm.
+        
+    Returns
+    -------
+    N_function : function
+        Refractive index N interpoler that takes wavelength in nm or Meep units 
+        as argument  and returns complex refractive index N = n + i k, 
+        dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Material should either be..."
+        When the desired material isn't available.
+    ValueError : "Reference paper should either be..."
+        When the desired paper reference of experimental data isn't available.
+    ValueError : "Data should either be from..."
+        When the desired data source isn't available.
+    ValueError : "Experimental data couldn't be found. Sorry!"
+        When the combination of parameters causes the data not to be found.
+    """
+    
+    available_references = {"RIinfo": "www.refractiveindex.info",
+                           "Meep": "Meep materials library & Drude-Lorentz fit"}
+    
+    if reference not in available_references.keys():
+        error = "Data should either be from"
+        error += vu.enumerate_string(vu.join_strings_dict(available_references), 
+                                     "or", True)
+        raise ValueError(error)
+    
+    if reference=="Meep":
+        N_function = n_function_from_meep(material, paper, from_um_factor)
+    else:
+        N_function = n_function_from_file(material, paper, 
+                                          reference, from_um_factor)
+        
+    
+    return N_function
 
 #%% MEEP MEDIUM THAT TAKES FUNCTION
 
