@@ -26,16 +26,36 @@ source ~/.bashrc
 conda activate pmp
 cd /nfs/home/vpais/ThesisPython
 
-# ## Parallel way 1
+# ## Parallel way 1 >> Job 380822
 
-srun python -m mpi4py ./MeepTutorial/straight-waveguide.py
+# srun python -m mpi4py ./MeepTutorial/straight-waveguide.py
 
-# ## Parallel way 2
+# ## Parallel way 2 >> Job 380824
 
 # Generate Machinefile for mpi such that hosts are in the same order as if run via srun
-#MACHINEFILE="SlurmScripts/ConfigFiles/nodes.$SLURM_JOB_ID"
-#srun -l /bin/hostname | sort -n | awk '{print $2}' > $MACHINEFILE
+# MACHINEFILE="SlurmScripts/ConfigFiles/nodes.$SLURM_JOB_ID"
+# srun -l /bin/hostname | sort -n | awk '{print $2}' > $MACHINEFILE
 
 # Run using generated Machine file:
-# mpirun -np $SLURM_NTASKS -machinefile $MACHINEFILE mpi-app
+# mpirun -np $SLURM_NTASKS -machinefile $MACHINEFILE ./MeepTutorial/straight-waveguide.py
 
+# ## Parallel way 3 >> Job 380830
+
+# srun -n $SLURM_NTASKS python -m mpi4py ./MeepTutorial/straight-waveguide.py
+
+# ## Parallel way 4 >> Job 380833
+
+# mpirun -np $SLURM_NTASKS python -m mpi4py ./MeepTutorial/straight-waveguide.py
+
+# ## Parallel way 5
+
+mpirun -mca rmaps seq -np $SLURM_NTASKS python -m mpi4py ./MeepTutorial/straight-waveguide.py
+
+# ## Parallel way 6
+
+# Generate Machinefile for mpi such that hosts are in the same order as if run via srun
+# MACHINEFILE="SlurmScripts/ConfigFiles/nodes.$SLURM_JOB_ID"
+# srun -l /bin/hostname | sort -n | awk '{print $2}' > $MACHINEFILE
+
+# Run using generated Machine file:
+# mpirun -np $SLURM_NTASKS -mca rmaps seq -machinefile $MACHINEFILE python -m mpi4py ./MeepTutorial/straight-waveguide.py

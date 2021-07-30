@@ -1,0 +1,133 @@
+no change     /nfs/home/vpais/miniconda/condabin/conda
+no change     /nfs/home/vpais/miniconda/bin/conda
+no change     /nfs/home/vpais/miniconda/bin/conda-env
+no change     /nfs/home/vpais/miniconda/bin/activate
+no change     /nfs/home/vpais/miniconda/bin/deactivate
+no change     /nfs/home/vpais/miniconda/etc/profile.d/conda.sh
+no change     /nfs/home/vpais/miniconda/etc/fish/conf.d/conda.fish
+no change     /nfs/home/vpais/miniconda/shell/condabin/Conda.psm1
+no change     /nfs/home/vpais/miniconda/shell/condabin/conda-hook.ps1
+no change     /nfs/home/vpais/miniconda/lib/python3.9/site-packages/xontrib/conda.xsh
+no change     /nfs/home/vpais/miniconda/etc/profile.d/conda.csh
+no change     /nfs/home/vpais/.bashrc
+No action taken.
+Using MPI version 3.1, 1 processes
+Using MPI version 3.1, 1 processes
+Using MPI version 3.1, 1 processes
+Using MPI version 3.1, 1 processes
+-----------
+Initializing structure...
+-----------
+Initializing structure...
+Using MPI version 3.1, 1 processes
+-----------
+Initializing structure...
+Using MPI version 3.1, 1 processes
+-----------
+Initializing structure...
+Using MPI version 3.1, 1 processes
+Using MPI version 3.1, 1 processes
+-----------
+Initializing structure...
+-----------
+Initializing structure...
+time for choose_chunkdivision = 0.00026989 s
+Working in 2D dimensions.
+Computational cell is 16 x 8 x 0 with resolution 10
+     block, center = (0,0,0)
+          size (1e+20,1,1e+20)
+          axes (1,0,0), (0,1,0), (0,0,1)
+          dielectric constant epsilon diagonal = (12,12,12)
+-----------
+Initializing structure...
+-----------
+Initializing structure...
+time for choose_chunkdivision = 0.000334978 s
+Working in 2D dimensions.
+Computational cell is 16 x 8 x 0 with resolution 10
+     block, center = (0,0,0)
+          size (1e+20,1,1e+20)
+          axes (1,0,0), (0,1,0), (0,0,1)
+          dielectric constant epsilon diagonal = (12,12,12)
+time for choose_chunkdivision = 0.000334978 s
+Working in 2D dimensions.
+Computational cell is 16 x 8 x 0 with resolution 10
+     block, center = (0,0,0)
+          size (1e+20,1,1e+20)
+          axes (1,0,0), (0,1,0), (0,0,1)
+          dielectric constant epsilon diagonal = (12,12,12)
+time for choose_chunkdivision = 0.000268936 s
+Working in 2D dimensions.
+Computational cell is 16 x 8 x 0 with resolution 10
+     block, center = (0,0,0)
+          size (1e+20,1,1e+20)
+          axes (1,0,0), (0,1,0), (0,0,1)
+          dielectric constant epsilon diagonal = (12,12,12)
+time for choose_chunkdivision = 0.000273943 s
+Working in 2D dimensions.
+Computational cell is 16 x 8 x 0 with resolution 10
+     block, center = (0,0,0)
+          size (1e+20,1,1e+20)
+          axes (1,0,0), (0,1,0), (0,0,1)
+          dielectric constant epsilon diagonal = (12,12,12)
+time for choose_chunkdivision = 0.000291109 s
+Working in 2D dimensions.
+Computational cell is 16 x 8 x 0 with resolution 10
+     block, center = (0,0,0)
+          size (1e+20,1,1e+20)
+          axes (1,0,0), (0,1,0), (0,0,1)
+          dielectric constant epsilon diagonal = (12,12,12)
+time for choose_chunkdivision = 0.000324011 s
+Working in 2D dimensions.
+Computational cell is 16 x 8 x 0 with resolution 10
+     block, center = (0,0,0)
+          size (1e+20,1,1e+20)
+          axes (1,0,0), (0,1,0), (0,0,1)
+          dielectric constant epsilon diagonal = (12,12,12)
+time for choose_chunkdivision = 0.000324011 s
+Working in 2D dimensions.
+Computational cell is 16 x 8 x 0 with resolution 10
+     block, center = (0,0,0)
+          size (1e+20,1,1e+20)
+          axes (1,0,0), (0,1,0), (0,0,1)
+          dielectric constant epsilon diagonal = (12,12,12)
+time for set_epsilon = 0.0594599 s
+-----------
+time for set_epsilon = 0.0594599 s
+-----------
+time for set_epsilon = 0.0604591 s
+-----------
+time for set_epsilon = 0.059485 s
+-----------
+time for set_epsilon = 0.0595729 s
+-----------
+time for set_epsilon = 0.0595551 s
+-----------
+time for set_epsilon = 0.0611479 s
+-----------
+time for set_epsilon = 0.061003 s
+-----------
+run 0 finished at t = 200.0 (4000 timesteps)
+run 0 finished at t = 200.0 (4000 timesteps)
+run 0 finished at t = 200.0 (4000 timesteps)
+run 0 finished at t = 200.0 (4000 timesteps)
+run 0 finished at t = 200.0 (4000 timesteps)
+run 0 finished at t = 200.0 (4000 timesteps)
+run 0 finished at t = 200.0 (4000 timesteps)
+run 0 finished at t = 200.0 (4000 timesteps)
+
+Elapsed run time = 2.3697 s
+
+Elapsed run time = 2.4674 s
+
+Elapsed run time = 2.4817 s
+
+Elapsed run time = 2.4906 s
+
+Elapsed run time = 2.4912 s
+
+Elapsed run time = 2.4975 s
+
+Elapsed run time = 2.5070 s
+
+Elapsed run time = 2.5063 s
