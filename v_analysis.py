@@ -250,7 +250,8 @@ def nonlinear_fit(X, Y, fitfunction, initial_guess=None, dY=None,
         W = 1/dY**2
     
     parameters, covariance = curve_fit(fitfunction, X, Y,
-                                       p0=initial_guess, sigma=W)  
+                                       p0=initial_guess, sigma=W)
+    n = len(parameters)
     rsq = sum( (Y - fitfunction(X, *parameters))**2 )
     rsq = rsq/sum( (Y - np.mean(Y))**2 )
     rsq = 1 - rsq
@@ -274,7 +275,6 @@ def nonlinear_fit(X, Y, fitfunction, initial_guess=None, dY=None,
                  'r-', zorder=100)      
         plt.legend(['Datos', 'Ajuste'])        
         
-        n = len(parameters)
         kwargs_list = ['text_position', 'par_units', 'par_string_scale', 
                        'par_error_digits', 'rsq_decimal_digits']
         kwargs_default = [(.02,'up'), ['' for i in range(n)], 
