@@ -51,15 +51,20 @@ cd /nfs/home/vpais/ThesisPython
 
 # mpirun -np $SLURM_NTASKS -mca plm rsh python -m mpi4py ./MeepTutorial/straight-waveguide.py
 
-# ## Parallel way 6 >> Untested
+# ## Parallel way 6 >> Job 381006
 
-mpirun -np $SLURM_NTASKS --mpi=pmi2 python -m mpi4py ./MeepTutorial/straight-waveguide.py
+srun -n $SLURM_NTASKS --mpi=pmi2 python -m mpi4py ./MeepTutorial/straight-waveguide.py
 
-# ## Parallel way 7 >> Untested
+# ## Parallel way 7 >> Job 381010
+
+# alias tupacrun='srun -n $SLURM_NTASKS --mpi=pmi2 python -m mpi4py'
+# tupacrun ./MeepTutorial/straight-waveguide.py
+
+# ## Parallel way 8 >> Untested
 
 # mpirun -np $SLURM_NTASKS -mca rmaps seq python -m mpi4py ./MeepTutorial/straight-waveguide.py
 
-# ## Parallel way 8 >> Untested
+# ## Parallel way 9 >> Untested
 
 # Generate Machinefile for mpi such that hosts are in the same order as if run via srun
 # MACHINEFILE="SlurmScripts/ConfigFiles/nodes.$SLURM_JOB_ID"
