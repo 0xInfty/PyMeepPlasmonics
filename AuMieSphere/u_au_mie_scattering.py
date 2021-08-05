@@ -131,6 +131,7 @@ def main(from_um_factor, resolution, courant,
     courant = 0.5
     
     # Nanoparticle specifications: Sphere in Vacuum :)
+    material = "Au"
     r = 51.5  # Radius of sphere in nm
     paper = "R"
     reference = "Meep"
@@ -139,7 +140,7 @@ def main(from_um_factor, resolution, courant,
     surface_index = 1 # 1.54 for glass
     
     # Frequency and wavelength
-    wlen_range = np.array([350,500]) # Wavelength range in nm
+    wlen_range = np.array([450,600]) # Wavelength range in nm
     nfreq = 100
     
     # Box dimensions
@@ -152,8 +153,8 @@ def main(from_um_factor, resolution, courant,
     second_time_factor = 10
     
     # Saving directories
-    series = "SilverRes4"
-    folder = "Test/TestSilver"
+    series = None
+    folder = None
     
     # Configuration
     parallel = False
@@ -161,7 +162,7 @@ def main(from_um_factor, resolution, courant,
     n_cores = 1
     n_nodes = 1
     split_chunks_evenly = True
-    load_flux = False
+    load_flux = True
     load_chunks = True    
     near2far = False
     """
