@@ -114,6 +114,9 @@ measure_ram()
 @cli.option("--near2far", "-n2f", "near2far", 
             type=bool, default=False,
             help="Whether to calculate angular pattern or not.")
+@cli.option("--make-plots", "-plt", "make_plots", 
+            type=bool, default=True,
+            help="Whether to make plots while running or not.")
 def main(from_um_factor, resolution, courant, 
          r, material, paper, reference, submerged_index, 
          displacement, surface_index, wlen_range, nfreq,
@@ -121,7 +124,7 @@ def main(from_um_factor, resolution, courant,
          time_factor_cell, second_time_factor,
          series, folder, 
          parallel, n_processes, n_cores, n_nodes, split_chunks_evenly,
-         load_flux, load_chunks, near2far):
+         load_flux, load_chunks, near2far, make_plots):
 
     #%% CLASSIC INPUT PARAMETERS    
     """
@@ -165,6 +168,7 @@ def main(from_um_factor, resolution, courant,
     load_flux = True
     load_chunks = True    
     near2far = False
+    make_plots = True
     """
 
     #%% MORE INPUT PARAMETERS
@@ -253,26 +257,29 @@ def main(from_um_factor, resolution, courant,
     # >> The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
     
-    until_after_sources = time_factor_cell * cell_width * submerged_index
+    until_after_sources = time_factor_cell * cell_width * max( submerged_index, surface_index )
     # Enough time for the pulse to pass through all the cell
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
     
-    geometry = [mp.Sphere(material=medium,
-                          center=mp.Vector3(),
-                          radius=r)]
+    nanoparticle = mp.Sphere(material=medium,
+                             center=mp.Vector3(),
+                             radius=r)
     # Au sphere with frequency-dependant characteristics imported from Meep.
     
     if surface_index != 1:
-        geometry = [mp.Block(material=mp.Medium(index=surface_index),
-                             center=mp.Vector3(
-                                 r/2 - displacement/2 + cell_width/4,
-                                 0, 0),
-                             size=mp.Vector3(
-                                 cell_width/2 - r + displacement,
-                                 cell_width, cell_width)),
-                    *geometry]
-    # A certain material surface underneath it
+        initial_geometry = [mp.Block(material=mp.Medium(index=surface_index),
+                                     center=mp.Vector3(
+                                         r/2 - displacement/2 + cell_width/4,
+                                         0, 0),
+                                     size=mp.Vector3(
+                                         cell_width/2 - r + displacement,
+                                         cell_width, cell_width))]
+    else:
+        initial_geometry = []
+    # If required, a certain material surface underneath it
+    
+    final_geometry = [*initial_geometry, nanoparticle]
           
     enlapsed = []
     
@@ -311,6 +318,7 @@ def main(from_um_factor, resolution, courant,
     else:
         print("As a whole, the simulation could not be stable")
         print(f"Recommended maximum courant factor is {max_courant}")
+    del stable, max_courant
         
     if load_flux:
         try:
@@ -349,7 +357,7 @@ def main(from_um_factor, resolution, courant,
                             output_single_precision=True,
                             split_chunks_evenly=split_chunks_evenly,
                             # symmetries=symmetries,
-                            geometry=geometry)
+                            geometry=final_geometry)
     
         sim.init_sim()
         
@@ -373,7 +381,8 @@ def main(from_um_factor, resolution, courant,
                             default_material=mp.Medium(index=submerged_index),
                             split_chunks_evenly=split_chunks_evenly,
                             chunk_layout=chunk_layout,
-                            output_single_precision=True)#,
+                            output_single_precision=True,
+                            geometry=initial_geometry)#,
                             # symmetries=symmetries)
         # >> k_point zero specifies boundary conditions needed
         # for the source to be infinitely extended
@@ -507,7 +516,7 @@ def main(from_um_factor, resolution, courant,
 
         #% PLOT FLUX FOURIER MID DATA
         
-        if vm.parallel_assign(1, np_process, parallel):
+        if vm.parallel_assign(1, np_process, parallel) and make_plots:
             ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
             ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
                       ylims[1]+.1*(ylims[1]-ylims[0]))
@@ -530,6 +539,8 @@ def main(from_um_factor, resolution, courant,
             del fig, ax, ylims, a, h
             
         sim.reset_meep()
+        del data_mid, box_x2_flux0, box_y1_flux0, box_y2_flux0
+        del box_z1_flux0, box_z2_flux0, header_mid
     
     #%% SECOND RUN: SETUP
     
@@ -546,7 +557,7 @@ def main(from_um_factor, resolution, courant,
                         split_chunks_evenly=split_chunks_evenly,
                         chunk_layout=chunk_layout,
                         # symmetries=symmetries,
-                        geometry=geometry)
+                        geometry=final_geometry)
     
     measure_ram()
     
@@ -571,7 +582,7 @@ def main(from_um_factor, resolution, courant,
     
     measure_ram()
 
-    if near2far:
+    if near2far and surface_index != 1:
         near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
             mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
                               size=mp.Vector3(0,flux_box_size,flux_box_size),
@@ -591,9 +602,12 @@ def main(from_um_factor, resolution, courant,
             mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
                               size=mp.Vector3(flux_box_size,flux_box_size,0),
                                weight=+1))
+        separate_simulations_needed = False
         measure_ram()
     else:
         near2far_box = None
+        separate_simulations_needed = True
+        
         # used_ram.append(used_ram[-1])
 
     #%% SECOND RUN: INITIALIZE
@@ -618,7 +632,8 @@ def main(from_um_factor, resolution, courant,
     box_y2_data = sim.get_flux_data(box_y2)
     box_z1_data = sim.get_flux_data(box_z1)
     box_z2_data = sim.get_flux_data(box_z2)
-    if near2far: near2far_data = sim.get_near2far_data(near2far_box)
+    if near2far and not separate_simulations_needed: 
+        near2far_data = sim.get_near2far_data(near2far_box)
      
     temp = time()
     sim.load_minus_flux_data(box_x1, box_x1_data)
@@ -627,11 +642,13 @@ def main(from_um_factor, resolution, courant,
     sim.load_minus_flux_data(box_y2, box_y2_data)
     sim.load_minus_flux_data(box_z1, box_z1_data)
     sim.load_minus_flux_data(box_z2, box_z2_data)
-    if near2far: sim.load_minus_near2far_data(near2far_box, near2far_data)
+    if near2far and not separate_simulations_needed: 
+        sim.load_minus_near2far_data(near2far_box, near2far_data)
     enlapsed.append( time() - temp )
     del box_x1_data, box_x2_data, box_y1_data, box_y2_data
     del box_z1_data, box_z2_data
-    if near2far: del near2far_data
+    if near2far and not separate_simulations_needed:  
+        del near2far_data
     
     measure_ram()
 
@@ -693,7 +710,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% ANGULAR PATTERN ANALYSIS
     
-    if near2far:
+    if near2far and not separate_simulations_needed: 
         
         fraunhofer_distance = 8 * (r**2) / min(wlen_range)        
         radial_distance = max( 10 * fraunhofer_distance , 1.5 * cell_width/2 ) 
@@ -738,10 +755,15 @@ def main(from_um_factor, resolution, courant,
                 poynting_z[-1].append( Pz )
                 poynting_r[-1].append( np.sqrt( np.square(Px) + np.square(Py) + np.square(Pz) ) )
         
+        del Px, Py, Pz, farfield_dict
+        
         poynting_x = np.array(poynting_x)
         poynting_y = np.array(poynting_y)
         poynting_z = np.array(poynting_z)
         poynting_r = np.array(poynting_r)
+    
+    elif separate_simulations_needed: 
+        print("Beware! Near2far is not supported yet for nanoparticle placed on a surface.")
 
     #%% SAVE FINAL DATA
     
@@ -775,8 +797,9 @@ def main(from_um_factor, resolution, courant,
                    header=header, footer=params)
         vs.savetxt(file("BaseResults.txt"), data_base, 
                    header=header_base, footer=params)
+    del data
         
-    if near2far:
+    if near2far and not separate_simulations_needed: 
         
         header_near2far = ["Poynting medio Px [u.a.]",
                            "Poynting medio Py [u.a.]",
@@ -791,6 +814,7 @@ def main(from_um_factor, resolution, courant,
         if vm.parallel_assign(1, np_process, parallel):
             vs.savetxt(file("Near2FarResults.txt"), data_near2far, 
                        header=header_near2far, footer=params)
+        del header_near2far, data_near2far
         
     if not split_chunks_evenly:
         vm.save_chunks(sim, params, path)        
@@ -818,7 +842,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT ALL TOGETHER
     
-    if vm.parallel_assign(0, np_process, parallel) and surface_index==1:
+    if vm.parallel_assign(0, np_process, parallel) and surface_index==1 and make_plots:
         plt.figure()
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
@@ -831,7 +855,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT SEPARATE
     
-    if vm.parallel_assign(1, np_process, parallel):
+    if vm.parallel_assign(1, np_process, parallel) and make_plots:
         plt.figure()
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         plt.xlabel('Wavelength [nm]')
@@ -840,9 +864,8 @@ def main(from_um_factor, resolution, courant,
         plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
         plt.tight_layout()
         plt.savefig(file("Meep.png"))
-    
         
-    if vm.parallel_assign(0, np_process, parallel) and surface_index==1:
+    if vm.parallel_assign(0, np_process, parallel) and surface_index==1 and make_plots:
         plt.figure()
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
         plt.xlabel('Wavelength [nm]')
@@ -854,7 +877,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT ONE ABOVE THE OTHER
     
-    if vm.parallel_assign(1, np_process, parallel) and surface_index==1:
+    if vm.parallel_assign(1, np_process, parallel) and surface_index==1 and make_plots:
         fig, axes = plt.subplots(nrows=2, sharex=True)
         fig.subplots_adjust(hspace=0)
         plt.suptitle('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
@@ -873,7 +896,7 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT FLUX FOURIER FINAL DATA
     
-    if vm.parallel_assign(0, np_process, parallel):
+    if vm.parallel_assign(0, np_process, parallel) and make_plots:
         
         ylims = (np.min(data_base[:,2:8]), np.max(data_base[:,2:8]))
         ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
@@ -898,7 +921,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
-    if near2far and vm.parallel_assign(1, np_process, parallel):
+    if near2far and vm.parallel_assign(1, np_process, parallel) and separate_simulations_needed and make_plots:
     
         freq_index = np.argmin(np.abs(freqs - freq_center))
     
@@ -919,7 +942,7 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
-    if near2far and vm.parallel_assign(0, np_process, parallel):
+    if near2far and vm.parallel_assign(0, np_process, parallel) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(polar_angle).index(alpha) for alpha in [0, .25, .5, .75, 1]]
@@ -941,7 +964,7 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
-    if near2far and vm.parallel_assign(1, np_process, parallel):
+    if near2far and vm.parallel_assign(1, np_process, parallel) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
@@ -960,7 +983,7 @@ def main(from_um_factor, resolution, courant,
         
         plt.savefig(file("AngularAzimuthal.png"))
         
-    if near2far and vm.parallel_assign(0, np_process, parallel):
+    if near2far and vm.parallel_assign(0, np_process, parallel) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
