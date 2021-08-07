@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SLURM script to make intra-node test with the 103 nm gold nanosphere in visible spectrum
+# SLURM script to test parallel Meep with Slurm solving fields for a straight waveguide as in Meep's Tutorial.
 
 #SBATCH --ntasks=8                # Total number of cores
 
@@ -51,7 +51,7 @@ cd /nfs/home/vpais/ThesisPython
 
 # mpirun -np $SLURM_NTASKS -mca plm rsh python -m mpi4py ./MeepTutorial/straight-waveguide.py
 
-# ## Parallel way 6 >> Job 381006
+# ## Parallel way 6 >> Job 381006 >> THIS WORKSSSSS! >> But Job 381028 >> IT'S BROKEN NOW :S
 
 srun -n $SLURM_NTASKS --mpi=pmi2 python -m mpi4py ./MeepTutorial/straight-waveguide.py
 
