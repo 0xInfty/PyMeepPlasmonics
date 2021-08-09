@@ -20,11 +20,11 @@ import v_utilities as vu
 #%% PARAMETERS
 
 # Saving directories
-folder = ["Test/TestResetMeep", 
-          "Test/TestResetMeep",
-          "Test/TestResetMeep"]
-# folder = ["Test/TestRAM/AllVac", 
-#           "Test/TestRAM/AllWat"]
+# folder = ["Test/TestResetMeep", 
+#           "Test/TestResetMeep",
+#           "Test/TestResetMeep"]
+folder = ["Test/TestRAM/TestRAMRes/AllVac", 
+          "Test/TestRAM/TestRAMRes/AllWat"]
 home = vs.get_home()
 
 # Parameter for the test
@@ -34,27 +34,31 @@ test_param_position = -1
 test_param_label = "Resolution"
 
 # Sorting and labelling data series
-sorting_function = [lambda l : l]*3
-# sorting_function = [lambda l : vu.sort_by_number(l, -1)]*2
-series_label = [lambda s : "Reset Meep",
-                lambda s : "Reset Meep Refined",
-                lambda s : "No Reset"]
-series_must = ["Original", "New", "No"] # leave "" per default
-series_mustnt = [""]*3 # leave "" per default
-# series_must = [""]*2 # leave "" per default
-# series_mustnt = [""]*2 # leave "" per default
-series_column = [1]*3
+# sorting_function = [lambda l : l]*3
+sorting_function = [lambda l : vu.sort_by_number(l, -1)]*2
+series_label = [lambda s : f"Vacuum Resolution {vu.find_numbers(s)[-1]}",
+                lambda s : f"Water Resolution {vu.find_numbers(s)[-1]}"]
+# series_label = [lambda s : "Reset Meep",
+#                 lambda s : "Reset Meep Refined",
+#                 lambda s : "No Reset"]
+# series_must = ["Original", "New", "No"] # leave "" per default
+# series_mustnt = [""]*3 # leave "" per default
+series_must = [""]*2 # leave "" per default
+series_mustnt = [""]*2 # leave "" per default
+# series_column = [1]*3
+series_column = [1]*2
 
 # Scattering plot options
 plot_title = "Au 103 nm sphere"
-series_legend = ["Reset Meep", "Reset Meep Refined", "No Reset"]
-# series_legend = ["Vacuum", "Water"]
-# series_colors = [plab.cm.Reds, plab.cm.Reds]
-series_colors = [plab.cm.Reds, plab.cm.Reds, plab.cm.Blues]
-series_linestyles = ["solid"]*3
+# series_legend = ["Reset Meep", "Reset Meep Refined", "No Reset"]
+series_legend = ["Vacuum", "Water"]
+series_colors = [plab.cm.Reds, plab.cm.Blues]
+# series_colors = [plab.cm.Reds, plab.cm.Reds, plab.cm.Blues]
+# series_linestyles = ["solid"]*3
+series_linestyles = ["solid"]*2
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Reset" + n)
-# plot_file = lambda n : os.path.join(home, "DataAnalysis/RAMRes" + n)
+# plot_file = lambda n : os.path.join(home, "DataAnalysis/Reset" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/RAMRes" + n)
 
 #%% LOAD DATA
 
@@ -150,6 +154,8 @@ for md, mt in zip(max_wlen, max_wlen_theory):
     max_wlen_diff.append( [d - t for d,t in zip(md, mt)] )
 
 mean_residual = [[np.mean(np.square(d[:,1] - t)) for d,t in zip(dat, theo)] for dat, theo in zip(data, theory)]
+mean_residual_left = [[np.mean(np.square(d[:np.argmax(t),1] - t[:np.argmax(t)])) for d,t in zip(dat, theo)] for dat, theo in zip(data, theory)]
+mean_residual_right = [[np.mean(np.square(d[np.argmax(t):,1] - t[np.argmax(t):])) for d,t in zip(dat, theo)] for dat, theo in zip(data, theory)]
 
 #%% WAVELENGTH MAXIMUM DIFFERENCE
 
@@ -223,6 +229,114 @@ plt.legend(series_legend)
 plt.xlabel(test_param_label)
 plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
 plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
+vs.saveplot(plot_file("QuaDiffJoint.png"), overwrite=True)
+
+#%% MEAN RESIDUAL LEFT AND RIGHT
+
+if len(series)>1:
+    colors = ["darkgrey", "k"]
+    colors_right = ["red", "maroon"]
+    colors_left = ["darkviolet", "rebeccapurple"]
+else:
+    colors = ["k"]
+    colors_right = ["red"]
+    colors_left = ["darkviolet"]
+
+colors = colors*2
+colors_right = colors_right*2
+colors_left = colors_left*2
+
+markers = ["o", "o", "D", "D"]
+
+plt.figure()
+plt.title("Mean quadratic difference in effiency for " + plot_title)
+lines = []
+medium_lines = []
+lines_legend = []
+medium_lines_legend = []
+for i in range(len(test_param)):
+    l1, = plt.plot(test_param[i], mean_residual_left[i], '.', color=colors_left[i], 
+                 marker=markers[i], markersize=7)
+    if i <= 1:
+        lines.append(l1)
+        lines_legend.append(series_legend[i]+" left")
+    if i == 0 or i == 2:
+        medium_lines.append(l1)
+        medium_lines_legend.append(series_legend[i])
+    l2, = plt.plot(test_param[i], mean_residual_right[i], '.', color=colors_right[i], 
+                  marker=markers[i], markersize=7)
+    if i <= 1:
+        lines.append(l2)
+        lines_legend.append(series_legend[i]+" right")
+    l3, = plt.plot(test_param[i], mean_residual[i], '.', color=colors[i], 
+                  marker=markers[i], markersize=7)
+    if i <= 1:
+        lines.append(l3)
+        lines_legend.append(series_legend[i]+" all")
+plt.grid(True)
+# plt.legend(lines, lines_legend)
+first_legend = plt.legend(lines, lines_legend)
+second_legend = plt.legend(medium_lines, medium_lines_legend, loc="center left")
+plt.gca().add_artist(first_legend)
+plt.xlabel(test_param_label)
+plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
+vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
+
+#%% MEAN RESIDUAL SUBPLOTS
+
+if len(series)>1:
+    colors = [*["darkgrey", "k"]*2]
+else:
+    colors = ["k"]
+
+markers = ["o", "D"]
+
+fig, axes = plt.subplots(2, sharex=True, gridspec_kw={"hspace":0})
+plt.suptitle("Mean quadratic difference in effiency for " + plot_title)
+for i in range(len(axes)):
+    axes[i].plot(test_param[i], mean_residual[i], "k", 
+                 marker=markers[i], markersize=7, linestyle="")
+    axes[i].grid(True)
+    axes[i].legend([series_legend[i]])
+    axes[i].set_ylabel("MSD( $C^{MEEP} - C^{MIE}$ )")
+axes[1].yaxis.tick_right()
+axes[1].yaxis.set_label_position("right")
+plt.xlabel(test_param_label)
+plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
+vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
+
+#%% MEAN RESIDUAL SUBPLOTS LEFT AND RIGHT
+
+if len(series)>1:
+    colors = ["darkgrey", "k"]
+    colors_right = ["red", "maroon"]
+    colors_left = ["darkviolet", "rebeccapurple"]
+else:
+    colors = ["k"]
+    colors_right = ["red"]
+    colors_left = ["darkviolet"]
+
+markers = ["o", "D"]
+
+fig, axes = plt.subplots(2, sharex=True, gridspec_kw={"hspace":0})
+plt.suptitle("Mean quadratic difference in effiency for " + plot_title)
+for i in range(len(axes)):
+    axes[i].plot(test_param[i], mean_residual_right[i], "red", 
+                 marker=markers[i], markersize=7, linestyle="")
+    axes[i].plot(test_param[i], mean_residual_left[i], "darkviolet", 
+                 marker=markers[i], markersize=7, linestyle="")
+    axes[i].plot(test_param[i], mean_residual[i], "k", 
+                 marker=markers[i], markersize=7, linestyle="")
+    axes[i].grid(True)
+    axes[i].legend([series_legend[i] + " left",
+                    series_legend[i] + " right",
+                    series_legend[i] + " all"])
+    axes[i].set_ylabel("MSD( $C^{MEEP} - C^{MIE}$ )")
+axes[1].yaxis.tick_right()
+axes[1].yaxis.set_label_position("right")
+plt.xlabel(test_param_label)
+plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
+plt.tight_layout()
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
 #%% GET ENLAPSED TIME COMPARED
@@ -375,9 +489,9 @@ mean_ram = [[ tr / (1024)**2 for tr in tram] for tram in mean_ram]
 
 #%% RAM PER SUBPROCESS
 
-colors = [["C0"], ["C4"], ["C3"]]
-# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-#           for sc, s in zip(series_colors, series)]
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+          for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
 
@@ -411,7 +525,8 @@ mng = plt.get_current_fig_manager()
 mng.window.showMaximized()
 plt.tight_layout()
 
-first_legend = plt.legend(lines, lines_legend)
+# first_legend = plt.legend(lines, lines_legend)
+first_legend = plt.legend(lines, lines_legend, ncol=2)
 second_legend = plt.legend(patches, patches_legend, loc="center left")
 plt.gca().add_artist(first_legend)
 
@@ -419,9 +534,9 @@ plt.savefig(plot_file("AllRAM.png"), bbox_inches='tight')
 
 #%% RAM TOTAL
 
-colors = [["C0"], ["C4"], ["C3"]]
-# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-#           for sc, s in zip(series_colors, series)]
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+          for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
 
@@ -454,7 +569,12 @@ patches.append( plt.axvspan(reference.index("Principio (Sim II)"),
 patches_legend = ["Configuration Sim I", "Running Sim I",
                   "Configuration Sim II", "Running Sim II"]
 
-plt.ylim(0, 16)
+if params[0][0]["sysname"]=="MC":
+    plt.ylim(0, 16)
+elif params[0][0]["sysname"]=="SC":
+    plt.ylim(0, 48)
+else:
+    plt.ylim(0, 128)
 plt.xlim(0, len(reference))
 plt.xticks(np.arange(len(reference)), reference)
 plt.xticks(rotation=-30, ha="left")
@@ -462,7 +582,8 @@ plt.grid(True)
 plt.ylabel("Total RAM Memory [GiB]")
 
 plt.legend(lines, lines_legend)
-first_legend = plt.legend(lines, lines_legend)
+# first_legend = plt.legend(lines, lines_legend)
+first_legend = plt.legend(lines, lines_legend, ncol=2)
 second_legend = plt.legend(patches, patches_legend, loc="center left")
 plt.gca().add_artist(first_legend)
 
@@ -532,9 +653,9 @@ mean_ram_common_sim_II = [[np.array([tr[i] for i in common_index]) for tr in tra
 
 #%% RAM SIM I AND II
 
-colors = [["C0"], ["C4"], ["C3"]]
-# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-#           for sc, s in zip(series_colors, series)]
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+          for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
 
@@ -552,7 +673,8 @@ for i in range(len(series)):
                          linewidth=1, zorder=2)
         lines.append(l)
         lines_legend.append(series_label[i](series[i][j]))
-        if j==0 and i==0:
+        # if j==0 and i==0:
+        if j==4 and i==0:
             second_lines.append(l)
             second_lines_legend.append("Sim I")
         l = plt.errorbar(common_reference, mean_ram_common_sim_II[i][j] - mean_ram_common_sim_II[i][j][0], 
@@ -561,7 +683,8 @@ for i in range(len(series)):
                          marker="D", color=colors[i][j], linestyle="dashed",
                          elinewidth=1.5, capsize=7, capthick=1.5, markersize=5,
                          linewidth=1, zorder=2)
-        if j==0 and i==0:
+        # if j==0 and i==0:
+        if j==4 and i==0:
             second_lines.append(l)
             second_lines_legend.append("Sim II")
         
@@ -579,7 +702,8 @@ mng = plt.get_current_fig_manager()
 mng.window.showMaximized()
 plt.tight_layout()
 
-first_legend = plt.legend(lines, lines_legend)
+# first_legend = plt.legend(lines, lines_legend)
+first_legend = plt.legend(lines, lines_legend, ncol=2)
 second_legend = plt.legend(patches, patches_legend, loc="center left")
 third_legend = plt.legend(second_lines, second_lines_legend, loc="lower left")
 ax = plt.gca()
@@ -620,9 +744,9 @@ mean_ram_key_sim_II = [[np.array([tr[i] for i in key_index_sim_II]) for tr in tr
 
 #%%
 
-colors = [["C0"], ["C4"], ["C3"]]
-# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-#           for sc, s in zip(series_colors, series)]
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+          for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
 
@@ -654,15 +778,19 @@ for i in range(len(series)):
             second_lines_legend.append("Sim II")
         k += 1
 
-plt.ylim(0, 16)
+if params[0][0]["sysname"]=="MC":
+    plt.ylim(0, 16)
+elif params[0][0]["sysname"]=="SC":
+    plt.ylim(0, 48)
+else:
+    plt.ylim(0, 128)
 plt.xlim(0, len(key_reference))
 plt.xticks(np.arange(len(key_reference)), key_mask)
 plt.xticks(rotation=0, ha="left")
 plt.grid(True)
 plt.ylabel("Total RAM Memory [GiB]")
 
-plt.legend(lines, lines_legend)
-first_legend = plt.legend(lines, lines_legend, loc="upper left")
+first_legend = plt.legend(lines, lines_legend, loc="upper left", ncol=2)
 second_legend = plt.legend(second_lines, second_lines_legend, loc="center left")
 plt.gca().add_artist(first_legend)
 
@@ -679,9 +807,9 @@ plt.savefig(plot_file("AllKeyRAMStage.png"), bbox_inches='tight')
 
 #%%
 
-colors = [["C0"], ["C3"], ["C4"]]
-# colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
-#           for sc, s in zip(series_colors, series)]
+# colors = [["C0"], ["C3"], ["C4"]]
+colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+          for sc, s in zip(series_colors, series)]
 
 fig, axes = plt.subplots(ncols=2, nrows=1, sharey=True, gridspec_kw={"wspace":0})
 
@@ -709,7 +837,12 @@ for i in range(len(series)):
 axes[0].set_title("Simulation I")
 axes[1].set_title("Simulation II")
 
-axes[0].set_ylim(0, 16)
+if params[0][0]["sysname"]=="MC":
+    axes[0].set_ylim(0, 16)
+elif params[0][0]["sysname"]=="SC":
+    axes[0].set_ylim(0, 48)
+else:
+    axes[0].set_ylim(0, 128)
 for ax in axes:
     ax.set_xlim(0, len(key_reference))
     ax.set_xticks(np.arange(len(key_reference)))
@@ -717,7 +850,8 @@ for ax in axes:
     ax.grid(True, axis="y")
 axes[0].set_ylabel("Total RAM Memory [GiB]")
 
-axes[0].legend(lines, lines_legend, loc="upper left")
+# axes[0].legend(lines, lines_legend, loc="upper left")
+axes[0].legend(lines, lines_legend, loc="upper left", ncol=2)
 
 second_ax = axes[1].twinx()
 second_ax.set_ylabel("Total RAM Memory [%]")
@@ -730,52 +864,142 @@ plt.tight_layout()
 
 plt.savefig(plot_file("AllKeyRAMSim.png"), bbox_inches='tight')
 
-#%% RAM ONLY ONE SERIES
+#%%
 
-one_used_ram = params[0][-1]["used_ram"]
+def cubic_fit(X, A, B, C, D):
+    return A * X**3 + B * X**2 + C * X + D
 
-one_total_ram = np.array([sum(ur) for ur in one_used_ram])
-one_max_ram = one_used_ram[:, np.argmax([sum(ur) for ur in one_used_ram.T]) ]
-one_min_ram = one_used_ram[:, np.argmin([sum(ur) for ur in one_used_ram.T]) ]
-one_mean_ram = np.array([np.mean(ur) for ur in one_used_ram])
+def cubic_simple_fit(X, A, B, C):
+    return A * X**3 + B * X**2 + C
 
-one_total_ram = one_total_ram / (1024**2)
-one_min_ram = one_min_ram / (1024**2)
-one_max_ram = one_max_ram / (1024**2)
-one_mean_ram = one_mean_ram / (1024**2)
+rsq_sim_I = []
+parameters_sim_I = []
+for i in range(len(total_ram_key_sim_I)):
+    rsq_sim_I.append([])
+    parameters_sim_I.append([])
+    for j in range(len(total_ram_key_sim_I[i][0])):
+        rs, pars = va.nonlinear_fit(np.array(test_param[i]), 
+                                    np.array([tr[j] for tr in total_ram_key_sim_I[i]]), 
+                                    cubic_simple_fit,
+                                    par_units=["GiB", "GiB"],
+                                    showplot=False)
+        rsq_sim_I[-1].append(rs)
+        parameters_sim_I[-1].append(pars)
 
-#%% RAM PER SUBPROCESS FOR ONE SERIES
+rsq_sim_II = []
+parameters_sim_II = []
+for i in range(len(total_ram_key_sim_II)):
+    rsq_sim_II.append([])
+    parameters_sim_II.append([])
+    for j in range(len(total_ram_key_sim_II[i][0])):
+        rs, pars = va.nonlinear_fit(np.array(test_param[i]), 
+                                   np.array([tr[j] for tr in total_ram_key_sim_II[i]]), 
+                                   cubic_simple_fit,
+                                   par_units=["GiB", "GiB"],
+                                   showplot=True)
+        rsq_sim_II[-1].append(rs)
+        parameters_sim_II[-1].append(pars)
 
-plt.figure()
+# rsq, parameters = va.nonlinear_fit(np.array(test_param[0]), 
+#                                    np.array([tr[0] for tr in total_ram_key_sim_I[0]]), 
+#                                    cubic_simple_fit,
+#                                    par_units=["GiB", "GiB"])#, "GiB", "GiB"])
 
-plt.suptitle(series[0][-1])
+#%%
+    
+fig = plt.figure(constrained_layout=True)
+subplot_grid = fig.add_gridspec(3, 2)
+axes = [[fig.add_subplot(subplot_grid[0:2, 0]),
+         fig.add_subplot(subplot_grid[2, 0])],
+        [fig.add_subplot(subplot_grid[0:2, 1]),
+         fig.add_subplot(subplot_grid[2, 1])]]
 
-lines = []
-lines.append( plt.plot(reference, one_min_ram, "ob", markersize=7)[0] )
-lines.append( plt.plot(reference, one_max_ram, "or", markersize=7)[0] )
-lines.append( plt.plot(reference, one_mean_ram, "o:k", markersize=7)[0] )
-lines_legend = ["Mínimo", "Máximo", "Promedio"]
-plt.xticks(rotation=-30, ha="left")
-plt.grid(True)
-plt.ylabel("RAM Memory Per Subprocess [GiB]")
+colors = [["r", "maroon"], ["b", "navy"]]
 
-patches = []
-patches.append( plt.axvspan(*["Inicial (Sim I)", "Principio (Sim I)"], alpha=0.15, color='grey') )
-patches.append( plt.axvspan(*["Principio (Sim I)", "Final (Sim I)"], alpha=0.3, color='grey') )
-patches.append( plt.axvspan(*["Inicial (Sim II)", "Principio (Sim II)"], alpha=0.1, color='gold') )
-patches.append( plt.axvspan(*["Principio (Sim II)", "Final (Sim II)"], alpha=0.2, color='gold') )
-patches_legend = ["Configuration Sim I", "Running Sim I",
-                  "Configuration Sim II", "Running Sim II"]
+for i in range(len(series)):
+    
+    # Fits
+    axes[i][0].plot(test_param[i], cubic_simple_fit(np.array(test_param[i]), 
+                                                    parameters_sim_I[i][0][0][0],
+                                                    parameters_sim_I[i][0][1][0],
+                                                    parameters_sim_I[i][0][2][0]), 
+                    marker="", linestyle="-", color=colors[i][0], label="Before Sim I")
+    axes[i][0].plot(test_param[i], cubic_simple_fit(np.array(test_param[i]), 
+                                                    parameters_sim_I[i][1][0][0],
+                                                    parameters_sim_I[i][1][1][0],
+                                                    parameters_sim_I[i][1][2][0]),
+                    marker="", linestyle="-", color=colors[i][1], label="After Sim I")
+    axes[i][0].plot(test_param[i], cubic_simple_fit(np.array(test_param[i]), 
+                                                    parameters_sim_II[i][0][0][0],
+                                                    parameters_sim_II[i][0][1][0],
+                                                    parameters_sim_II[i][0][2][0]), 
+                    marker="", linestyle=":", color=colors[i][0], label="Before Sim II")
+    axes[i][0].plot(test_param[i], cubic_simple_fit(np.array(test_param[i]), 
+                                                    parameters_sim_II[i][1][0][0],
+                                                    parameters_sim_II[i][1][1][0],
+                                                    parameters_sim_II[i][1][2][0]),
+                    marker="", linestyle=":", color=colors[i][1], label="After Sim II")
+    
+    # Points
+    axes[i][0].plot(test_param[i], [tr[0] for tr in total_ram_key_sim_I[i]], 
+                    marker="o", linestyle="", color=colors[i][0], label="Before Sim I")
+    axes[i][0].plot(test_param[i], [tr[1] for tr in total_ram_key_sim_I[i]], 
+                    marker="o", linestyle="", color=colors[i][1], label="During Sim I")
+    axes[i][0].plot(test_param[i], [tr[0] for tr in total_ram_key_sim_II[i]], 
+                    marker="D", linestyle="", color=colors[i][0], label="Before Sim II")
+    axes[i][0].plot(test_param[i], [tr[1] for tr in total_ram_key_sim_II[i]], 
+                    marker="D", linestyle="", color=colors[i][1], label="During Sim II")
+    
+    # Residuum
+    axes[i][1].plot(test_param[i], np.array([tr[0] for tr in total_ram_key_sim_I[i]]) - 
+                                    cubic_simple_fit(np.array(test_param[i]), 
+                                                     parameters_sim_I[i][0][0][0],
+                                                     parameters_sim_I[i][0][1][0],
+                                                     parameters_sim_I[i][0][2][0]), 
+                    marker="o", linestyle="", color=colors[i][0], label="Before Sim I")
+    axes[i][1].plot(test_param[i], np.array([tr[1] for tr in total_ram_key_sim_I[i]]) - 
+                                    cubic_simple_fit(np.array(test_param[i]), 
+                                                     parameters_sim_I[i][1][0][0],
+                                                     parameters_sim_I[i][1][1][0],
+                                                     parameters_sim_I[i][1][2][0]), 
+                    marker="o", linestyle="", color=colors[i][1], label="After Sim I")
+    axes[i][1].plot(test_param[i], np.array([tr[0] for tr in total_ram_key_sim_II[i]]) - 
+                                    cubic_simple_fit(np.array(test_param[i]), 
+                                                     parameters_sim_II[i][0][0][0],
+                                                     parameters_sim_II[i][0][1][0],
+                                                     parameters_sim_II[i][0][2][0]), 
+                    marker="D", linestyle="", color=colors[i][0], label="Before Sim II")
+    axes[i][1].plot(test_param[i], np.array([tr[1] for tr in total_ram_key_sim_II[i]]) - 
+                                    cubic_simple_fit(np.array(test_param[i]), 
+                                                     parameters_sim_II[i][1][0][0],
+                                                     parameters_sim_II[i][1][1][0],
+                                                     parameters_sim_II[i][1][2][0]), 
+                    marker="D", linestyle="", color=colors[i][1], label="After Sim II")
+    
+    axes[i][0].set_ylabel("Total RAM [GiB]")
+    axes[i][1].set_ylabel("Residua [GiB]")
+    
+    axes[i][1].xaxis.set_ticks( [] )
+    axes[i][1].xaxis.set_ticklabels( [] )
+    axes[i][0].set_xlabel("Resolution")
+    axes[i][0].xaxis.set_ticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
+    
 
-mng = plt.get_current_fig_manager()
-mng.window.showMaximized()
-plt.tight_layout()
+    axes[i][0].legend()
+    
 
-first_legend = plt.legend(lines, lines_legend)
-second_legend = plt.legend(patches, patches_legend, loc="center left")
-plt.gca().add_artist(first_legend)
+axes[0][0].set_title("Vacuum")
+axes[1][0].set_title("Water")
 
-plt.savefig(plot_file("OneRAM.png"), bbox_inches='tight')
+plt.suptitle("Fitted total RAM before and during simulations")
+
+axes[1][0].yaxis.tick_right()
+axes[1][1].yaxis.tick_right()
+axes[1][0].yaxis.set_label_position("right")
+axes[1][1].yaxis.set_label_position("right")
+
+fig.set_size_inches([8.64, 4.8])
+vs.saveplot(plot_file("FitAllKeyRAM2.png"), overwrite=True)
 
 #%% PLOT NORMALIZED
 
@@ -858,3 +1082,4 @@ if plot_make_big:
     mng.window.showMaximized()
     del mng
 vs.saveplot(plot_file("AllScattDiff.png"), overwrite=True)
+
