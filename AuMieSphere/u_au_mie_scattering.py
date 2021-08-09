@@ -387,7 +387,6 @@ def main(from_um_factor, resolution, courant,
         plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                 (5, 5),
                 xycoords='figure points')
-        plt.show()
         
         plt.savefig(file("SimBox.png"))
         
