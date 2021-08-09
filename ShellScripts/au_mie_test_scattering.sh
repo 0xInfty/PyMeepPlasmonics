@@ -41,11 +41,11 @@
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -np 4 --material "Ag" --wlen-range 350 500 -r 30 -res 2 -s "SilverDiam60Res2" -f "Test/TestSilver"
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -np 4 --material "Ag" --paper "JC" --wlen-range 350 500 -res 5 -s "SilverJCRes5" -f "Test/TestSilver"
 #############
-mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over00" -f "Test/TestGlass/OverlapRes4" --wlen-range "[500, 700]" --index 1.33 --surface-index 1.54
-#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over20" -f "Test/TestGlass/OverlapRes4" --wlen-range "[500, 700]" --index 1.33 --surface-index 1.54 --overlap 20
-mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over10" -f "Test/TestGlass/OverlapRes4" --wlen-range "[500, 700]" --index 1.33 --surface-index 1.54 --overlap 10
-#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over25" -f "Test/TestGlass/OverlapRes4" --wlen-range "[500, 700]" --index 1.33 --surface-index 1.54 --overlap 25
-mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over15" -f "Test/TestGlass/OverlapRes4" --wlen-range "[500, 700]" --index 1.33 --surface-index 1.54 --overlap 15
-#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over05" -f "Test/TestGlass/OverlapRes4" --wlen-range "[500, 700]" --index 1.33 --surface-index 1.54 --overlap 5
+mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over00" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over20" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 20
+mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over10" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 10
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over25" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 25
+mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over15" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 15
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over05" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 5
 ############ DO I ADD OVERLAP IN THIS RESOLUTION RUN?
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 --from-um-factor 20e-3 -res 8 -s "GlassRes8" -f "Test/TestGlass/TestGlassRes" --wlen-range "[500, 700]" --index 1.33 --surface-index 1.54
