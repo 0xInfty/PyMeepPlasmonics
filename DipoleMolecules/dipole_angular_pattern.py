@@ -67,6 +67,8 @@ measure_ram()
 @cli.option("--wlen-width", "-wd", "wlen_width", 
             type=float, default=200,
             help="Dipole wavelength amplitude expressed in nm")
+@cli.option("--standing", "-stand", type=bool, default=True,
+            help="Whether the polarization is perpendicular or parallel to the surface")
 @cli.option("--nfreq", "-nfreq", "nfreq", 
             type=int, default=100,
             help="Quantity of frequencies to sample in wavelength range")
@@ -76,9 +78,12 @@ measure_ram()
 @cli.option("--pml-wlen-factor", "-pml", "pml_wlen_factor", 
             type=float, default=0.38,
             help="PML layer width expressed in multiples of maximum wavelength")
-@cli.option("--flux-wlen-factor", "-flux", "flux_r_factor", 
+@cli.option("--flux-wlen-factor", "-flux", "flux_wlen_factor", 
             type=float, default=0.1,
-            help="Flux box padding expressed in multiples of maximum wavelength")
+            help="Flux box side expressed in multiples of maximum wavelength")
+@cli.option("--padd-wlen-factor", "-padd", "padd_wlen_factor", 
+            type=float, default=0.1,
+            help="Flux box extra padding expressed in multiples of maximum wavelength")
 @cli.option("--time-factor-cell", "-tfc", "time_factor_cell", 
             type=float, default=1.2,
             help="First simulation total time expressed as multiples of time \
@@ -99,8 +104,8 @@ measure_ram()
             help="Number of nuclei used to run the program in parallel")
 def main(from_um_factor, resolution_wlen, courant, 
          submerged_index, displacement, surface_index, 
-         wlen_center, wlen_width, nfreq,
-         air_wlen_factor, pml_wlen_factor, flux_wlen_factor,
+         wlen_center, wlen_width, nfreq, standing,
+         air_wlen_factor, pml_wlen_factor, flux_padd_factor,
          time_factor_cell, second_time_factor,
          series, folder, parallel, n_processes, split_chunks_evenly):
 
@@ -108,33 +113,32 @@ def main(from_um_factor, resolution_wlen, courant,
     """
     # Simulation size
     from_um_factor = 100e-3 # Conversion of 1 μm to my length unit (=100nm/1μm)
-    resolution_wlen = 20 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+    resolution_wlen = 80 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
     courant = 0.5
     
-    # Nanoparticle specifications: Sphere in Vacuum :)
-    paper = "R"
-    reference = "Meep"
-    displacement = 0 # Displacement of the surface from the bottom of the sphere in nm
+    # Cell specifications
+    displacement = 50 # Displacement of the surface relative to the dipole
     submerged_index = 1.33 # 1.33 for water
     surface_index = 1.54 # 1.54 for glass
     
     # Frequency and wavelength
     wlen_center = 650 # Main wavelength range in nm
     wlen_width = 200 # Wavelength band in nm
-    nfreq = 100
+    nfreq = 100 # Number of discrete frequencies
+    standing = True # Perpendicular to surface if true, parallel if false
     
     # Box dimensions
     pml_wlen_factor = 0.38
-    air_wlen_factor = 0.15
-    flux_wlen_factor = 0.1
+    air_wlen_factor = 0.25
+    flux_padd_factor = 0.1
     
     # Simulation time
     time_factor_cell = 1.2
     second_time_factor = 10
     
     # Saving directories
-    series = "1stTest"
-    folder = "Test/TestDipole/DipoleGlass"
+    series = "2ndTest"
+    folder = "Test/TestDipole/DipoleStandingGlass/Disp50"
     
     # Configuration
     parallel = False
@@ -150,7 +154,7 @@ def main(from_um_factor, resolution_wlen, courant,
     
     # Frequency and wavelength
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
-    nazimuthal = 16
+    nazimuthal = 25
     npolar = 20
     
     ### TREATED INPUT PARAMETERS
@@ -167,7 +171,9 @@ def main(from_um_factor, resolution_wlen, courant,
     # Space configuration
     pml_width = pml_wlen_factor * (wlen_center + wlen_width/2) # 0.5 * max(wlen_range)
     air_width = air_wlen_factor * (wlen_center + wlen_width/2)
-    flux_box_size = flux_wlen_factor * (wlen_center + wlen_width/2)
+    flux_box_size = min( 2 * air_width ,
+                         2 * ( displacement + flux_padd_factor * 2 * air_width ) )
+    surface_box_size = (1 - flux_padd_factor) * flux_box_size
     
     # Computation
     enlapsed = []
@@ -183,8 +189,9 @@ def main(from_um_factor, resolution_wlen, courant,
         folder = "Test"
     params_list = ["from_um_factor", "resolution_wlen", "resolution", "courant",
                    "submerged_index", "displacement", "surface_index",
-                   "wlen_center", "wlen_width", "cutoff",
-                   "nfreq", "nazimuthal", "npolar", "flux_box_size",
+                   "wlen_center", "wlen_width", "cutoff", "standing",
+                   "nfreq", "nazimuthal", "npolar", 
+                   "flux_box_size", "surface_box_size", "flux_padd_factor",
                    "cell_width", "pml_width", "air_width",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
                    "enlapsed", "parallel", "n_processes", "split_chunks_evenly", 
@@ -214,14 +221,46 @@ def main(from_um_factor, resolution_wlen, courant,
     displacement = displacement - displacement%(1/resolution)
     
     flux_box_size = flux_box_size - flux_box_size%(1/resolution)
+    
+    surface_box_size = surface_box_size - surface_box_size%(1/resolution)
+   
+    if surface_index != 1:
+        # Cell filled with submerged_index, with a glass below.
+        initial_geometry = [mp.Block(material=mp.Medium(index=surface_index),
+                                     center=mp.Vector3(
+                                         0, 0,
+                                         - displacement/2 - surface_box_size/4),
+                                     size=mp.Vector3(
+                                         surface_box_size, surface_box_size,
+                                         surface_box_size/2 - displacement))]
+        initial_background = mp.Medium(index=submerged_index)
+        # Celled filled with surface_index, with air above
+        final_geometry = [mp.Block(material=mp.Medium(index=submerged_index),
+                                     center=mp.Vector3(
+                                         0, 0,
+                                         - displacement/2 + surface_box_size/4),
+                                     size=mp.Vector3(
+                                         surface_box_size, surface_box_size,
+                                         surface_box_size/2 + displacement))]
+        final_background = mp.Medium(index=surface_index)
+    else:
+        initial_geometry = []
+        initial_background = mp.Medium(index=submerged_index)
+        
+    # If required, there will be a certain material surface underneath the dipole
 
+    if standing:
+        polarization = mp.Ez
+    else:
+        polarization = mp.Ex
+        
     sources = [mp.Source(mp.GaussianSource(freq_center,
                                            fwidth=freq_width,
                                            is_integrated=True,
                                            cutoff=cutoff),
                           center=mp.Vector3(),
-                          component=mp.Ez)]
-    # Ez-polarized point pulse 
+                          component=polarization)]
+    # Point pulse, polarized parallel or perpendicular to surface
     # (its size parameter is null and it is centered at zero)
     # >> The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
@@ -230,19 +269,7 @@ def main(from_um_factor, resolution_wlen, courant,
     # Enough time for the pulse to pass through all the cell
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
-    
-    # if surface_index != 1:
-    #     geometry = [mp.Block(material=mp.Medium(index=surface_index),
-    #                          center=mp.Vector3(
-    #                              - displacement/2 + cell_width/4,
-    #                              0, 0),
-    #                          size=mp.Vector3(
-    #                              cell_width/2 + displacement,
-    #                              cell_width, cell_width))]
-    # else:
-    #     geometry = []
-    # A certain material surface underneath it
-    
+        
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
@@ -263,9 +290,10 @@ def main(from_um_factor, resolution_wlen, courant,
                         sources=sources,
                         k_point=mp.Vector3(),
                         Courant=courant,
-                        default_material=mp.Medium(index=submerged_index),
+                        default_material=initial_background,
                         output_single_precision=True,
-                        split_chunks_evenly=split_chunks_evenly)
+                        split_chunks_evenly=split_chunks_evenly,
+                        geometry=initial_geometry)
     
     measure_ram()
     
@@ -290,6 +318,33 @@ def main(from_um_factor, resolution_wlen, courant,
                            weight=+1))
     measure_ram()
     # used_ram.append(used_ram[-1])
+
+#%%
+
+    plt.figure()
+    
+    plt.fill_between( [-1, 1],  -displacement * np.ones(2),  
+                     -cell_width/2 * np.ones(2), 
+                     color="blue", alpha=.1)
+    plt.fill_between( [-1, 1],  -displacement * np.ones(2),  
+                     -surface_box_size/2 * np.ones(2), 
+                     color="white", edgecolor="navy", hatch="/")
+    plt.fill_between( [-1, 1],  -displacement * np.ones(2),  
+                      -surface_box_size/2 * np.ones(2), 
+                      color="navy", alpha=.3)
+    plt.fill_between( [-1, 1],  cell_width/2 * np.ones(2),  
+                     -displacement * np.ones(2), 
+                     color="blue", alpha=.1)
+
+    plt.hlines([-cell_width/2, cell_width/2], -1, 1, color="k")
+    plt.hlines([cell_width/2-pml_width, -cell_width/2+pml_width], -1, 1, color="m")
+    plt.hlines([-flux_box_size/2, flux_box_size/2], -1, 1, color="r")
+    plt.hlines(-displacement, -1, 1, color="k")
+    plt.hlines([-surface_box_size/2, surface_box_size/2], -1, 1, color="r", linestyle=":")
+    plt.hlines(- displacement/2 - surface_box_size/4, -1, 1, color="k", linestyle=":")
+    plt.hlines(- displacement/2 + surface_box_size/4, -1, 1, color="k", linestyle=":")
+
+    plt.xlim(-1, 1)
 
     #%% BASE SIMULATION: INITIALIZE
     
@@ -439,9 +494,10 @@ def main(from_um_factor, resolution_wlen, courant,
                             sources=sources,
                             k_point=mp.Vector3(),
                             Courant=courant,
-                            default_material=mp.Medium(index=surface_index),
+                            default_material=final_background,
                             output_single_precision=True,
-                            split_chunks_evenly=split_chunks_evenly)
+                            split_chunks_evenly=split_chunks_evenly,
+                            geometry=final_geometry)
         
         measure_ram()
         
@@ -600,26 +656,15 @@ def main(from_um_factor, resolution_wlen, courant,
     
     if surface_index!=1:
         
-        poynting_x0 = np.array(poynting_x)
-        poynting_y0 = np.array(poynting_y)
-        poynting_z0 = np.array(poynting_z)
-        poynting_r0 = np.array(poynting_r)
+        # poynting_x0 = np.array(poynting_x)
+        # poynting_y0 = np.array(poynting_y)
+        # poynting_z0 = np.array(poynting_z)
+        # poynting_r0 = np.array(poynting_r)
         
         poynting_x2 = np.array(poynting_x2) / max_poynting_r
         poynting_y2 = np.array(poynting_y2) / max_poynting_r
         poynting_z2 = np.array(poynting_z2) / max_poynting_r
         poynting_r2 = np.array(poynting_r2) / max_poynting_r
-        
-    #%%    
-    
-    """
-    poynting_x = np.array(poynting_x0)
-    poynting_y = np.array(poynting_y0)
-    poynting_z = np.array(poynting_z0)
-    poynting_r = np.array(poynting_r0)
-    """
-    
-    if surface_index!=1:
         
         polar_limit = np.arcsin(displacement/radial_distance) + .5
         
@@ -633,10 +678,10 @@ def main(from_um_factor, resolution_wlen, courant,
         poynting_z[:, index_limit:, :] = poynting_z2[:, index_limit:, :]
         poynting_r[:, index_limit:, :] = poynting_r2[:, index_limit:, :]
         
-        poynting_x[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_x2[:, index_limit-1, :], poynting_x0[:, index_limit-1, :])])
-        poynting_y[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_y2[:, index_limit-1, :], poynting_y0[:, index_limit-1, :])])
-        poynting_z[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_z2[:, index_limit-1, :], poynting_z0[:, index_limit-1, :])])
-        poynting_r[:, index_limit-1, :] = np.sqrt( np.squared(poynting_x[:, index_limit-1, :]) + np.squared(poynting_y[:, index_limit-1, :]) + np.squared(poynting_y[:, index_limit-1, :]))
+        # poynting_x[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_x2[:, index_limit-1, :], poynting_x0[:, index_limit-1, :])])
+        # poynting_y[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_y2[:, index_limit-1, :], poynting_y0[:, index_limit-1, :])])
+        # poynting_z[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_z2[:, index_limit-1, :], poynting_z0[:, index_limit-1, :])])
+        # poynting_r[:, index_limit-1, :] = np.sqrt( np.square(poynting_x[:, index_limit-1, :]) + np.square(poynting_y[:, index_limit-1, :]) + np.square(poynting_y[:, index_limit-1, :]))
 
     #%% SAVE FINAL DATA
     
