@@ -63,10 +63,10 @@ measure_ram()
 @cli.option("--index", "-i", "submerged_index", 
             type=float, default=1,
             help="Reflective index of sourrounding medium")
-@cli.option("--displacement", "-dis", "displacement", default=0, type=float,
+@cli.option("--overlap", "-over", "overlap", default=0, type=float,
             help="Overlap of sphere and surface in nm")
 @cli.option("--surface-index", "-si", "surface_index", 
-            type=float, default=1,
+            type=float, default=None,
             help="Reflective index of surface medium")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=cli.Tuple([float, float]), default=(450,600),
@@ -119,7 +119,7 @@ measure_ram()
             help="Whether to make plots while running or not.")
 def main(from_um_factor, resolution, courant, 
          r, material, paper, reference, submerged_index, 
-         displacement, surface_index, wlen_range, nfreq,
+         overlap, surface_index, wlen_range, nfreq,
          air_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
          series, folder, 
@@ -138,9 +138,9 @@ def main(from_um_factor, resolution, courant,
     r = 51.5  # Radius of sphere in nm
     paper = "R"
     reference = "Meep"
-    displacement = 0 # Displacement of the surface from the bottom of the sphere in nm
+    overlap = 0 # Displacement of the surface from the bottom of the sphere in nm
     submerged_index = 1 # 1.33 for water
-    surface_index = 1 # 1.54 for glass
+    surface_index = None # 1.54 for glass
     
     # Frequency and wavelength
     wlen_range = np.array([450,600]) # Wavelength range in nm
@@ -190,7 +190,9 @@ def main(from_um_factor, resolution, courant,
         # Importing material constants dependant on frequency from external file
     else:
         raise ValueError("Reference for medium not recognized. Sorry :/")
-    displacement = displacement / ( from_um_factor * 1e3 ) # Now in Meep units
+    overlap = overlap / ( from_um_factor * 1e3 ) # Now in Meep units
+    if surface_index is None:
+        surface_index = submerged_index
     
     # Frequency and wavelength
     wlen_range = np.array(wlen_range)
@@ -211,7 +213,7 @@ def main(from_um_factor, resolution, courant,
         folder = "Test"
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", "reference", "submerged_index",
-                   "displacement", "surface_index",
+                   "overlap", "surface_index",
                    "wlen_range", "nfreq", "nazimuthal", "npolar", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
@@ -236,11 +238,11 @@ def main(from_um_factor, resolution, courant,
     cell_width = cell_width - cell_width%(1/resolution)
     cell_size = mp.Vector3(cell_width, cell_width, cell_width)
     
-    # surface_center = r/4 - displacement/2 + cell_width/4
+    # surface_center = r/4 - overlap/2 + cell_width/4
     # surface_center = surface_center - surface_center%(1/resolution)
-    # displacement = r/2 + cell_width/2 - 2*surface_center
+    # overlap = r/2 + cell_width/2 - 2*surface_center
     
-    displacement = displacement - displacement%(1/resolution)
+    overlap = overlap - overlap%(1/resolution)
     
     flux_box_size = flux_box_size - flux_box_size%(1/resolution)
 
@@ -267,13 +269,13 @@ def main(from_um_factor, resolution, courant,
                              radius=r)
     # Au sphere with frequency-dependant characteristics imported from Meep.
     
-    if surface_index != 1:
+    if surface_index != submerged_index:
         initial_geometry = [mp.Block(material=mp.Medium(index=surface_index),
                                      center=mp.Vector3(
-                                         r/2 - displacement/2 + cell_width/4,
+                                         r/2 - overlap/2 + cell_width/4,
                                          0, 0),
                                      size=mp.Vector3(
-                                         cell_width/2 - r + displacement,
+                                         cell_width/2 - r + overlap,
                                          cell_width, cell_width))]
     else:
         initial_geometry = []
@@ -305,6 +307,90 @@ def main(from_um_factor, resolution, courant,
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
     
+    #%% PLOT CELL
+
+    if make_plots:
+        fig, ax = plt.subplots()
+        
+        # PML borders
+        pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
+                                       cell_width, cell_width,
+                                       fill=False, edgecolor="m", linestyle="dashed",
+                                       hatch='/', 
+                                       zorder=-20,
+                                       label="PML borders")
+        pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
+                                        -cell_width/2+pml_width), 
+                                       cell_width - 2*pml_width, cell_width - 2*pml_width,
+                                       facecolor="white", edgecolor="m", 
+                                       linestyle="dashed", linewidth=1, zorder=-10)
+       
+        # Surrounding medium
+        if submerged_index != 1:
+            surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
+                                               cell_width, cell_width,
+                                               color="blue", alpha=.1, zorder=-6,
+                                               label=fr"Medium $n$={submerged_index}") 
+    
+        # Surface medium
+        if surface_index != submerged_index:
+            surface_square = plt.Rectangle((r - overlap, -cell_width/2),
+                                           cell_width/2 - r + overlap, 
+                                           cell_width,
+                                           edgecolor="navy", hatch=r"\\", 
+                                           fill=False, zorder=-3,
+                                           label=fr"Surface $n$={surface_index}") 
+    
+        # Nanoparticle
+        if material=="Au":
+            circle_color = "gold"
+        elif material=="Ag":
+            circle_color="silver"
+        else:
+            circle_color="peru"
+        circle = plt.Circle((0,0), r, color=circle_color, linewidth=1, alpha=.4, 
+                            zorder=0, label=f"{material} Nanoparticle")
+        
+        # Source
+        ax.vlines(source_center, -cell_width/2, cell_width/2,
+                  color="r", linestyle="dashed", zorder=5, label="Planewave Source")
+        
+        # Flux box
+        flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
+                                    flux_box_size, flux_box_size,
+                                    linewidth=1, edgecolor="limegreen", linestyle="dashed",
+                                    fill=False, zorder=10, label="Flux box")
+        
+        ax.add_patch(circle)
+        if submerged_index!=1: ax.add_patch(surrounding_square)
+        if surface_index!=submerged_index: ax.add_patch(surface_square)
+        ax.add_patch(flux_square)
+        ax.add_patch(pml_out_square)
+        ax.add_patch(pml_inn_square)
+        
+        # General configuration
+        
+        box = ax.get_position()
+        box.x0 = box.x0 - .15 * (box.x1 - box.x0)
+        # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
+        box.y1 = box.y1 + .10 * (box.y1 - box.y0)
+        ax.set_position(box)
+        plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
+        
+        fig.set_size_inches(7.5, 4.8)
+        ax.set_aspect("equal")
+        plt.xlim(-cell_width/2, cell_width/2)
+        plt.ylim(-cell_width/2, cell_width/2)
+        plt.xlabel("Position X [Meep Units]")
+        plt.ylabel("Position Y [Meep Units]")
+        
+        plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                (5, 5),
+                xycoords='figure points')
+        plt.show()
+        
+        plt.savefig(file("SimBox.png"))
+        
     #%% FIRST RUN
     
     measure_ram()
@@ -582,7 +668,7 @@ def main(from_um_factor, resolution, courant,
     
     measure_ram()
 
-    if near2far and surface_index != 1:
+    if near2far and surface_index != submerged_index:
         near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
             mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
                               size=mp.Vector3(0,flux_box_size,flux_box_size),
@@ -842,16 +928,17 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT ALL TOGETHER
     
-    if vm.parallel_assign(0, np_process, parallel) and surface_index==1 and make_plots:
-        plt.figure()
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
-        plt.xlabel('Wavelength [nm]')
-        plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        plt.legend()
-        plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
-        plt.tight_layout()
-        plt.savefig(file("Comparison.png"))
+    if surface_index==submerged_index and make_plots:
+        if vm.parallel_assign(0, np_process, parallel):
+            plt.figure()
+            plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
+            plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
+            plt.xlabel('Wavelength [nm]')
+            plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
+            plt.legend()
+            plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
+            plt.tight_layout()
+            plt.savefig(file("Comparison.png"))
     
     #%% PLOT SEPARATE
     
@@ -865,35 +952,37 @@ def main(from_um_factor, resolution, courant,
         plt.tight_layout()
         plt.savefig(file("Meep.png"))
         
-    if vm.parallel_assign(0, np_process, parallel) and surface_index==1 and make_plots:
-        plt.figure()
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
-        plt.xlabel('Wavelength [nm]')
-        plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        plt.legend()
-        plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*10))
-        plt.tight_layout()
-        plt.savefig(file("Theory.png"))
+    if surface_index==submerged_index and make_plots:
+        if vm.parallel_assign(0, np_process, parallel):
+            plt.figure()
+            plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
+            plt.xlabel('Wavelength [nm]')
+            plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
+            plt.legend()
+            plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*10))
+            plt.tight_layout()
+            plt.savefig(file("Theory.png"))
     
     #%% PLOT ONE ABOVE THE OTHER
     
-    if vm.parallel_assign(1, np_process, parallel) and surface_index==1 and make_plots:
-        fig, axes = plt.subplots(nrows=2, sharex=True)
-        fig.subplots_adjust(hspace=0)
-        plt.suptitle('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
-        
-        axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        axes[0].yaxis.tick_right()
-        axes[0].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        axes[0].legend()
-        
-        axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
-        axes[1].set_xlabel('Wavelength [nm]')
-        axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        axes[1].legend()
-        
-        plt.savefig(file("SeparatedComparison.png"))
-        
+    if surface_index==submerged_index and make_plots:
+        if vm.parallel_assign(1, np_process, parallel):
+            fig, axes = plt.subplots(nrows=2, sharex=True)
+            fig.subplots_adjust(hspace=0)
+            plt.suptitle('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
+            
+            axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
+            axes[0].yaxis.tick_right()
+            axes[0].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
+            axes[0].legend()
+            
+            axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
+            axes[1].set_xlabel('Wavelength [nm]')
+            axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
+            axes[1].legend()
+            
+            plt.savefig(file("SeparatedComparison.png"))
+            
     #%% PLOT FLUX FOURIER FINAL DATA
     
     if vm.parallel_assign(0, np_process, parallel) and make_plots:
