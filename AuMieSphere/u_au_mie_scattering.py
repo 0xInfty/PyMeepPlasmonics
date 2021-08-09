@@ -309,7 +309,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT CELL
 
-    if make_plots:
+    if make_plots and vm.parallel_assign(0, n_processes, parallel):
         fig, ax = plt.subplots()
         
         # PML borders
@@ -390,6 +390,11 @@ def main(from_um_factor, resolution, courant,
         plt.show()
         
         plt.savefig(file("SimBox.png"))
+        
+        del pml_inn_square, pml_out_square, flux_square, circle, circle_color
+        if submerged_index!=1: del surrounding_square
+        if surface_index!=submerged_index: del surface_square
+        del fig, box, ax
         
     #%% FIRST RUN
     

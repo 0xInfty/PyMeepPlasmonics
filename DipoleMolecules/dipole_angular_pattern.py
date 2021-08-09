@@ -321,104 +321,84 @@ def main(from_um_factor, resolution_wlen, courant,
     measure_ram()
     # used_ram.append(used_ram[-1])
 
-#%%
-
-    plt.figure()
-    
-    plt.fill_between( [-1, 1],  -displacement * np.ones(2),  
-                     -cell_width/2 * np.ones(2), 
-                     color="blue", alpha=.1)
-    plt.fill_between( [-1, 1],  -displacement * np.ones(2),  
-                     -surface_box_size/2 * np.ones(2), 
-                     color="white", edgecolor="navy", hatch="/")
-    plt.fill_between( [-1, 1],  -displacement * np.ones(2),  
-                      -surface_box_size/2 * np.ones(2), 
-                      color="navy", alpha=.3)
-    plt.fill_between( [-1, 1],  cell_width/2 * np.ones(2),  
-                     -displacement * np.ones(2), 
-                     color="blue", alpha=.1)
-
-    plt.hlines([-cell_width/2, cell_width/2], -1, 1, color="k")
-    plt.hlines([cell_width/2-pml_width, -cell_width/2+pml_width], -1, 1, color="m")
-    plt.hlines([-flux_box_size/2, flux_box_size/2], -1, 1, color="r")
-    plt.hlines(-displacement, -1, 1, color="k")
-    plt.hlines([-surface_box_size/2, surface_box_size/2], -1, 1, color="r", linestyle=":")
-    plt.hlines(- displacement/2 - surface_box_size/4, -1, 1, color="k", linestyle=":")
-    plt.hlines(- displacement/2 + surface_box_size/4, -1, 1, color="k", linestyle=":")
-
-    plt.xlim(-1, 1)
-
     #%% PLOT CELL
 
-    fig, ax = plt.subplots()
+    if vm.parallel_assign(0, np_process, parallel):
     
-    # PML borders
-    pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
-                                   cell_width, cell_width,
-                                   fill=False, edgecolor="m", linestyle="dashed",
-                                   hatch='/', 
-                                   zorder=-20,
-                                   label="PML borders")
-    pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
-                                    -cell_width/2+pml_width), 
-                                   cell_width - 2*pml_width, cell_width - 2*pml_width,
-                                   facecolor="white", edgecolor="m", 
-                                   linestyle="dashed", linewidth=1, zorder=-10)
-   
-    # Surrounding medium
-    if submerged_index != 1:
-        surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
-                                           cell_width, cell_width,
-                                           color="blue", alpha=.1, zorder=-6,
-                                           label=fr"Medium $n$={submerged_index}") 
-
-    # Surface medium
-    if surface_index != submerged_index:
-        surface_square = plt.Rectangle((-surface_box_size/2, -surface_box_size/2),
-                                       surface_box_size/2 - displacement,
-                                       surface_box_size,
-                                       edgecolor="navy", hatch=r"\\", 
-                                       fill=False, zorder=-3,
-                                       label=fr"Surface $n$={surface_index}") 
+        fig, ax = plt.subplots()
+        
+        # PML borders
+        pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
+                                       cell_width, cell_width,
+                                       fill=False, edgecolor="m", linestyle="dashed",
+                                       hatch='/', 
+                                       zorder=-20,
+                                       label="PML borders")
+        pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
+                                        -cell_width/2+pml_width), 
+                                       cell_width - 2*pml_width, cell_width - 2*pml_width,
+                                       facecolor="white", edgecolor="m", 
+                                       linestyle="dashed", linewidth=1, zorder=-10)
+       
+        # Surrounding medium
+        if submerged_index != 1:
+            surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
+                                               cell_width, cell_width,
+                                               color="blue", alpha=.1, zorder=-6,
+                                               label=fr"Medium $n$={submerged_index}") 
     
-    # Source
-    ax.plot(0, 0, "o", color="r", zorder=5, 
-            label=f"Point Dipole {wlen_center * from_um_factor * 1e3:.0f} nm")
-    
-    # Flux box
-    flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
-                                flux_box_size, flux_box_size,
-                                linewidth=1, edgecolor="limegreen", linestyle="dashed",
-                                fill=False, zorder=10, label="Flux box")
-    
-    if submerged_index!=1: ax.add_patch(surrounding_square)
-    if surface_index!=submerged_index: ax.add_patch(surface_square)
-    ax.add_patch(flux_square)
-    ax.add_patch(pml_out_square)
-    ax.add_patch(pml_inn_square)
-    
-    # General configuration
-    
-    box = ax.get_position()
-    box.x0 = box.x0 - .15 * (box.x1 - box.x0)
-    # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
-    box.y1 = box.y1 + .10 * (box.y1 - box.y0)
-    ax.set_position(box)
-    plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
-    
-    fig.set_size_inches(7.5, 4.8)
-    ax.set_aspect("equal")
-    plt.xlim(-cell_width/2, cell_width/2)
-    plt.ylim(-cell_width/2, cell_width/2)
-    plt.xlabel("Position X [Meep Units]")
-    plt.ylabel("Position Y [Meep Units]")
-    
-    plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-            (5, 5),
-            xycoords='figure points')
-    plt.show()
-    
-    plt.savefig(file("SimBox.png"))
+        # Surface medium
+        if surface_index != submerged_index:
+            surface_square = plt.Rectangle((-surface_box_size/2, -surface_box_size/2),
+                                           surface_box_size/2 - displacement,
+                                           surface_box_size,
+                                           edgecolor="navy", hatch=r"\\", 
+                                           fill=False, zorder=-3,
+                                           label=fr"Surface $n$={surface_index}") 
+        
+        # Source
+        ax.plot(0, 0, "o", color="r", zorder=5, 
+                label=f"Point Dipole {wlen_center * from_um_factor * 1e3:.0f} nm")
+        
+        # Flux box
+        flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
+                                    flux_box_size, flux_box_size,
+                                    linewidth=1, edgecolor="limegreen", linestyle="dashed",
+                                    fill=False, zorder=10, label="Flux box")
+        
+        if submerged_index!=1: ax.add_patch(surrounding_square)
+        if surface_index!=submerged_index: ax.add_patch(surface_square)
+        ax.add_patch(flux_square)
+        ax.add_patch(pml_out_square)
+        ax.add_patch(pml_inn_square)
+        
+        # General configuration
+        
+        box = ax.get_position()
+        box.x0 = box.x0 - .15 * (box.x1 - box.x0)
+        # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
+        box.y1 = box.y1 + .10 * (box.y1 - box.y0)
+        ax.set_position(box)
+        plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
+        
+        fig.set_size_inches(7.5, 4.8)
+        ax.set_aspect("equal")
+        plt.xlim(-cell_width/2, cell_width/2)
+        plt.ylim(-cell_width/2, cell_width/2)
+        plt.xlabel("Position X [Meep Units]")
+        plt.ylabel("Position Y [Meep Units]")
+        
+        plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                (5, 5),
+                xycoords='figure points')
+        plt.show()
+        
+        plt.savefig(file("SimBox.png"))
+        
+        del pml_inn_square, pml_out_square, flux_square
+        if submerged_index!=1: del surrounding_square
+        if surface_index!=submerged_index: del surface_square
+        del fig, box, ax
 
     #%% BASE SIMULATION: INITIALIZE
     
@@ -599,96 +579,97 @@ def main(from_um_factor, resolution_wlen, courant,
     
         # #%% PLOT CELL
     
-        fig, ax = plt.subplots()
-        
-        # PML borders
-        pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
-                                       cell_width, cell_width,
-                                       fill=False, edgecolor="m", linestyle="dashed",
-                                       hatch='/', 
-                                       zorder=-20,
-                                       label="PML borders")
-        pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
-                                        -cell_width/2+pml_width), 
-                                       cell_width - 2*pml_width, cell_width - 2*pml_width,
-                                       facecolor="white", edgecolor="m", 
-                                       linestyle="dashed", linewidth=1, zorder=-10)
-       
-        # Surrounding medium
-        if submerged_index != 1:
-            submerged_color = "blue"
-        else:
-            submerged_color = "white"
-            
+        if vm.parallel_assign(0, np_process, parallel):
     
-        # Surface medium
-        surface_square = plt.Rectangle((-cell_width/2, -cell_width/2),
-                                       cell_width,
-                                       cell_width,
-                                       edgecolor="navy", hatch=r"\\", 
-                                       fill=False, zorder=-6,
-                                       label=fr"Surface $n$={surface_index}") 
-        
-
-        surrounding_square_0 = plt.Rectangle((-displacement, -surface_box_size/2),
-                                             # cell_width, cell_width,
-                                             surface_box_size/2 + displacement,
-                                             surface_box_size,
-                                             color="white", zorder=-4) 
-
-        surrounding_square = plt.Rectangle((-displacement, -surface_box_size/2),
-                                           # cell_width, cell_width,
-                                           surface_box_size/2 + displacement,
-                                           surface_box_size,
-                                           color=submerged_color, alpha=.1, zorder=-3,
-                                           label=fr"Medium $n$={submerged_index}") 
-        
-        surrounding_square_2 = plt.Rectangle((-displacement, -surface_box_size/2),
-                                           # cell_width, cell_width,
-                                           surface_box_size/2 + displacement,
-                                           surface_box_size, zorder=-2,
-                                           edgecolor="navy", fill=False) 
-        
-        # Source
-        ax.plot(0, 0, "o", color="r", zorder=5, 
-                label=f"Point Dipole {wlen_center * from_um_factor * 1e3:.0f} nm")
-        
-        # Flux box
-        flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
-                                    flux_box_size, flux_box_size,
-                                    linewidth=1, edgecolor="limegreen", linestyle="dashed",
-                                    fill=False, zorder=10, label="Flux box")
-        
-        ax.add_patch(surrounding_square_0)
-        ax.add_patch(surrounding_square)
-        ax.add_patch(surrounding_square_2)
-        ax.add_patch(surface_square)
-        ax.add_patch(flux_square)
-        ax.add_patch(pml_out_square)
-        ax.add_patch(pml_inn_square)
-        
-        # General configuration
-        
-        box = ax.get_position()
-        box.x0 = box.x0 - .15 * (box.x1 - box.x0)
-        # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
-        box.y1 = box.y1 + .10 * (box.y1 - box.y0)
-        ax.set_position(box)
-        plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
-        
-        fig.set_size_inches(7.5, 4.8)
-        ax.set_aspect("equal")
-        plt.xlim(-cell_width/2, cell_width/2)
-        plt.ylim(-cell_width/2, cell_width/2)
-        plt.xlabel("Position X [Meep Units]")
-        plt.ylabel("Position Y [Meep Units]")
-        
-        plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                (5, 5),
-                xycoords='figure points')
-        plt.show()
-        
-        plt.savefig(file("FurtherSimBox.png"))
+            fig, ax = plt.subplots()
+            
+            # PML borders
+            pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
+                                           cell_width, cell_width,
+                                           fill=False, edgecolor="m", linestyle="dashed",
+                                           hatch='/', 
+                                           zorder=-20,
+                                           label="PML borders")
+            pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
+                                            -cell_width/2+pml_width), 
+                                           cell_width - 2*pml_width, cell_width - 2*pml_width,
+                                           facecolor="white", edgecolor="m", 
+                                           linestyle="dashed", linewidth=1, zorder=-10)
+           
+            # Surface medium
+            surface_square = plt.Rectangle((-cell_width/2, -cell_width/2),
+                                           cell_width,
+                                           cell_width,
+                                           edgecolor="navy", hatch=r"\\", 
+                                           fill=False, zorder=-6,
+                                           label=fr"Surface $n$={surface_index}") 
+            
+            # Surrounding medium
+            if submerged_index != 1:
+                submerged_color = "blue"
+            else:
+                submerged_color = "white"            
+            surrounding_square_0 = plt.Rectangle((-displacement, -surface_box_size/2),
+                                                 surface_box_size/2 + displacement,
+                                                 surface_box_size,
+                                                 color="white", zorder=-4) 
+    
+            surrounding_square = plt.Rectangle((-displacement, -surface_box_size/2),
+                                               surface_box_size/2 + displacement,
+                                               surface_box_size,
+                                               color=submerged_color, alpha=.1, zorder=-3,
+                                               label=fr"Medium $n$={submerged_index}") 
+            
+            surrounding_square_2 = plt.Rectangle((-displacement, -surface_box_size/2),
+                                               surface_box_size/2 + displacement,
+                                               surface_box_size, zorder=-2,
+                                               edgecolor="navy", fill=False) 
+            
+            # Source
+            ax.plot(0, 0, "o", color="r", zorder=5, 
+                    label=f"Point Dipole {wlen_center * from_um_factor * 1e3:.0f} nm")
+            
+            # Flux box
+            flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
+                                        flux_box_size, flux_box_size,
+                                        linewidth=1, edgecolor="limegreen", linestyle="dashed",
+                                        fill=False, zorder=10, label="Flux box")
+            
+            ax.add_patch(surrounding_square_0)
+            ax.add_patch(surrounding_square)
+            ax.add_patch(surrounding_square_2)
+            ax.add_patch(surface_square)
+            ax.add_patch(flux_square)
+            ax.add_patch(pml_out_square)
+            ax.add_patch(pml_inn_square)
+            
+            # General configuration
+            
+            box = ax.get_position()
+            box.x0 = box.x0 - .15 * (box.x1 - box.x0)
+            # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
+            box.y1 = box.y1 + .10 * (box.y1 - box.y0)
+            ax.set_position(box)
+            plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
+            
+            fig.set_size_inches(7.5, 4.8)
+            ax.set_aspect("equal")
+            plt.xlim(-cell_width/2, cell_width/2)
+            plt.ylim(-cell_width/2, cell_width/2)
+            plt.xlabel("Position X [Meep Units]")
+            plt.ylabel("Position Y [Meep Units]")
+            
+            plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                    (5, 5),
+                    xycoords='figure points')
+            plt.show()
+            
+            plt.savefig(file("FurtherSimBox.png"))
+            
+            del pml_inn_square, pml_out_square, flux_square
+            del surrounding_square, surrounding_square_0, surrounding_square_2
+            del surface_square, submerged_color
+            del fig, box, ax
     
         #% FURTHER SIMULATION: INITIALIZE
         
