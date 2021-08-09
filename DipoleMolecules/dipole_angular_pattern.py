@@ -59,7 +59,7 @@ measure_ram()
 @cli.option("--displacement", "-dis", "displacement", default=0, type=float,
             help="Overlap of sphere and surface in nm")
 @cli.option("--surface-index", "-si", "surface_index", 
-            type=float, default=1,
+            type=float, default=None,
             help="Reflective index of surface medium")
 @cli.option("--wlen-center", "-wlen", "wlen_center", 
             type=float, default=650,
@@ -154,13 +154,15 @@ def main(from_um_factor, resolution_wlen, courant,
     
     # Frequency and wavelength
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
-    nazimuthal = 25
-    npolar = 20
+    nazimuthal = 32 # Suggestion: multiple of 8, to make plots correctly.
+    npolar = 40 # Suggestion: multiple of 4, to make plots correctly.
     
     ### TREATED INPUT PARAMETERS
     
-    # Nanoparticle specifications: Sphere in Vacuum :)
+    # Cell general specifications: Surface below dipole
     displacement = displacement / ( from_um_factor * 1e3 ) # Now in Meep units
+    if surface_index is None:
+        surface_index = submerged_index
     
     # Frequency and wavelength
     wlen_center = wlen_center / ( from_um_factor * 1e3 ) # Now in Meep units
@@ -224,7 +226,7 @@ def main(from_um_factor, resolution_wlen, courant,
     
     surface_box_size = surface_box_size - surface_box_size%(1/resolution)
    
-    if surface_index != 1:
+    if surface_index != submerged_index:
         # Cell filled with submerged_index, with a glass below.
         initial_geometry = [mp.Block(material=mp.Medium(index=surface_index),
                                      center=mp.Vector3(
@@ -345,6 +347,78 @@ def main(from_um_factor, resolution_wlen, courant,
     plt.hlines(- displacement/2 + surface_box_size/4, -1, 1, color="k", linestyle=":")
 
     plt.xlim(-1, 1)
+
+    #%% PLOT CELL
+
+    fig, ax = plt.subplots()
+    
+    # PML borders
+    pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
+                                   cell_width, cell_width,
+                                   fill=False, edgecolor="m", linestyle="dashed",
+                                   hatch='/', 
+                                   zorder=-20,
+                                   label="PML borders")
+    pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
+                                    -cell_width/2+pml_width), 
+                                   cell_width - 2*pml_width, cell_width - 2*pml_width,
+                                   facecolor="white", edgecolor="m", 
+                                   linestyle="dashed", linewidth=1, zorder=-10)
+   
+    # Surrounding medium
+    if submerged_index != 1:
+        surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
+                                           cell_width, cell_width,
+                                           color="blue", alpha=.1, zorder=-6,
+                                           label=fr"Medium $n$={submerged_index}") 
+
+    # Surface medium
+    if surface_index != submerged_index:
+        surface_square = plt.Rectangle((-surface_box_size/2, -surface_box_size/2),
+                                       surface_box_size/2 - displacement,
+                                       surface_box_size,
+                                       edgecolor="navy", hatch=r"\\", 
+                                       fill=False, zorder=-3,
+                                       label=fr"Surface $n$={surface_index}") 
+    
+    # Source
+    ax.plot(0, 0, "o", color="r", zorder=5, 
+            label=f"Point Dipole {wlen_center * from_um_factor * 1e3:.0f} nm")
+    
+    # Flux box
+    flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
+                                flux_box_size, flux_box_size,
+                                linewidth=1, edgecolor="limegreen", linestyle="dashed",
+                                fill=False, zorder=10, label="Flux box")
+    
+    if submerged_index!=1: ax.add_patch(surrounding_square)
+    if surface_index!=submerged_index: ax.add_patch(surface_square)
+    ax.add_patch(flux_square)
+    ax.add_patch(pml_out_square)
+    ax.add_patch(pml_inn_square)
+    
+    # General configuration
+    
+    box = ax.get_position()
+    box.x0 = box.x0 - .15 * (box.x1 - box.x0)
+    # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
+    box.y1 = box.y1 + .10 * (box.y1 - box.y0)
+    ax.set_position(box)
+    plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
+    
+    fig.set_size_inches(7.5, 4.8)
+    ax.set_aspect("equal")
+    plt.xlim(-cell_width/2, cell_width/2)
+    plt.ylim(-cell_width/2, cell_width/2)
+    plt.xlabel("Position X [Meep Units]")
+    plt.ylabel("Position Y [Meep Units]")
+    
+    plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+            (5, 5),
+            xycoords='figure points')
+    plt.show()
+    
+    plt.savefig(file("SimBox.png"))
 
     #%% BASE SIMULATION: INITIALIZE
     
@@ -479,7 +553,7 @@ def main(from_um_factor, resolution_wlen, courant,
     
     #%% FURTHER SIMULATION
         
-    if surface_index!=1:
+    if surface_index!=submerged_index:
     
         #% FURTHER SIMULATION: SETUP
         
@@ -522,6 +596,99 @@ def main(from_um_factor, resolution_wlen, courant,
                                weight=+1))
         measure_ram()
         # used_ram.append(used_ram[-1])
+    
+        # #%% PLOT CELL
+    
+        fig, ax = plt.subplots()
+        
+        # PML borders
+        pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
+                                       cell_width, cell_width,
+                                       fill=False, edgecolor="m", linestyle="dashed",
+                                       hatch='/', 
+                                       zorder=-20,
+                                       label="PML borders")
+        pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
+                                        -cell_width/2+pml_width), 
+                                       cell_width - 2*pml_width, cell_width - 2*pml_width,
+                                       facecolor="white", edgecolor="m", 
+                                       linestyle="dashed", linewidth=1, zorder=-10)
+       
+        # Surrounding medium
+        if submerged_index != 1:
+            submerged_color = "blue"
+        else:
+            submerged_color = "white"
+            
+    
+        # Surface medium
+        surface_square = plt.Rectangle((-cell_width/2, -cell_width/2),
+                                       cell_width,
+                                       cell_width,
+                                       edgecolor="navy", hatch=r"\\", 
+                                       fill=False, zorder=-6,
+                                       label=fr"Surface $n$={surface_index}") 
+        
+
+        surrounding_square_0 = plt.Rectangle((-displacement, -surface_box_size/2),
+                                             # cell_width, cell_width,
+                                             surface_box_size/2 + displacement,
+                                             surface_box_size,
+                                             color="white", zorder=-4) 
+
+        surrounding_square = plt.Rectangle((-displacement, -surface_box_size/2),
+                                           # cell_width, cell_width,
+                                           surface_box_size/2 + displacement,
+                                           surface_box_size,
+                                           color=submerged_color, alpha=.1, zorder=-3,
+                                           label=fr"Medium $n$={submerged_index}") 
+        
+        surrounding_square_2 = plt.Rectangle((-displacement, -surface_box_size/2),
+                                           # cell_width, cell_width,
+                                           surface_box_size/2 + displacement,
+                                           surface_box_size, zorder=-2,
+                                           edgecolor="navy", fill=False) 
+        
+        # Source
+        ax.plot(0, 0, "o", color="r", zorder=5, 
+                label=f"Point Dipole {wlen_center * from_um_factor * 1e3:.0f} nm")
+        
+        # Flux box
+        flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
+                                    flux_box_size, flux_box_size,
+                                    linewidth=1, edgecolor="limegreen", linestyle="dashed",
+                                    fill=False, zorder=10, label="Flux box")
+        
+        ax.add_patch(surrounding_square_0)
+        ax.add_patch(surrounding_square)
+        ax.add_patch(surrounding_square_2)
+        ax.add_patch(surface_square)
+        ax.add_patch(flux_square)
+        ax.add_patch(pml_out_square)
+        ax.add_patch(pml_inn_square)
+        
+        # General configuration
+        
+        box = ax.get_position()
+        box.x0 = box.x0 - .15 * (box.x1 - box.x0)
+        # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
+        box.y1 = box.y1 + .10 * (box.y1 - box.y0)
+        ax.set_position(box)
+        plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
+        
+        fig.set_size_inches(7.5, 4.8)
+        ax.set_aspect("equal")
+        plt.xlim(-cell_width/2, cell_width/2)
+        plt.ylim(-cell_width/2, cell_width/2)
+        plt.xlabel("Position X [Meep Units]")
+        plt.ylabel("Position Y [Meep Units]")
+        
+        plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                (5, 5),
+                xycoords='figure points')
+        plt.show()
+        
+        plt.savefig(file("FurtherSimBox.png"))
     
         #% FURTHER SIMULATION: INITIALIZE
         
@@ -643,28 +810,28 @@ def main(from_um_factor, resolution_wlen, courant,
     
     #%% NORMALIZE AND REARANGE DATA
     
-    if surface_index!=1:
-        max_poynting_r = np.max([np.max(np.abs(poynting_r)), 
-                                 np.max(np.abs(poynting_r2))])
-    else:
-        max_poynting_r = np.max(np.abs(poynting_r))
+    # if surface_index!=submerged_index:
+    #     max_poynting_r = np.max([np.max(np.abs(poynting_r)), 
+    #                              np.max(np.abs(poynting_r2))])
+    # else:
+    #     max_poynting_r = np.max(np.abs(poynting_r))
     
-    poynting_x = np.array(poynting_x) / max_poynting_r
-    poynting_y = np.array(poynting_y) / max_poynting_r
-    poynting_z = np.array(poynting_z) / max_poynting_r
-    poynting_r = np.array(poynting_r) / max_poynting_r
+    # poynting_x = np.array(poynting_x) / max_poynting_r
+    # poynting_y = np.array(poynting_y) / max_poynting_r
+    # poynting_z = np.array(poynting_z) / max_poynting_r
+    # poynting_r = np.array(poynting_r) / max_poynting_r
     
-    if surface_index!=1:
+    if surface_index!=submerged_index:
         
-        # poynting_x0 = np.array(poynting_x)
-        # poynting_y0 = np.array(poynting_y)
-        # poynting_z0 = np.array(poynting_z)
+        poynting_x0 = np.array(poynting_x)
+        poynting_y0 = np.array(poynting_y)
+        poynting_z0 = np.array(poynting_z)
         # poynting_r0 = np.array(poynting_r)
         
-        poynting_x2 = np.array(poynting_x2) / max_poynting_r
-        poynting_y2 = np.array(poynting_y2) / max_poynting_r
-        poynting_z2 = np.array(poynting_z2) / max_poynting_r
-        poynting_r2 = np.array(poynting_r2) / max_poynting_r
+        # poynting_x2 = np.array(poynting_x2) / max_poynting_r
+        # poynting_y2 = np.array(poynting_y2) / max_poynting_r
+        # poynting_z2 = np.array(poynting_z2) / max_poynting_r
+        # poynting_r2 = np.array(poynting_r2) / max_poynting_r
         
         polar_limit = np.arcsin(displacement/radial_distance) + .5
         
@@ -673,19 +840,19 @@ def main(from_um_factor, resolution_wlen, courant,
                 index_limit = i
                 break
         
-        poynting_x[:, index_limit:, :] = poynting_x2[:, index_limit:, :]
-        poynting_y[:, index_limit:, :] = poynting_y2[:, index_limit:, :]
-        poynting_z[:, index_limit:, :] = poynting_z2[:, index_limit:, :]
-        poynting_r[:, index_limit:, :] = poynting_r2[:, index_limit:, :]
+        poynting_x[:, index_limit+1:, :] = poynting_x2[:, index_limit+1:, :]
+        poynting_y[:, index_limit+1:, :] = poynting_y2[:, index_limit+1:, :]
+        poynting_z[:, index_limit+1:, :] = poynting_z2[:, index_limit+1:, :]
+        poynting_r[:, index_limit+1:, :] = poynting_r2[:, index_limit+1:, :]
         
-        # poynting_x[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_x2[:, index_limit-1, :], poynting_x0[:, index_limit-1, :])])
-        # poynting_y[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_y2[:, index_limit-1, :], poynting_y0[:, index_limit-1, :])])
-        # poynting_z[:, index_limit-1, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_z2[:, index_limit-1, :], poynting_z0[:, index_limit-1, :])])
-        # poynting_r[:, index_limit-1, :] = np.sqrt( np.square(poynting_x[:, index_limit-1, :]) + np.square(poynting_y[:, index_limit-1, :]) + np.square(poynting_y[:, index_limit-1, :]))
+        poynting_x[:, index_limit, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_x2[:, index_limit, :], poynting_x0[:, index_limit, :])])
+        poynting_y[:, index_limit, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_y2[:, index_limit, :], poynting_y0[:, index_limit, :])])
+        poynting_z[:, index_limit, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_z2[:, index_limit, :], poynting_z0[:, index_limit, :])])
+        poynting_r[:, index_limit, :] = np.sqrt( np.square(poynting_x[:, index_limit-1, :]) + np.square(poynting_y[:, index_limit-1, :]) + np.square(poynting_y[:, index_limit-1, :]))
 
     #%% SAVE FINAL DATA
     
-    if surface_index!=1 and vm.parallel_assign(0, np_process, parallel):
+    if surface_index!=submerged_index and vm.parallel_assign(0, np_process, parallel):
         
         os.remove(file("BaseRAM.h5"))
         os.rename(file("FurtherRAM.h5"), file("RAM.h5"))
