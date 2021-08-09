@@ -81,6 +81,19 @@ for k in keys:
 
 #%%
 
+submerged_index = []
+surface_index = []
+for nsubm, nsurf in zip(flux_dir["submerged_index"], flux_dir["surface_index"]):
+    if nsurf == 1 and nsubm != 1:
+        nsurf = nsubm
+    submerged_index.append(nsubm)
+    surface_index.append(nsurf)
+
+flux_dir["submerged_index"] = submerged_index
+flux_dir["surface_index"] = surface_index
+
+#%%
+
 vs.savetxt(flux_file, np.array([]), footer=flux_dir, overwrite=True)
 
 #%%

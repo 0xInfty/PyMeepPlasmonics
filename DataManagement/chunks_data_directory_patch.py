@@ -77,6 +77,19 @@ for i in range(n):
 
 #%%
 
+submerged_index = []
+surface_index = []
+for nsubm, nsurf in zip(chunks_dir["submerged_index"], chunks_dir["surface_index"]):
+    if nsurf == 1 and nsubm != 1:
+        nsurf = nsubm
+    submerged_index.append(nsubm)
+    surface_index.append(nsurf)
+
+chunks_dir["submerged_index"] = submerged_index
+chunks_dir["surface_index"] = surface_index
+
+#%%
+
 index = []
 for i in range(len(chunks_dir["path"])-1):
     if chunks_dir["path"][i+1] != chunks_dir["path"][i]:
