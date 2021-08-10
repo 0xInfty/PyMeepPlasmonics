@@ -94,7 +94,7 @@ measure_ram()
             help="Series name used to create a folder and save files")
 @cli.option("--folder", "-f", type=str, default=None,
             help="Series folder used to save files")
-@cli.option("--parallel", "-par", type=bool, default=True,
+@cli.option("--parallel", "-par", type=bool, default=False,
             help="Whether the program is being run in parallel or in serial")
 @cli.option("--split-chunks-evenly", "-chev", "split_chunks_evenly", 
             type=bool, default=True,
@@ -438,16 +438,16 @@ def main(from_um_factor, resolution, courant,
     if chunks_needed:
 
         sim = mp.Simulation(resolution=resolution,
-                            cell_size=cell_size,
-                            boundary_layers=pml_layers,
+                            Courant=courant,
+                            geometry=final_geometry,
                             sources=sources,
                             k_point=mp.Vector3(),
-                            Courant=courant,
                             default_material=mp.Medium(index=submerged_index),
+                            cell_size=cell_size,
+                            boundary_layers=pml_layers,
                             output_single_precision=True,
-                            split_chunks_evenly=split_chunks_evenly,
+                            split_chunks_evenly=split_chunks_evenly)
                             # symmetries=symmetries,
-                            geometry=final_geometry)
     
         sim.init_sim()
         
@@ -637,17 +637,17 @@ def main(from_um_factor, resolution, courant,
     measure_ram()
     
     sim = mp.Simulation(resolution=resolution,
-                        cell_size=cell_size,
-                        boundary_layers=pml_layers,
+                        Courant=courant,
+                        geometry=final_geometry,
                         sources=sources,
                         k_point=mp.Vector3(),
-                        Courant=courant,
                         default_material=mp.Medium(index=submerged_index),
+                        cell_size=cell_size,
+                        boundary_layers=pml_layers,
                         output_single_precision=True,
                         split_chunks_evenly=split_chunks_evenly,
-                        chunk_layout=chunk_layout,
+                        chunk_layout=chunk_layout)
                         # symmetries=symmetries,
-                        geometry=final_geometry)
     
     measure_ram()
     
