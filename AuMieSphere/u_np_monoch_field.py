@@ -71,13 +71,9 @@ import v_utilities as vu
             help="Series name used to create a folder and save files")
 @cli.option("--folder", "-f", type=str, 
             help="Series folder used to save files")
-@cli.option("--parallel", "-par", type=bool, default=False,
-            help="Whether the program is being run in parallel or in serial")
 @cli.option("--split-chunks-evenly", "-chev", "split_chunks_evenly", 
             type=bool, default=True,
             help="Whether to split chunks evenly or not during parallel run")
-@cli.option("--n-processes", "-np", "n_processes", type=int, default=0,
-            help="Number of cores used to run the program in parallel")
 @cli.option("--n-cores", "-nc", "n_cores", type=int, default=0,
             help="Number of cores used to run the program in parallel")
 @cli.option("--n-nodes", "-nn", "n_nodes", type=int, default=0,
@@ -89,7 +85,7 @@ def main(from_um_factor, resolution, courant,
          empty_r_factor, pml_wlen_factor, 
          time_factor_cell,
          series, folder,
-         parallel, n_processes, n_cores, n_nodes, split_chunks_evenly,
+         n_cores, n_nodes, split_chunks_evenly,
          save_hfield):
     
     #%% DEFAULT PARAMETERS
@@ -161,7 +157,6 @@ def main(from_um_factor, resolution, courant,
         series = f"AuSphereField{2*r*from_um_factor*1e3:.0f}WLen{wlen*from_um_factor*1e3:.0f}"
     if folder is None:
         folder = "AuMieSphere/AuSphereField"
-    trs = vu.BilingualManager(english=english)
     
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", "submerged_index", "wlen", 
@@ -204,6 +199,7 @@ def main(from_um_factor, resolution, courant,
                           radius=r)]
     # Au sphere with frequency-dependant characteristics imported from Meep.
     
+    n_processes = mp.count_processors()
     parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
     max_index = np.argmax(parallel_specs)
     for index, item in enumerate(parallel_specs): 
@@ -213,22 +209,21 @@ def main(from_um_factor, resolution, courant,
     n_processes, n_cores, n_nodes = parallel_specs
     parallel = max(parallel_specs) > 1
     del parallel_specs, max_index, index, item
-            
-    if parallel:
-        np_process = mp.count_processors()
-    else:
-        np_process = 1
+                    
+    parallel_assign = vm.parallel_manager(n_processes, parallel)
     
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and vm.parallel_assign(0, n_processes, parallel):
+    if not os.path.isdir(path) and parallel_assign(0):
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
     
+    trs = vu.BilingualManager(english=english)
+    
     #%% PLOT CELL
 
-    if vm.parallel_assign(0, n_processes, parallel):
+    if parallel_assign(0):
         fig, ax = plt.subplots()
         
         # PML borders
@@ -395,14 +390,12 @@ def main(from_um_factor, resolution, courant,
     del t, x, y, z, more
     del volumes, periods, vol, per
     
-    if vm.parallel_assign(0, n_processes, parallel):
+    if parallel_assign(0):
         
         files = ["Field-Lines", "Field-Planes"]
         for fil, dims in zip(files, dimensions):
             
-            print(f"Going to open {fil}")
             f = h5.File(file(fil + ".h5"), "r+")
-            print(f"I have opened {fil}")
             keys = [vu.camel(k) for k in f.keys()]
             for oldk, newk in zip(list(f.keys()), keys):
                 f[newk] = f[oldk]
@@ -438,9 +431,7 @@ def main(from_um_factor, resolution, courant,
                 
                 f.close()
                 fh.close()
-                
                 os.remove(file(hfil + ".h5"))
-                print(f"Removed {hfil}")
             
             del hfiles, f, fh, keys, oldk, newk, k
           

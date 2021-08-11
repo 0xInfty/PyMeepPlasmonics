@@ -36,6 +36,7 @@ import PyMieScatt as ps
 import v_materials as vmt
 import v_meep as vm
 import v_save as vs
+import v_utilities as vu
 
 used_ram, swapped_ram, measure_ram = vm.ram_manager()
 measure_ram()
@@ -94,13 +95,9 @@ measure_ram()
             help="Series name used to create a folder and save files")
 @cli.option("--folder", "-f", type=str, default=None,
             help="Series folder used to save files")
-@cli.option("--parallel", "-par", type=bool, default=False,
-            help="Whether the program is being run in parallel or in serial")
 @cli.option("--split-chunks-evenly", "-chev", "split_chunks_evenly", 
             type=bool, default=True,
             help="Whether to split chunks evenly or not during parallel run")
-@cli.option("--n-processes", "-np", "n_processes", type=int, default=0,
-            help="Number of cores used to run the program in parallel")
 @cli.option("--n-cores", "-nc", "n_cores", type=int, default=0,
             help="Number of cores used to run the program in parallel")
 @cli.option("--n-nodes", "-nn", "n_nodes", type=int, default=0,
@@ -123,7 +120,7 @@ def main(from_um_factor, resolution, courant,
          air_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
          series, folder, 
-         parallel, n_processes, n_cores, n_nodes, split_chunks_evenly,
+         n_cores, n_nodes, split_chunks_evenly,
          load_flux, load_chunks, near2far, make_plots):
 
     #%% CLASSIC INPUT PARAMETERS    
@@ -177,6 +174,9 @@ def main(from_um_factor, resolution, courant,
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
     nazimuthal = 16
     npolar = 20
+    
+    # Run configuration
+    english = False
     
     ### TREATED INPUT PARAMETERS
     
@@ -285,6 +285,7 @@ def main(from_um_factor, resolution, courant,
           
     enlapsed = []
     
+    n_processes = mp.count_processors()
     parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
     max_index = np.argmax(parallel_specs)
     for index, item in enumerate(parallel_specs): 
@@ -294,22 +295,21 @@ def main(from_um_factor, resolution, courant,
     n_processes, n_cores, n_nodes = parallel_specs
     parallel = max(parallel_specs) > 1
     del parallel_specs, max_index, index, item
-            
-    if parallel:
-        np_process = mp.count_processors()
-    else:
-        np_process = 1
+                    
+    parallel_assign = vm.parallel_manager(n_processes, parallel)
         
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and vm.parallel_assign(0, n_processes, parallel):
+    if not os.path.isdir(path) and parallel_assign(0):
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
     
+    trs = vu.BilingualManager(english=english)
+    
     #%% PLOT CELL
 
-    if make_plots and vm.parallel_assign(0, n_processes, parallel):
+    if make_plots and parallel_assign(0):
         fig, ax = plt.subplots()
         
         # PML borders
@@ -318,7 +318,7 @@ def main(from_um_factor, resolution, courant,
                                        fill=False, edgecolor="m", linestyle="dashed",
                                        hatch='/', 
                                        zorder=-20,
-                                       label="PML borders")
+                                       label=trs.choose("PML borders", "Bordes PML"))
         pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
                                         -cell_width/2+pml_width), 
                                        cell_width - 2*pml_width, cell_width - 2*pml_width,
@@ -330,7 +330,8 @@ def main(from_um_factor, resolution, courant,
             surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
                                                cell_width, cell_width,
                                                color="blue", alpha=.1, zorder=-6,
-                                               label=fr"Medium $n$={submerged_index}") 
+                                               label=trs.choose(fr"Medium $n$={submerged_index}",
+                                                                fr"Medio $n$={submerged_index}"))
     
         # Surface medium
         if surface_index != submerged_index:
@@ -339,7 +340,8 @@ def main(from_um_factor, resolution, courant,
                                            cell_width,
                                            edgecolor="navy", hatch=r"\\", 
                                            fill=False, zorder=-3,
-                                           label=fr"Surface $n$={surface_index}") 
+                                           label=trs.choose(fr"Surface $n$={surface_index}",
+                                                            fr"Superficie $n$={surface_index}"))
     
         # Nanoparticle
         if material=="Au":
@@ -349,17 +351,20 @@ def main(from_um_factor, resolution, courant,
         else:
             circle_color="peru"
         circle = plt.Circle((0,0), r, color=circle_color, linewidth=1, alpha=.4, 
-                            zorder=0, label=f"{material} Nanoparticle")
+                            zorder=0, label=trs.choose(f"{material} Nanoparticle",
+                                                       f"Nanopartícula de {material}"))
         
         # Source
         ax.vlines(source_center, -cell_width/2, cell_width/2,
-                  color="r", linestyle="dashed", zorder=5, label="Planewave Source")
+                  color="r", linestyle="dashed", zorder=5, 
+                  label=trs.choose("Planewave Source", "Fuente de ondas plana"))
         
         # Flux box
         flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
                                     flux_box_size, flux_box_size,
                                     linewidth=1, edgecolor="limegreen", linestyle="dashed",
-                                    fill=False, zorder=10, label="Flux box")
+                                    fill=False, zorder=10, 
+                                    label=trs.choose("Flux box", "Caja de flujo"))
         
         ax.add_patch(circle)
         if submerged_index!=1: ax.add_patch(surrounding_square)
@@ -375,18 +380,20 @@ def main(from_um_factor, resolution, courant,
         # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
         box.y1 = box.y1 + .10 * (box.y1 - box.y0)
         ax.set_position(box)
-        plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
+        plt.legend(bbox_to_anchor=trs.choose( (1.47, 0.5), (1.54, 0.5) ), 
+                   loc="center right", frameon=False)
         
         fig.set_size_inches(7.5, 4.8)
         ax.set_aspect("equal")
         plt.xlim(-cell_width/2, cell_width/2)
         plt.ylim(-cell_width/2, cell_width/2)
-        plt.xlabel("Position X [Meep Units]")
-        plt.ylabel("Position Z [Meep Units]")
+        plt.xlabel(trs.choose("Position X [Mp.u.]", "Posición X [u.Mp.]"))
+        plt.ylabel(trs.choose("Position Z [Mp.u.]", "Posición Z [u.Mp.]"))
         
-        plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                (5, 5),
-                xycoords='figure points')
+        plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                     (5, 5),
+                     xycoords='figure points')
         
         plt.savefig(file("SimBox.png"))
         
@@ -579,7 +586,7 @@ def main(from_um_factor, resolution, courant,
                       "Flujo Z10 [u.a]",
                       "Flujo Z20 [u.a]"]
         
-        if vm.parallel_assign(0, n_processes, parallel):
+        if parallel_assign(0):
             vs.savetxt(file("MidFlux.txt"), data_mid, 
                        header=header_mid, footer=params)
 
@@ -589,10 +596,10 @@ def main(from_um_factor, resolution, courant,
         if parallel:
             f = h5.File(file("MidRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
             current_process = mp.my_rank()
-            f.create_dataset("RAM", (len(used_ram), np_process), dtype="float")
+            f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
             f["RAM"][:, current_process] = used_ram
             for a in params: f["RAM"].attrs[a] = params[a]
-            f.create_dataset("SWAP", (len(used_ram), np_process), dtype="int")
+            f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
             f["SWAP"][:, current_process] = swapped_ram
             for a in params: f["SWAP"].attrs[a] = params[a]
         else:
@@ -606,7 +613,7 @@ def main(from_um_factor, resolution, courant,
 
         #% PLOT FLUX FOURIER MID DATA
         
-        if vm.parallel_assign(1, np_process, parallel) and make_plots:
+        if parallel_assign(1) and make_plots:
             ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
             ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
                       ylims[1]+.1*(ylims[1]-ylims[0]))
@@ -882,7 +889,7 @@ def main(from_um_factor, resolution, courant,
                     "Flujo scattereado [u.a.]",
                     "Sección eficaz de scattering [u.a.]"]
     
-    if vm.parallel_assign(0, np_process, parallel):
+    if parallel_assign(0):
         vs.savetxt(file("Results.txt"), data, 
                    header=header, footer=params)
         vs.savetxt(file("BaseResults.txt"), data_base, 
@@ -901,7 +908,7 @@ def main(from_um_factor, resolution, courant,
                          poynting_z.reshape(poynting_z.size),
                          poynting_r.reshape(poynting_r.size)]
         
-        if vm.parallel_assign(1, np_process, parallel):
+        if parallel_assign(1):
             vs.savetxt(file("Near2FarResults.txt"), data_near2far, 
                        header=header_near2far, footer=params)
         del header_near2far, data_near2far
@@ -912,10 +919,10 @@ def main(from_um_factor, resolution, courant,
     if parallel:
         f = h5.File(file("RAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
         current_process = mp.my_rank()
-        f.create_dataset("RAM", (len(used_ram), np_process), dtype="float")
+        f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
         f["RAM"][:, current_process] = used_ram
         for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", (len(used_ram), np_process), dtype="int")
+        f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
         f["SWAP"][:, current_process] = swapped_ram
         for a in params: f["SWAP"].attrs[a] = params[a]
     else:
@@ -927,69 +934,81 @@ def main(from_um_factor, resolution, courant,
     f.close()
     del f
     
-    if flux_needed and vm.parallel_assign(0, np_process, parallel):
+    if flux_needed and parallel_assign(0):
         os.remove(file("MidRAM.h5"))
     
     #%% PLOT ALL TOGETHER
     
-    if surface_index==submerged_index and make_plots:
-        if vm.parallel_assign(0, np_process, parallel):
-            plt.figure()
-            plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-            plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
-            plt.xlabel('Wavelength [nm]')
-            plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
-            plt.legend()
-            plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
-            plt.tight_layout()
-            plt.savefig(file("Comparison.png"))
+    if parallel_assign(0) and surface_index==submerged_index and make_plots:
+        plt.figure()
+        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Radius',
+                             'Scattering de esfera de {} con radio {:.1f} nm'
+                             ).format(material, r*from_um_factor*1e3 ))
+        plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
+        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',
+                 label=trs.choose('Theory', 'Teoría'))
+        plt.xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
+                              'Eficiencia de scattering [σ/πr$^{2}$]'))
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(file("Comparison.png"))
     
     #%% PLOT SEPARATE
     
-    if vm.parallel_assign(1, np_process, parallel) and make_plots:
+    if parallel_assign(1) and make_plots:
         plt.figure()
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        plt.xlabel('Wavelength [nm]')
-        plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
+        plt.xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
+                              'Eficiencia de scattering [σ/πr$^{2}$]'))
         plt.legend()
-        plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
+        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Radius',
+                             'Scattering de esfera de {} con radio {:.1f} nm'
+                             ).format(material, r*from_um_factor*1e3 ))
         plt.tight_layout()
         plt.savefig(file("Meep.png"))
         
-    if surface_index==submerged_index and make_plots:
-        if vm.parallel_assign(0, np_process, parallel):
-            plt.figure()
-            plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
-            plt.xlabel('Wavelength [nm]')
-            plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
-            plt.legend()
-            plt.title('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*10))
-            plt.tight_layout()
-            plt.savefig(file("Theory.png"))
+    if parallel_assign(0) and surface_index==submerged_index and make_plots:
+        plt.figure()
+        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Radius',
+                             'Scattering de esfera de {} con radio {:.1f} nm'
+                             ).format(material, r*from_um_factor*1e3 ))
+        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',
+                 label=trs.choose('Theory', 'Teoría'))
+        plt.xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
+                              'Eficiencia de scattering [σ/πr$^{2}$]'))
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(file("Theory.png"))
     
     #%% PLOT ONE ABOVE THE OTHER
     
-    if surface_index==submerged_index and make_plots:
-        if vm.parallel_assign(1, np_process, parallel):
-            fig, axes = plt.subplots(nrows=2, sharex=True)
-            fig.subplots_adjust(hspace=0)
-            plt.suptitle('Scattering of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
-            
-            axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-            axes[0].yaxis.tick_right()
-            axes[0].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
-            axes[0].legend()
-            
-            axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
-            axes[1].set_xlabel('Wavelength [nm]')
-            axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
-            axes[1].legend()
-            
-            plt.savefig(file("SeparatedComparison.png"))
+    if parallel_assign(1) and surface_index==submerged_index and make_plots:
+        fig, axes = plt.subplots(nrows=2, sharex=True)
+        fig.subplots_adjust(hspace=0)
+        plt.suptitle(trs.choose('Scattering of {} Sphere With {:.1f} nm Radius',
+                                'Scattering de esfera de {} con radio {:.1f} nm'
+                                ).format(material, r*from_um_factor*1e3 ))
+        axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
+        axes[0].yaxis.tick_right()
+        axes[0].set_ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
+                                      'Eficiencia de scattering [σ/πr$^{2}$]'))
+        axes[0].legend()
+        
+        axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
+        axes[1].set_xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
+        axes[0].set_ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
+                                      'Eficiencia de scattering [σ/πr$^{2}$]'))
+        axes[1].legend()
+        
+        plt.savefig(file("SeparatedComparison.png"))
             
     #%% PLOT FLUX FOURIER FINAL DATA
     
-    if vm.parallel_assign(0, np_process, parallel) and make_plots:
+    if parallel_assign(0) and make_plots:
         
         ylims = (np.min(data_base[:,2:8]), np.max(data_base[:,2:8]))
         ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
@@ -997,7 +1016,9 @@ def main(from_um_factor, resolution, courant,
         
         fig, ax = plt.subplots(3, 2, sharex=True)
         fig.subplots_adjust(hspace=0, wspace=.05)
-        plt.suptitle('Final flux of Au Sphere With {:.1f} nm Radius'.format(r*from_um_factor*1e3))
+        plt.suptitle(trs.choose('Final flux of {} Sphere With {:.1f} nm Radius',
+                                'Flujo final de esfera de {} con radio {:.1f} nm'
+                                ).format(material, r*from_um_factor*1e3 ))
         for a in ax[:,1]:
             a.yaxis.tick_right()
             a.yaxis.set_label_position("right")
@@ -1007,20 +1028,24 @@ def main(from_um_factor, resolution, courant,
         for d, a in zip(data_base[:,3:9].T, np.reshape(ax, 6)):
             a.plot(1e3*from_um_factor/freqs, d)
             a.set_ylim(*ylims)
-        ax[-1,0].set_xlabel("Wavelength [nm]")
-        ax[-1,1].set_xlabel("Wavelength [nm]")
+        ax[-1,0].set_xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        ax[-1,1].set_xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
         
         plt.savefig(file("FinalFlux.png"))
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
-    if near2far and vm.parallel_assign(1, np_process, parallel) and separate_simulations_needed and make_plots:
+    if near2far and parallel_assign(1) and separate_simulations_needed and make_plots:
     
         freq_index = np.argmin(np.abs(freqs - freq_center))
     
         fig = plt.figure()
-        plt.suptitle('Angular Pattern of Au Sphere With {:.1f} nm Radius at {:.1f} nm'.format(r*from_um_factor*1e3,
-                                                                                              from_um_factor*1e3/freqs[freq_index]))
+        plt.suptitle(trs.choose(
+            'Angular Pattern of {} Sphere With {:.1f} nm Radius at {:.1f} nm',
+            'Patrón angular de esfera de {} con radio {:.1f} nm a {:.1f} nm'
+            ).format(material,
+                     r*from_um_factor*1e3, 
+                     from_um_factor*1e3/freqs[freq_index] ))
         ax = fig.add_subplot(1,1,1, projection='3d')
         ax.plot_surface(
             poynting_x[:,:,freq_index], 
@@ -1035,14 +1060,18 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
-    if near2far and vm.parallel_assign(0, np_process, parallel) and separate_simulations_needed and make_plots:
+    if near2far and parallel_assign(0) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(polar_angle).index(alpha) for alpha in [0, .25, .5, .75, 1]]
         
         plt.figure()
-        plt.suptitle('Angular Pattern of Au Sphere With {:.1f} nm Radius at {:.1f} nm'.format(r*from_um_factor*1e3,
-                                                                                              from_um_factor*1e3/freqs[freq_index]))
+        plt.suptitle(trs.choose(
+            'Angular Pattern of {} Sphere With {:.1f} nm Radius at {:.1f} nm',
+            'Patrón angular de esfera de {} con radio {:.1f} nm a {:.1f} nm'
+            ).format(material,
+                     r*from_um_factor*1e3, 
+                     from_um_factor*1e3/freqs[freq_index] ))
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(poynting_x[:,i,freq_index], 
@@ -1057,14 +1086,19 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
-    if near2far and vm.parallel_assign(1, np_process, parallel) and separate_simulations_needed and make_plots:
+    if near2far and parallel_assign(1) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
         
         plt.figure()
-        plt.suptitle('Angular Pattern of Au Sphere With {:.1f} nm Radius at {:.1f} nm'.format(r*from_um_factor*1e3,
-                                                                                      from_um_factor*1e3/freqs[freq_index]))
+        plt.suptitle(trs.choose(
+            'Angular Pattern of {} Sphere With {:.1f} nm Radius at {:.1f} nm',
+            'Patrón angular de esfera de {} con radio {:.1f} nm a {:.1f} nm'
+            ).format(material,
+                     r*from_um_factor*1e3, 
+                     from_um_factor*1e3/freqs[freq_index] ))
+                     
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(poynting_x[i,:,freq_index], 
@@ -1076,14 +1110,18 @@ def main(from_um_factor, resolution, courant,
         
         plt.savefig(file("AngularAzimuthal.png"))
         
-    if near2far and vm.parallel_assign(0, np_process, parallel) and separate_simulations_needed and make_plots:
+    if near2far and parallel_assign(0) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
         
         plt.figure()
-        plt.suptitle('Angular Pattern of Au Sphere With {:.1f} nm Radius at {:.1f} nm'.format(r*from_um_factor*1e3,
-                                                                                      from_um_factor*1e3/freqs[freq_index]))
+        plt.suptitle(trs.choose(
+            'Angular Pattern of {} Sphere With {:.1f} nm Radius at {:.1f} nm',
+            'Patrón angular de esfera de {} con radio {:.1f} nm a {:.1f} nm'
+            ).format(material,
+                     r*from_um_factor*1e3, 
+                     from_um_factor*1e3/freqs[freq_index] ))
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(np.sqrt(np.square(poynting_x[i,:,freq_index]) + np.square(poynting_y[i,:,freq_index])), 

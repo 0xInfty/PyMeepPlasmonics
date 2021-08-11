@@ -36,6 +36,7 @@ import os
 from time import time#, sleep
 import v_meep as vm
 import v_save as vs
+import v_utilities as vu
 
 used_ram, swapped_ram, measure_ram = vm.ram_manager()
 measure_ram()
@@ -100,14 +101,16 @@ measure_ram()
 @cli.option("--split-chunks-evenly", "-chev", "split_chunks_evenly", 
             type=bool, default=True,
             help="Whether to split chunks evenly or not during parallel run")
-@cli.option("--n-processes", "-np", "n_processes", type=int, default=1,
-            help="Number of nuclei used to run the program in parallel")
+@cli.option("--n-cores", "-nc", "n_cores", type=int, default=0,
+            help="Number of cores used to run the program in parallel")
+@cli.option("--n-nodes", "-nn", "n_nodes", type=int, default=0,
+            help="Number of nodes used to run the program in parallel")
 def main(from_um_factor, resolution_wlen, courant, 
          submerged_index, displacement, surface_index, 
          wlen_center, wlen_width, nfreq, standing,
          air_wlen_factor, pml_wlen_factor, flux_padd_factor,
          time_factor_cell, second_time_factor,
-         series, folder, parallel, n_processes, split_chunks_evenly):
+         series, folder, n_cores, n_nodes, split_chunks_evenly):
 
     #%% CLASSIC INPUT PARAMETERS    
     """
@@ -157,6 +160,9 @@ def main(from_um_factor, resolution_wlen, courant,
     nazimuthal = 32 # Suggestion: multiple of 8, to make plots correctly.
     npolar = 40 # Suggestion: multiple of 4, to make plots correctly.
     
+    # Run configuration
+    english = False
+    
     ### TREATED INPUT PARAMETERS
     
     # Cell general specifications: Surface below dipole
@@ -179,16 +185,27 @@ def main(from_um_factor, resolution_wlen, courant,
     
     # Computation
     enlapsed = []
-    if parallel:
-        np_process = mp.count_processors()
-    else:
-        np_process = 1
+    
+    n_processes = mp.count_processors()
+    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
+    max_index = np.argmax(parallel_specs)
+    for index, item in enumerate(parallel_specs): 
+        if item == 0: parallel_specs[index] = 1
+    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
+                                          max(parallel_specs))
+    n_processes, n_cores, n_nodes = parallel_specs
+    parallel = max(parallel_specs) > 1
+    del parallel_specs, max_index, index, item
+                    
+    parallel_assign = vm.parallel_manager(n_processes, parallel)
     
     # Saving directories
     if series is None:
         series = "Test"
     if folder is None:
         folder = "Test"
+    trs = vu.BilingualManager(english=english)
+    
     params_list = ["from_um_factor", "resolution_wlen", "resolution", "courant",
                    "submerged_index", "displacement", "surface_index",
                    "wlen_center", "wlen_width", "cutoff", "standing",
@@ -275,7 +292,7 @@ def main(from_um_factor, resolution_wlen, courant,
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and vm.parallel_assign(0, n_processes, parallel):
+    if not os.path.isdir(path) and parallel_assign(0):
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
         
@@ -323,7 +340,7 @@ def main(from_um_factor, resolution_wlen, courant,
 
     #%% PLOT CELL
 
-    if vm.parallel_assign(0, np_process, parallel):
+    if parallel_assign(0):
     
         fig, ax = plt.subplots()
         
@@ -333,10 +350,11 @@ def main(from_um_factor, resolution_wlen, courant,
                                        fill=False, edgecolor="m", linestyle="dashed",
                                        hatch='/', 
                                        zorder=-20,
-                                       label="PML borders")
+                                       label=trs.choose("PML borders", "Bordes PML"))
         pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
                                         -cell_width/2+pml_width), 
-                                       cell_width - 2*pml_width, cell_width - 2*pml_width,
+                                       cell_width - 2*pml_width, 
+                                       cell_width - 2*pml_width,
                                        facecolor="white", edgecolor="m", 
                                        linestyle="dashed", linewidth=1, zorder=-10)
        
@@ -345,26 +363,30 @@ def main(from_um_factor, resolution_wlen, courant,
             surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
                                                cell_width, cell_width,
                                                color="blue", alpha=.1, zorder=-6,
-                                               label=fr"Medium $n$={submerged_index}") 
+                                               label=trs.choose(fr"Medium $n$={submerged_index}",
+                                                                fr"Medio $n$={submerged_index}"))
     
         # Surface medium
         if surface_index != submerged_index:
             surface_square = plt.Rectangle((-surface_box_size/2, -surface_box_size/2),
-                                           surface_box_size/2 - displacement,
                                            surface_box_size,
+                                           surface_box_size/2 - displacement,
                                            edgecolor="navy", hatch=r"\\", 
                                            fill=False, zorder=-3,
-                                           label=fr"Surface $n$={surface_index}") 
+                                           label=trs.choose(fr"Surface $n$={surface_index}",
+                                                            fr"Superficie $n$={surface_index}"))
         
         # Source
         ax.plot(0, 0, "o", color="r", zorder=5, 
-                label=f"Point Dipole {wlen_center * from_um_factor * 1e3:.0f} nm")
+                label=trs.choose("Point Dipole", "Dipolo puntual") + 
+                                 f"{wlen_center * from_um_factor * 1e3:.0f} nm")
         
         # Flux box
         flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
                                     flux_box_size, flux_box_size,
-                                    linewidth=1, edgecolor="limegreen", linestyle="dashed",
-                                    fill=False, zorder=10, label="Flux box")
+                                    linewidth=1, edgecolor="limegreen", 
+                                    linestyle="dashed", fill=False, zorder=10, 
+                                    label=trs.choose("Flux box", "Caja de flujo"))
         
         if submerged_index!=1: ax.add_patch(surrounding_square)
         if surface_index!=submerged_index: ax.add_patch(surface_square)
@@ -379,19 +401,19 @@ def main(from_um_factor, resolution_wlen, courant,
         # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
         box.y1 = box.y1 + .10 * (box.y1 - box.y0)
         ax.set_position(box)
-        plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
+        plt.legend(bbox_to_anchor=trs.choose( (1.47, 0.5), (1.54, 0.5) ), 
+                   loc="center right", frameon=False)
         
         fig.set_size_inches(7.5, 4.8)
         ax.set_aspect("equal")
         plt.xlim(-cell_width/2, cell_width/2)
         plt.ylim(-cell_width/2, cell_width/2)
-        plt.xlabel("Position X [Meep Units]")
-        plt.ylabel("Position Y [Meep Units]")
+        plt.xlabel(trs.choose("Position X [Mp.u.]", "Posición X [u.Mp.]"))
+        plt.ylabel(trs.choose("Position Z [Mp.u.]", "Posición Z [u.Mp.]"))
         
-        plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                (5, 5),
-                xycoords='figure points')
-        plt.show()
+        plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                     (5, 5), xycoords='figure points')
         
         plt.savefig(file("SimBox.png"))
         
@@ -488,7 +510,7 @@ def main(from_um_factor, resolution_wlen, courant,
     
     os.chdir(path)
     sim.save_near2far("BaseNear2Far", near2far_box)
-    if vm.parallel_assign(0, np_process, parallel):
+    if parallel_assign(0):
             f = h5.File("BaseNear2Far.h5", "r+")
             for key, par in params.items():
                 f[ list(f.keys())[0] ].attrs[key] = par
@@ -496,7 +518,7 @@ def main(from_um_factor, resolution_wlen, courant,
             del f
     os.chdir(syshome)
 
-    if vm.parallel_assign(1, np_process, parallel):
+    if parallel_assign(1):
             f = h5.File(file("BaseResults.h5"), "w")
             f["Px"] = poynting_x
             f["Py"] = poynting_y
@@ -514,10 +536,10 @@ def main(from_um_factor, resolution_wlen, courant,
     if parallel:
         f = h5.File(file("BaseRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
         current_process = mp.my_rank()
-        f.create_dataset("RAM", (len(used_ram), np_process), dtype="float")
+        f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
         f["RAM"][:, current_process] = used_ram
         for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", (len(used_ram), np_process), dtype="int")
+        f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
         f["SWAP"][:, current_process] = swapped_ram
         for a in params: f["SWAP"].attrs[a] = params[a]
     else:
@@ -579,7 +601,7 @@ def main(from_um_factor, resolution_wlen, courant,
     
         # #%% PLOT CELL
     
-        if vm.parallel_assign(0, np_process, parallel):
+        if parallel_assign(0):
     
             fig, ax = plt.subplots()
             
@@ -589,7 +611,7 @@ def main(from_um_factor, resolution_wlen, courant,
                                            fill=False, edgecolor="m", linestyle="dashed",
                                            hatch='/', 
                                            zorder=-20,
-                                           label="PML borders")
+                                           label=trs.choose("PML borders", "Bordes PML"))
             pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
                                             -cell_width/2+pml_width), 
                                            cell_width - 2*pml_width, cell_width - 2*pml_width,
@@ -602,7 +624,8 @@ def main(from_um_factor, resolution_wlen, courant,
                                            cell_width,
                                            edgecolor="navy", hatch=r"\\", 
                                            fill=False, zorder=-6,
-                                           label=fr"Surface $n$={surface_index}") 
+                                           label=trs.choose(fr"Surface $n$={surface_index}",
+                                                            fr"Superficie $n$={surface_index}"))
             
             # Surrounding medium
             if submerged_index != 1:
@@ -618,7 +641,8 @@ def main(from_um_factor, resolution_wlen, courant,
                                                surface_box_size/2 + displacement,
                                                surface_box_size,
                                                color=submerged_color, alpha=.1, zorder=-3,
-                                               label=fr"Medium $n$={submerged_index}") 
+                                               label=trs.choose(fr"Medium $n$={submerged_index}",
+                                                                fr"Medio $n$={submerged_index}"))
             
             surrounding_square_2 = plt.Rectangle((-displacement, -surface_box_size/2),
                                                surface_box_size/2 + displacement,
@@ -627,13 +651,15 @@ def main(from_um_factor, resolution_wlen, courant,
             
             # Source
             ax.plot(0, 0, "o", color="r", zorder=5, 
-                    label=f"Point Dipole {wlen_center * from_um_factor * 1e3:.0f} nm")
+                    label=trs.choose("Point Dipole", "Dipolo puntual") + 
+                                     f"{wlen_center * from_um_factor * 1e3:.0f} nm")
             
             # Flux box
             flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
                                         flux_box_size, flux_box_size,
                                         linewidth=1, edgecolor="limegreen", linestyle="dashed",
-                                        fill=False, zorder=10, label="Flux box")
+                                        fill=False, zorder=10, 
+                                        label=trs.choose("Flux box", "Caja de flujo"))
             
             ax.add_patch(surrounding_square_0)
             ax.add_patch(surrounding_square)
@@ -650,18 +676,19 @@ def main(from_um_factor, resolution_wlen, courant,
             # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
             box.y1 = box.y1 + .10 * (box.y1 - box.y0)
             ax.set_position(box)
-            plt.legend(bbox_to_anchor=(1.5, 0.5), loc="center right", frameon=False)
+            plt.legend(bbox_to_anchor=trs.choose( (1.47, 0.5), (1.54, 0.5) ), 
+                       loc="center right", frameon=False)
             
             fig.set_size_inches(7.5, 4.8)
             ax.set_aspect("equal")
             plt.xlim(-cell_width/2, cell_width/2)
             plt.ylim(-cell_width/2, cell_width/2)
-            plt.xlabel("Position X [Meep Units]")
-            plt.ylabel("Position Y [Meep Units]")
+            plt.xlabel(trs.choose("Position X [Mp.u.]", "Posición X [u.Mp.]"))
+            plt.ylabel(trs.choose("Position Z [Mp.u.]", "Posición Z [u.Mp.]"))
             
-            plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                    (5, 5),
-                    xycoords='figure points')
+            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                         (5, 5), xycoords='figure points')
             plt.show()
             
             plt.savefig(file("FurtherSimBox.png"))
@@ -748,7 +775,7 @@ def main(from_um_factor, resolution_wlen, courant,
         
         os.chdir(path)
         sim.save_near2far("FurtherNear2Far", near2far_box)
-        if vm.parallel_assign(0, np_process, parallel):
+        if parallel_assign(0):
                 f = h5.File("FurtherNear2Far.h5", "r+")
                 for key, par in params.items():
                     f[ list(f.keys())[0] ].attrs[key] = par
@@ -756,7 +783,7 @@ def main(from_um_factor, resolution_wlen, courant,
                 del f
         os.chdir(syshome)
     
-        if vm.parallel_assign(1, np_process, parallel):
+        if parallel_assign(1):
                 f = h5.File(file("FurtherResults.h5"), "w")
                 f["Px"] = poynting_x2
                 f["Py"] = poynting_y2
@@ -774,10 +801,10 @@ def main(from_um_factor, resolution_wlen, courant,
         if parallel:
             f = h5.File(file("FurtherRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
             current_process = mp.my_rank()
-            f.create_dataset("RAM", (len(used_ram), np_process), dtype="float")
+            f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
             f["RAM"][:, current_process] = used_ram
             for a in params: f["RAM"].attrs[a] = params[a]
-            f.create_dataset("SWAP", (len(used_ram), np_process), dtype="int")
+            f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
             f["SWAP"][:, current_process] = swapped_ram
             for a in params: f["SWAP"].attrs[a] = params[a]
         else:
@@ -833,24 +860,26 @@ def main(from_um_factor, resolution_wlen, courant,
 
     #%% SAVE FINAL DATA
     
-    if surface_index!=submerged_index and vm.parallel_assign(0, np_process, parallel):
+    if surface_index!=submerged_index and parallel_assign(0):
         
         os.remove(file("BaseRAM.h5"))
         os.rename(file("FurtherRAM.h5"), file("RAM.h5"))
     
-    elif vm.parallel_assign(0, np_process, parallel):
+    elif parallel_assign(0):
         
         os.rename(file("BaseRAM.h5"), file("RAM.h5"))
     
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
-    if vm.parallel_assign(1, np_process, parallel):
+    if parallel_assign(1):
     
         freq_index = np.argmin(np.abs(freqs - freq_center))
     
         fig = plt.figure()
-        plt.suptitle(f'Angular Pattern of point dipole molecule at {from_um_factor * 1e3 * wlen_center:.0f} nm')
+        plt.suptitle(trs.choose(
+            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm',
+            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm'))
         ax = fig.add_subplot(1,1,1, projection='3d')
         ax.plot_surface(
             poynting_x[:,:,freq_index], 
@@ -865,13 +894,15 @@ def main(from_um_factor, resolution_wlen, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
-    if vm.parallel_assign(0, np_process, parallel):
+    if parallel_assign(0):
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(polar_angle).index(alpha) for alpha in [0, .25, .5, .75, 1]]
         
         plt.figure()
-        plt.suptitle(f'Angular Pattern of point dipole molecule at {from_um_factor * 1e3 * wlen_center:.0f} nm')
+        plt.suptitle(trs.choose(
+            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm',
+            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm'))
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(poynting_x[:,i,freq_index], 
@@ -886,13 +917,15 @@ def main(from_um_factor, resolution_wlen, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
-    if vm.parallel_assign(1, np_process, parallel):
+    if parallel_assign(1):
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
         
         plt.figure()
-        plt.suptitle(f'Angular Pattern of point dipole molecule at {from_um_factor * 1e3 * wlen_center:.0f} nm')
+        plt.suptitle(trs.choose(
+            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm',
+            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm'))
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(poynting_x[i,:,freq_index], 
@@ -904,13 +937,15 @@ def main(from_um_factor, resolution_wlen, courant,
         
         plt.savefig(file("AngularAzimuthal.png"))
         
-    if vm.parallel_assign(0, np_process, parallel):
+    if parallel_assign(0):
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
         
         plt.figure()
-        plt.suptitle(f'Angular Pattern of point dipole molecule at {from_um_factor * 1e3 * wlen_center:.0f} nm')
+        plt.suptitle(trs.choose(
+            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm',
+            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm'))
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(np.sqrt(np.square(poynting_x[i,:,freq_index]) + np.square(poynting_y[i,:,freq_index])), 

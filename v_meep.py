@@ -159,18 +159,11 @@ def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5, print_log=Tru
 
 def check_stability(params):
     
-    if params["reference"]=="Meep": 
-        medium = vmt.import_medium(params["material"], 
-                                   from_um_factor=params["from_um_factor"], 
-                                   paper=params["paper"])
-        # Importing material constants dependant on frequency from Meep Library
-    elif params["reference"]=="RIinfo":
-        medium = vmt.MediumFromFile(params["material"], paper=params["paper"], 
-                                    reference=params["reference"], 
-                                    from_um_factor=params["from_um_factor"])
-        # Importing material constants dependant on frequency from external file
-    else:
-        raise ValueError("Reference for medium not recognized. Sorry :/")
+
+    medium = vmt.import_medium(params["material"], 
+                               from_um_factor=params["from_um_factor"], 
+                               paper=params["paper"])
+    # Importing material constants dependant on frequency from Meep Library
 
     stable_freq_res, max_courant_freq_res = verify_stability_freq_res(
         medium, params["resolution"], courant=params["courant"], print_log=True)
@@ -199,6 +192,22 @@ def check_stability(params):
     max_courant = min([max_courant_dim_index, max_courant_freq_res])
     
     return stable, max_courant    
+
+#%%
+
+def parallel_manager(process_total_number, parallel):
+    
+    def parallel_assign(process_number):
+        
+        if parallel and process_total_number > 1:
+            if process_number == 0:
+                return mp.am_master()
+            else:
+                return mp.my_rank() == 1
+        else:
+            return True
+    
+    return parallel_assign
 
 #%%
 
