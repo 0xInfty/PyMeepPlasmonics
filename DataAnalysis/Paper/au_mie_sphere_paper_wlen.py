@@ -145,46 +145,46 @@ plt.legend()
 plt.xlabel("Wavelength [nm]")
 plt.ylabel("Normalized Scattering Residuum")
 
-#%% GET ENLAPSED TIME
+#%% GET elapsed TIME
 
-enlapsed_time = [params[0][i]["enlapsed"] for i in range(len(data[0]))]
-total_enlapsed_time = [sum(et) for et in enlapsed_time]
+elapsed_time = [params[0][i]["elapsed"] for i in range(len(data[0]))]
+total_elapsed_time = [sum(et) for et in elapsed_time]
 
 rsq, m, b = va.linear_fit(np.array(wlen_maximum), 
-                          np.array(total_enlapsed_time), 
+                          np.array(total_elapsed_time), 
                           mb_units=["nm/s","s"])
 
 # plt.figure()
-plt.title("Enlapsed total time for simulation of Au 103 nm sphere in water")
-# plt.plot(wlen_maximum, total_enlapsed_time, '.k', markersize=12)
+plt.title("elapsed total time for simulation of Au 103 nm sphere in water")
+# plt.plot(wlen_maximum, total_elapsed_time, '.k', markersize=12)
 plt.legend(["Data", r"Fit $f(r)=a_0 \lambda + a_1$"], loc="lower right")
 plt.xlabel("Wavelength Range Maximum [nm]")
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("TotTime.png"), overwrite=True)
         
 plt.figure()
-plt.title("Enlapsed time for simulations of Au 103 nm sphere in water")
-plt.plot(wlen_maximum, [et[1] for et in enlapsed_time], 'D-b', label="Sim I")
-plt.plot(wlen_maximum, [et[-1] for et in enlapsed_time], 's-b', label="Sim II")
+plt.title("elapsed time for simulations of Au 103 nm sphere in water")
+plt.plot(wlen_maximum, [et[1] for et in elapsed_time], 'D-b', label="Sim I")
+plt.plot(wlen_maximum, [et[-1] for et in elapsed_time], 's-b', label="Sim II")
 plt.xlabel("Wavelength Range Maximum [nm]")
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("SimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of Au 103 nm sphere in water")
-plt.plot(wlen_maximum, [et[0] for et in enlapsed_time], 'D-r', label="Sim I")
-plt.plot(wlen_maximum, [et[2] for et in enlapsed_time], 's-r', label="Sim II")
+plt.title("elapsed time for building of Au 103 nm sphere in water")
+plt.plot(wlen_maximum, [et[0] for et in elapsed_time], 'D-r', label="Sim I")
+plt.plot(wlen_maximum, [et[2] for et in elapsed_time], 's-r', label="Sim II")
 plt.xlabel("Wavelength Range Maximum [nm]")
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("BuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of Au 103 nm sphere in water")
-plt.plot(wlen_maximum, [et[3] for et in enlapsed_time], 's-m')
+plt.title("elapsed time for loading flux of Au 103 nm sphere in water")
+plt.plot(wlen_maximum, [et[3] for et in elapsed_time], 's-m')
 plt.xlabel("Wavelength Range Maximum [nm]")
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("LoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

@@ -73,7 +73,7 @@ sources = [mp.Source(mp.ContinuousSource(wavelength=wlen,
 
 symmetries = [mp.Mirror(mp.Y), mp.Mirror(mp.Z, phase=-1)]
 
-enlapsed = []
+elapsed = []
 
 path = os.path.join(home, folder, "{}Results".format(series))
 if not os.path.isdir(path): vs.new_dir(path)
@@ -119,7 +119,7 @@ if time_is_after_source:
 else:
     sim.run(*to_do_while_running, until=run_time)
 del f, g
-enlapsed.append(time() - temp)
+elapsed.append(time() - temp)
 
 #%% SAVE METADATA
 
@@ -182,7 +182,7 @@ if time_is_after_source:
     sim.run(*to_do_while_running, until_after_source=run_time)
 else:
     sim.run(*to_do_while_running, until=run_time)
-enlapsed.append(time() - temp)
+elapsed.append(time() - temp)
 
 #%% SAVE DATA!
 
@@ -217,7 +217,7 @@ if time_is_after_source:
     sim.run(*to_do_while_running, until_after_source=run_time)
 else:
     sim.run(*to_do_while_running, until=run_time)
-enlapsed.append(time() - temp)
+elapsed.append(time() - temp)
 
 #%% SAVE METADATA
 
@@ -262,7 +262,7 @@ if time_is_after_source:
 else:
     sim.run(*to_do_while_running, until=run_time)
 del h
-enlapsed.append(time() - temp)
+elapsed.append(time() - temp)
 
 #%% SAVE METADATA
 

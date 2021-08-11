@@ -34,9 +34,9 @@ for s in series:
 
 params = [vu.fix_params_dict(p) for p in params]
 
-enlapsed = [p["enlapsed"] for p in params]
-total = np.array([sum(e) for e in enlapsed])
-enlapsed = np.array(enlapsed)
+elapsed = [p["elapsed"] for p in params]
+total = np.array([sum(e) for e in elapsed])
+elapsed = np.array(elapsed)
 
 #%% PLOT
 
@@ -51,10 +51,10 @@ plt.savefig(os.path.join(path, "Total.png"), bbox_inches='tight')
 #%% 
 
 plt.figure()
-# plt.plot(nprocesses, enlapsed_0[:,1], 's-r', label="Serie 1: Sim I")
-# plt.plot(nprocesses, enlapsed_0[:,-1], 'o-r', label="Serie 1: Sim II")
-plt.plot(nprocesses, enlapsed[:,1], 's-b', label="Serie 2: Sim I")
-plt.plot(nprocesses, enlapsed[:,-1], 'o-b', label="Serie 2: Sim II")
+# plt.plot(nprocesses, elapsed_0[:,1], 's-r', label="Serie 1: Sim I")
+# plt.plot(nprocesses, elapsed_0[:,-1], 'o-r', label="Serie 1: Sim II")
+plt.plot(nprocesses, elapsed[:,1], 's-b', label="Serie 2: Sim I")
+plt.plot(nprocesses, elapsed[:,-1], 'o-b', label="Serie 2: Sim II")
 plt.xlabel("Número de subprocesos")
 plt.ylabel("Tiempo (s)")
 plt.legend()
@@ -63,10 +63,10 @@ plt.savefig(os.path.join(path, "Simulations.png"), bbox_inches='tight')
 #%%
 
 plt.figure()
-# plt.plot(nprocesses, enlapsed_0[:,0], 's-r', label="Serie 1: Init I")
-plt.plot(nprocesses, enlapsed[:,0], 's-b', label="Serie 2: Init I")
-# plt.plot(nprocesses, enlapsed_0[:,2], 'o-r', label="Serie 1: Init II")
-plt.plot(nprocesses, enlapsed[:,2], 'o-b', label="Serie 2: Init II")
+# plt.plot(nprocesses, elapsed_0[:,0], 's-r', label="Serie 1: Init I")
+plt.plot(nprocesses, elapsed[:,0], 's-b', label="Serie 2: Init I")
+# plt.plot(nprocesses, elapsed_0[:,2], 'o-r', label="Serie 1: Init II")
+plt.plot(nprocesses, elapsed[:,2], 'o-b', label="Serie 2: Init II")
 plt.xlabel("Número de subprocesos")
 plt.ylabel("Tiempo (s)")
 plt.legend()
@@ -75,8 +75,8 @@ plt.savefig(os.path.join(path, "Building.png"), bbox_inches='tight')
 #%%
 
 plt.figure()
-# plt.plot(nprocesses, enlapsed_0[:,3], 'o-r', label="Serie 1: Load Flux")
-plt.plot(nprocesses, enlapsed[:,3], 'o-b', label="Serie 2: Load Flux")
+# plt.plot(nprocesses, elapsed_0[:,3], 'o-r', label="Serie 1: Load Flux")
+plt.plot(nprocesses, elapsed[:,3], 'o-b', label="Serie 2: Load Flux")
 plt.xlabel("Número de subprocesos")
 plt.ylabel("Tiempo (s)")
 plt.legend()

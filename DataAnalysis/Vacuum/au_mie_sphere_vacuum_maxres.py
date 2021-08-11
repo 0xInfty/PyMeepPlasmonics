@@ -71,7 +71,7 @@ for f, sf, sm in zip(folder, sorting_function, series_must):
 
 wlens = data[0][0][:,0]
 resolution = [vu.find_numbers(s)[-1] for s in series[0]]
-enlapsed = [p["enlapsed"] for p in params[0]]
+elapsed = [p["elapsed"] for p in params[0]]
 
 def special_label(s):
     if str(resolution[-1]) in s:
@@ -100,48 +100,48 @@ plt.xlabel("Resolution")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET ENLAPSED TIME
+#%% GET elapsed TIME
 
-enlapsed_time = [params[0][i]["enlapsed"] for i in range(len(data[0]))]
-total_enlapsed_time = [sum(et) for et in enlapsed_time]
+elapsed_time = [params[0][i]["elapsed"] for i in range(len(data[0]))]
+total_elapsed_time = [sum(et) for et in elapsed_time]
 
 def quartic_fit(X, A, b):
     return A * (X)**4 + b
 rsq, parameters = va.nonlinear_fit(np.array(resolution), 
-                                   np.array(total_enlapsed_time), 
+                                   np.array(total_elapsed_time), 
                                    quartic_fit,
                                    par_units=["s","s"])
 
-plt.title("Enlapsed time simulation of Au 103 nm sphere in vacuum")
-# plt.plot(resolution, total_enlapsed_time)
+plt.title("elapsed time simulation of Au 103 nm sphere in vacuum")
+# plt.plot(resolution, total_elapsed_time)
 plt.legend(["Data", r"Fit $f(r)=a_0 r^4 + a_1$"], loc="lower right")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("TotTime.png"), overwrite=True)
 
 plt.figure()
-plt.title("Enlapsed time for simulations of Au 103 nm sphere in vacuum")
-plt.plot(resolution, [et[1] for et in enlapsed_time], 'D-b', label="Sim I")
-plt.plot(resolution, [et[-1] for et in enlapsed_time], 's-b', label="Sim II")
+plt.title("elapsed time for simulations of Au 103 nm sphere in vacuum")
+plt.plot(resolution, [et[1] for et in elapsed_time], 'D-b', label="Sim I")
+plt.plot(resolution, [et[-1] for et in elapsed_time], 's-b', label="Sim II")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("SimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of Au 103 nm sphere in vacuum")
-plt.plot(resolution, [et[0] for et in enlapsed_time], 'D-r', label="Sim I")
-plt.plot(resolution, [et[2] for et in enlapsed_time], 's-r', label="Sim II")
+plt.title("elapsed time for building of Au 103 nm sphere in vacuum")
+plt.plot(resolution, [et[0] for et in elapsed_time], 'D-r', label="Sim I")
+plt.plot(resolution, [et[2] for et in elapsed_time], 's-r', label="Sim II")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("BuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of Au 103 nm sphere in vacuum")
-plt.plot(resolution, [et[3] for et in enlapsed_time], 's-m')
+plt.title("elapsed time for loading flux of Au 103 nm sphere in vacuum")
+plt.plot(resolution, [et[3] for et in elapsed_time], 's-m')
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("LoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

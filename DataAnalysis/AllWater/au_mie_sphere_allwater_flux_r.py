@@ -186,11 +186,11 @@ fig.axes[1].set_xlim(-5, 55)
 plt.ylim(-2, 14)
 vs.saveplot(plot_file("WLenDiff2Zoom.png"), overwrite=True)
 
-#%% GET ENLAPSED TIME COMPARED
+#%% GET elapsed TIME COMPARED
 
 flux_r_factor = [[vu.find_numbers(s)[0] for s in ser] for ser in series]
-enlapsed_time = [[p["enlapsed"] for p in par] for par in params]
-total_enlapsed_time = [[sum(p["enlapsed"]) for p in par] for par in params]
+elapsed_time = [[p["elapsed"] for p in par] for par in params]
+total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
 
 first_flux_r_factor = []
 second_flux_r_factor = []
@@ -199,7 +199,7 @@ first_sim_time = []
 second_flux_time = []
 second_build_time = []
 second_sim_time = []
-for enl, frf in zip(enlapsed_time, flux_r_factor):
+for enl, frf in zip(elapsed_time, flux_r_factor):
     first_flux_r_factor.append( [] )
     first_build_time.append( [] )
     first_sim_time.append( [] )
@@ -225,42 +225,42 @@ for enl, frf in zip(enlapsed_time, flux_r_factor):
             print(f"Unknown error in flux_r_factor {fr} of", frf)
 
 plt.figure()
-plt.title("Enlapsed total time for simulation of " + plot_title)
-for frf, tot, col in zip(flux_r_factor, total_enlapsed_time, colors):
+plt.title("elapsed total time for simulation of " + plot_title)
+for frf, tot, col in zip(flux_r_factor, total_elapsed_time, colors):
     plt.plot(frf, tot, '.', markersize=12, color=col[3])
 plt.legend(["Air-r factor 0.5", "Air-r factor 2.0"])
 plt.xlabel("Flux box side in multiples of radius")
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 plt.figure()
-plt.title("Enlapsed time for simulations of " + plot_title)
+plt.title("elapsed time for simulations of " + plot_title)
 plt.plot(first_flux_r_factor[0], first_sim_time[0], 'D-', color="r", label="Air 0.5 Sim I")
 plt.plot(first_flux_r_factor[1], first_sim_time[1], 'D-', color="maroon", label="Air 2.0 Sim I")
 plt.plot(second_flux_r_factor[0], second_sim_time[0], 's-', color="r", label="Air 0.5 Sim II")
 plt.plot(second_flux_r_factor[1], second_sim_time[1], 's-', color="maroon", label="Air 2.0 Sim II")
 plt.xlabel("Flux box side in multiples of radius")
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of " + plot_title)
+plt.title("elapsed time for building of " + plot_title)
 plt.plot(first_flux_r_factor[0], first_build_time[0], 'D-', color="b", label="Air 0.5 Sim I")
 plt.plot(first_flux_r_factor[1], first_build_time[1], 'D-', color="navy", label="Air 2.0 Sim I")
 plt.plot(second_flux_r_factor[0], second_build_time[0], 's-', color="b", label="Air 0.5 Sim II")
 plt.plot(second_flux_r_factor[1], second_build_time[1], 's-', color="navy", label="Air 2.0 Sim II")
 plt.xlabel("Flux box side in multiples of radius")
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title)
 plt.plot(second_flux_r_factor[0], second_flux_time[0], 's-', color="m", label="Air 0.5 Sim II")
 plt.plot(second_flux_r_factor[1], second_flux_time[1], 's-', color="darkmagenta", label="Air 2.0 Sim II")
 plt.xlabel("Flux box side in multiples of radius")
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

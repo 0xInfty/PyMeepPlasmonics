@@ -176,10 +176,10 @@ plt.xlabel("Resolution")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET ENLAPSED TIME COMPARED
+#%% GET elapsed TIME COMPARED
 
-enlapsed_time = [[p["enlapsed"] for p in par] for par in params]
-total_enlapsed_time = [[sum(p["enlapsed"]) for p in par] for par in params]
+elapsed_time = [[p["elapsed"] for p in par] for par in params]
+total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
 
 first_resolution = []
 second_resolution = []
@@ -188,7 +188,7 @@ first_sim_time = []
 second_flux_time = []
 second_build_time = []
 second_sim_time = []
-for enl, res in zip(enlapsed_time, joint_resolution):
+for enl, res in zip(elapsed_time, joint_resolution):
     first_resolution.append( [] )
     first_build_time.append( [] )
     first_sim_time.append( [] )
@@ -214,83 +214,83 @@ for enl, res in zip(enlapsed_time, joint_resolution):
             print(f"Unknown error in resolution {rs} of", res)
 
 plt.figure()
-plt.title("Enlapsed total time for simulation of " + plot_title)
-for res, tot in zip(joint_resolution, total_enlapsed_time):
+plt.title("elapsed total time for simulation of " + plot_title)
+for res, tot in zip(joint_resolution, total_elapsed_time):
     plt.plot(res, tot, '.', markersize=12)
 plt.legend(["Meep R", "Meep JC"], loc="lower right")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 plt.figure()
-plt.title("Enlapsed time for simulations of " + plot_title)
+plt.title("elapsed time for simulations of " + plot_title)
 plt.plot(first_resolution[0], first_sim_time[0], 'D-', color="C0", label="R Sim I")
 plt.plot(first_resolution[1], first_sim_time[1], 'D-', color="C1", label="JC Sim I")
 plt.plot(second_resolution[0], second_sim_time[0], 's-', color="C0", label="R Sim II")
 plt.plot(second_resolution[1], second_sim_time[1], 's-', color="C1", label="JC Sim II")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of " + plot_title)
+plt.title("elapsed time for building of " + plot_title)
 plt.plot(first_resolution[0], first_build_time[0], 'D-', color="C0", label="R Sim I")
 plt.plot(first_resolution[1], first_build_time[1], 'D-', color="C1", label="JC Sim I")
 plt.plot(second_resolution[0], second_build_time[0], 's-', color="C0", label="R Sim II")
 plt.plot(second_resolution[1], second_build_time[1], 's-', color="C1", label="JC Sim II")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title)
 plt.plot(second_resolution[0], second_flux_time[0], 's-', color="C0", label="R Sim II")
 plt.plot(second_resolution[1], second_flux_time[1], 's-', color="C1", label="JC Sim II")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
-#%% GET ENLAPSED TIME JC
+#%% GET elapsed TIME JC
 
 def quartic_fit(X, A, b):
     return A * (X)**4 + b
 rsq, parameters = va.nonlinear_fit(np.array(resolution[1][:-1]), 
-                                   np.array(total_enlapsed_time[1][:-1]), 
+                                   np.array(total_elapsed_time[1][:-1]), 
                                    quartic_fit,
                                    par_units=["s","s"])
 
-plt.title("Enlapsed total time for simulation of " + plot_title)
-# plt.plot(resolution, total_enlapsed_time)
+plt.title("elapsed total time for simulation of " + plot_title)
+# plt.plot(resolution, total_elapsed_time)
 plt.legend(["Data", r"Fit $f(r)=a_0 r^4 + a_1$"], loc="lower right")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("TotTime.png"), overwrite=True)
         
 plt.figure()
-plt.title("Enlapsed time for simulations of " + plot_title)
+plt.title("elapsed time for simulations of " + plot_title)
 plt.plot(first_resolution[1], first_sim_time[1], 'D-b', label="Sim I")
 plt.plot(second_resolution[1], second_sim_time[1], 's-b', label="Sim II")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("SimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of " + plot_title)
+plt.title("elapsed time for building of " + plot_title)
 plt.plot(first_resolution[1], first_build_time[1], 'D-r', label="Sim I")
 plt.plot(second_resolution[1], second_build_time[1], 's-r', label="Sim II")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("BuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title)
 plt.plot(second_resolution[1], second_flux_time[1], 's-m')
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("LoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

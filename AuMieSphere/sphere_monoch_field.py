@@ -53,7 +53,7 @@ period_line = 1
 period_plane = 1
 
 # Computation time
-enlapsed = []
+elapsed = []
 after_cell_run_time = 10*wlen
 
 # Saving directories
@@ -129,7 +129,7 @@ sim = mp.Simulation(resolution=resolution,
 
 temp = time()
 sim.init_sim()
-enlapsed.append(time()-temp)
+elapsed.append(time()-temp)
 
 #%% DEFINE SAVE STEP FUNCTIONS
 
@@ -144,7 +144,7 @@ to_do_while_running = [mp.at_every(period_line, save_line),
 temp = time()
 sim.run(*to_do_while_running, until=cell_width+after_cell_run_time)
 del f, g
-enlapsed.append(time() - temp)
+elapsed.append(time() - temp)
 
 #%% SAVE METADATA
 
@@ -163,7 +163,7 @@ params = dict(
     series=series,
     folder=folder, 
     home=home,
-    enlapsed=enlapsed
+    elapsed=elapsed
     )
 
 f = h5.File(file("Lines.h5"), "r+")

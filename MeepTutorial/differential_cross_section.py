@@ -185,7 +185,7 @@ print("- absolute error: {:.3e}".format(
     abs(scatt_cross_section_meep - scatt_cross_section_theory)))
 print("- relative error: {:.2f}%".format(
     100*abs(scatt_cross_section_meep - scatt_cross_section_theory)/scatt_cross_section_theory))
-print("- enlapsed time: {:.2f} s".format(stop_time - start_time))
+print("- elapsed time: {:.2f} s".format(stop_time - start_time))
 
 #%%
 
@@ -196,12 +196,12 @@ print("- enlapsed time: {:.2f} s".format(stop_time - start_time))
 - σscatt x theory: 8.3429545590438750
 - absolute error: 1.875e-01
 - relative error: 2.25%
-- enlapsed time: 410.43 s
+- elapsed time: 410.43 s
 
 >> Results x resolution=25 <<
 - σscatt x meep: 8.2215435272741395 
 - σscatt x theory: 8.3429545590438750
 - absolute error: 1.214e-01
 - relative error: 1.46%
-- enlapsed time: 934.35 s
+- elapsed time: 934.35 s
 """

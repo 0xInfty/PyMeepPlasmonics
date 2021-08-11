@@ -154,11 +154,11 @@ plt.xlabel("Courant factor")
 plt.ylabel("Mean quadratic difference in scattering effiency")
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
-#%% GET ENLAPSED TIME COMPARED
+#%% GET elapsed TIME COMPARED
 
 courant = [[vu.find_numbers(s)[0] for s in ser] for ser in series]
-enlapsed_time = [[p["enlapsed"] for p in par] for par in params]
-total_enlapsed_time = [[sum(p["enlapsed"]) for p in par] for par in params]
+elapsed_time = [[p["elapsed"] for p in par] for par in params]
+total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
 
 first_courant = []
 second_courant = []
@@ -167,7 +167,7 @@ first_sim_time = []
 second_flux_time = []
 second_build_time = []
 second_sim_time = []
-for enl, cou in zip(enlapsed_time, courant):
+for enl, cou in zip(elapsed_time, courant):
     first_courant.append( [] )
     first_build_time.append( [] )
     first_sim_time.append( [] )
@@ -194,45 +194,45 @@ for enl, cou in zip(enlapsed_time, courant):
 
 colors = ["darkgrey", "k"]
 plt.figure()
-plt.title("Enlapsed total time for simulation of " + plot_title)
-for cou, tot, col in zip(courant, total_enlapsed_time, colors):
+plt.title("elapsed total time for simulation of " + plot_title)
+for cou, tot, col in zip(courant, total_elapsed_time, colors):
     plt.plot(cou, tot, '.-', color=col, markersize=14)
 plt.legend(series_legend)
 plt.xlabel("Courant factor")
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 colors = ["r", "maroon"]
 plt.figure()
-plt.title("Enlapsed time for simulations of " + plot_title)
+plt.title("elapsed time for simulations of " + plot_title)
 for cou, tim, col, leg in zip(first_courant, first_sim_time, colors, series_legend):
     plt.plot(cou, tim, 'D-', color=col, label=leg + " Sim I")
 for cou, tim, col, leg in zip(second_courant, second_sim_time, colors, series_legend):
     plt.plot(cou, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel("Courant factor")
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 colors = ["b", "navy"]
 plt.figure()
-plt.title("Enlapsed time for building of " + plot_title)
+plt.title("elapsed time for building of " + plot_title)
 for cou, tim, col, leg in zip(first_courant, first_build_time, colors, series_legend):
     plt.plot(cou, tim, 'D-', color=col, label=leg + " Sim I")
 for cou, tim, col, leg in zip(second_courant, second_build_time, colors, series_legend):
     plt.plot(cou, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel("Courant factor")
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 colors = ["m", "darkmagenta"]
 plt.figure()
-plt.title("Enlapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title)
 for cou, tim, col, leg in zip(second_courant, second_flux_time, colors, series_legend):
     plt.plot(cou, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel("Courant factor")
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

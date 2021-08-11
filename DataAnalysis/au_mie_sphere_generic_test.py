@@ -202,10 +202,10 @@ plt.xlabel(test_param_label)
 plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
-#%% GET ENLAPSED TIME COMPARED
+#%% GET elapsed TIME COMPARED
 
-enlapsed_time = [[p["enlapsed"] for p in par] for par in params]
-total_enlapsed_time = [[sum(p["enlapsed"]) for p in par] for par in params]
+elapsed_time = [[p["elapsed"] for p in par] for par in params]
+total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
 
 first_test_param = []
 second_test_param = []
@@ -214,7 +214,7 @@ first_sim_time = []
 second_flux_time = []
 second_build_time = []
 second_sim_time = []
-for enl, tpar in zip(enlapsed_time, test_param):
+for enl, tpar in zip(elapsed_time, test_param):
     first_test_param.append( [] )
     first_build_time.append( [] )
     first_sim_time.append( [] )
@@ -245,45 +245,45 @@ else:
     colors = ["k"]
 
 plt.figure()
-plt.title("Enlapsed total time for simulation of " + plot_title)
-for tp, tot, col in zip(test_param, total_enlapsed_time, colors):
+plt.title("elapsed total time for simulation of " + plot_title)
+for tp, tot, col in zip(test_param, total_elapsed_time, colors):
     plt.plot(tp, tot, '.-', color=col, markersize=14)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 colors = ["r", "maroon"]
 plt.figure()
-plt.title("Enlapsed time for simulations of " + plot_title)
+plt.title("elapsed time for simulations of " + plot_title)
 for tp, tim, col, leg in zip(first_test_param, first_sim_time, colors, series_legend):
     plt.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
 for tp, tim, col, leg in zip(second_test_param, second_sim_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 colors = ["b", "navy"]
 plt.figure()
-plt.title("Enlapsed time for building of " + plot_title)
+plt.title("elapsed time for building of " + plot_title)
 for tp, tim, col, leg in zip(first_test_param, first_build_time, colors, series_legend):
     plt.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
 for tp, tim, col, leg in zip(second_test_param, second_build_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 colors = ["m", "darkmagenta"]
 plt.figure()
-plt.title("Enlapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title)
 for tp, tim, col, leg in zip(second_test_param, second_flux_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

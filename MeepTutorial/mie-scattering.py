@@ -101,8 +101,8 @@ box_z2 = sim.add_flux(frq_cen, dfrq, nfrq,
 
 temp = time()
 sim.init_sim()
-enlapsed = [time() - temp]
-print("Enlapsed on 1st Building: {} s".format(enlapsed[-1]))
+elapsed = [time() - temp]
+print("elapsed on 1st Building: {} s".format(elapsed[-1]))
 
 """
 8x8x8 with resolution 25
@@ -114,8 +114,8 @@ print("Enlapsed on 1st Building: {} s".format(enlapsed[-1]))
 
 temp = time()
 sim.run(until_after_sources=10)
-enlapsed = [*enlapsed, time()-temp]
-print("Enlapsed on 1st Simulation: {} s".format(enlapsed[-1]))
+elapsed = [*elapsed, time()-temp]
+print("elapsed on 1st Simulation: {} s".format(elapsed[-1]))
 
 freqs = mp.get_flux_freqs(box_x1)
 box_x1_data = sim.get_flux_data(box_x1)
@@ -141,7 +141,7 @@ sim.reset_meep()
 params = dict(
     from_um_factor=from_um_factor,
     resolution=resolution,
-    enlapsed=enlapsed,
+    elapsed=elapsed,
     )
 
 data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
@@ -199,8 +199,8 @@ sim.load_minus_flux_data(box_y1, box_y1_data)
 sim.load_minus_flux_data(box_y2, box_y2_data)
 sim.load_minus_flux_data(box_z1, box_z1_data)
 sim.load_minus_flux_data(box_z2, box_z2_data)
-enlapsed = [*enlapsed, time()-temp]
-print("Enlapsed on 2nd Building: {} s".format(enlapsed[-1]))
+elapsed = [*elapsed, time()-temp]
+print("elapsed on 2nd Building: {} s".format(elapsed[-1]))
 
 #%% SECOND RUN: SIMULATION :D
 
@@ -213,8 +213,8 @@ box_y1_flux = np.asarray(mp.get_fluxes(box_y1))
 box_y2_flux = np.asarray(mp.get_fluxes(box_y2))
 box_z1_flux = np.asarray(mp.get_fluxes(box_z1))
 box_z2_flux = np.asarray(mp.get_fluxes(box_z2))
-enlapsed = [*enlapsed, time()-temp]
-print("Enlapsed on 2nd Simulation: {} s".format(enlapsed[-1]))
+elapsed = [*elapsed, time()-temp]
+print("elapsed on 2nd Simulation: {} s".format(elapsed[-1]))
 
 #%% ANALYSIS
 
@@ -261,7 +261,7 @@ plt.savefig(file("Plot.png"))
 
 data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
 
-params["enlapsed"] = enlapsed
+params["elapsed"] = elapsed
 
 header = ["Longitud de onda [nm]", 
           "Sección eficaz efectiva (Meep) [u.a.]", 

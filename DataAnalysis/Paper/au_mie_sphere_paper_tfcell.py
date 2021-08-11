@@ -117,11 +117,11 @@ plt.xlabel("Time factor cell")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET ENLAPSED TIME COMPARED
+#%% GET elapsed TIME COMPARED
 
 time_factor_cell = [[p["time_factor_cell"] for p in par] for par in params]
-enlapsed_time = [[p["enlapsed"] for p in par] for par in params]
-total_enlapsed_time = [[sum(p["enlapsed"]) for p in par] for par in params]
+elapsed_time = [[p["elapsed"] for p in par] for par in params]
+total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
 
 first_time_factor_cell = []
 second_time_factor_cell = []
@@ -130,7 +130,7 @@ first_sim_time = []
 second_flux_time = []
 second_build_time = []
 second_sim_time = []
-for enl, tfc in zip(enlapsed_time, time_factor_cell):
+for enl, tfc in zip(elapsed_time, time_factor_cell):
     first_time_factor_cell.append( [] )
     first_build_time.append( [] )
     first_sim_time.append( [] )
@@ -156,37 +156,37 @@ for enl, tfc in zip(enlapsed_time, time_factor_cell):
             print(f"Unknown error in time_factor_cell {tf} of", tfc)
 
 plt.figure()
-plt.title("Enlapsed total time for simulation of " + plot_title)
-for tfc, tot in zip(time_factor_cell, total_enlapsed_time):
+plt.title("elapsed total time for simulation of " + plot_title)
+for tfc, tot in zip(time_factor_cell, total_elapsed_time):
     plt.plot(tfc, tot, '.', markersize=12)
 plt.legend(["Meep R", "Meep JC"], loc="lower right")
 plt.xlabel("Time factor cell")
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 plt.figure()
-plt.title("Enlapsed time for simulations of " + plot_title)
+plt.title("elapsed time for simulations of " + plot_title)
 plt.plot(first_time_factor_cell[0], first_sim_time[0], 'D-', color="C0", label="Sim I")
 plt.plot(second_time_factor_cell[0], second_sim_time[0], 's-', color="C0", label="Sim II")
 plt.xlabel("Time factor cell")
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of " + plot_title)
+plt.title("elapsed time for building of " + plot_title)
 plt.plot(first_time_factor_cell[0], first_build_time[0], 'D-', color="C0", label="Sim I")
 plt.plot(second_time_factor_cell[0], second_build_time[0], 's-', color="C0", label="Sim II")
 plt.xlabel("Time factor cell")
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title)
 plt.plot(second_time_factor_cell[0], second_flux_time[0], 's-', color="C0", label="Sim II")
 plt.xlabel("Resolution")
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

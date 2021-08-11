@@ -70,7 +70,7 @@ def main(series, folder, resolution, from_um_factor,
     after_cell_run_time = 10*wlen
     
     # Computation time
-    enlapsed = []
+    elapsed = []
     
     # Saving directories
     if series is None:
@@ -142,7 +142,7 @@ def main(series, folder, resolution, from_um_factor,
     
     temp = time()
     sim.init_sim()
-    enlapsed.append(time()-temp)
+    elapsed.append(time()-temp)
     
     #%% DEFINE SAVE STEP FUNCTIONS
     
@@ -157,7 +157,7 @@ def main(series, folder, resolution, from_um_factor,
     temp = time()
     sim.run(*to_do_while_running, until=cell_width+after_cell_run_time)
     del f, g
-    enlapsed.append(time() - temp)
+    elapsed.append(time() - temp)
     
     #%% SAVE METADATA
     
@@ -179,7 +179,7 @@ def main(series, folder, resolution, from_um_factor,
         series=series,
         folder=folder, 
         home=home,
-        enlapsed=enlapsed
+        elapsed=elapsed
         )
     
     f = h5.File(file("Lines.h5"), "r+")

@@ -61,7 +61,7 @@ def main(series, resolution, r, paper, wlen_range, meep_flux, H_field):
     cutoff = 3.2
     
     # Computation time
-    enlapsed = []
+    elapsed = []
     time_factor_cell = 1.2
     until_after_sources = False
     
@@ -177,7 +177,7 @@ def main(series, resolution, r, paper, wlen_range, meep_flux, H_field):
     
     temp = time()
     sim.init_sim()
-    enlapsed.append( time() - temp )
+    elapsed.append( time() - temp )
     
     #%% DEFINE SAVE STEP FUNCTIONS
     
@@ -225,7 +225,7 @@ def main(series, resolution, r, paper, wlen_range, meep_flux, H_field):
     
     temp = time()
     sim.run(*to_do_while_running, until_after_sources=until_after_sources)
-    enlapsed.append( time() - temp )
+    elapsed.append( time() - temp )
     
     # if meep_flux:
     #     freqs = np.asarray(mp.get_flux_freqs(box_x1))
@@ -249,7 +249,7 @@ def main(series, resolution, r, paper, wlen_range, meep_flux, H_field):
     #     pml_width=pml_width,
     #     air_width=air_width,
     #     source_center=source_center,
-    #     enlapsed=enlapsed,
+    #     elapsed=elapsed,
     #     period_line=period_line,
     #     period_plane=period_plane,
     #     series=series,

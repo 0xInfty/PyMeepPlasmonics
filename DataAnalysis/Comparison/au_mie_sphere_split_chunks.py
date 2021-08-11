@@ -232,10 +232,10 @@ plt.xlabel(test_param_label)
 plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
-#%% GET ENLAPSED TIME COMPARED
+#%% GET elapsed TIME COMPARED
 
-enlapsed_time = [[p["enlapsed"] for p in par] for par in params]
-# total_enlapsed_time = [[sum(p["enlapsed"]) for p in par] for par in params]
+elapsed_time = [[p["elapsed"] for p in par] for par in params]
+# total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
 
 first_test_param = []
 second_test_param = []
@@ -244,8 +244,8 @@ first_sim_time = []
 second_flux_time = []
 second_build_time = []
 second_sim_time = []
-total_enlapsed_time = []
-for enl, tpar, par in zip(enlapsed_time, test_param, params):
+total_elapsed_time = []
+for enl, tpar, par in zip(elapsed_time, test_param, params):
     first_test_param.append( [] )
     first_build_time.append( [] )
     first_sim_time.append( [] )
@@ -253,7 +253,7 @@ for enl, tpar, par in zip(enlapsed_time, test_param, params):
     second_flux_time.append( [] )
     second_build_time.append( [] )
     second_sim_time.append( [] )
-    total_enlapsed_time.append( [] )
+    total_elapsed_time.append( [] )
     for e, tp, p in zip(enl, tpar, par):
         if len(e)==5:
             first_test_param[-1].append( tp )
@@ -271,12 +271,12 @@ for enl, tpar, par in zip(enlapsed_time, test_param, params):
         else:
             print(f"Unknown error in '{test_param_string}' {tp} of", tpar)
         if p["split_chunks_evenly"]:
-            total_enlapsed_time[-1].append(sum(p["enlapsed"]))
+            total_elapsed_time[-1].append(sum(p["elapsed"]))
         else:
             if len(e)==5:
-                total_enlapsed_time[-1].append(sum(p["enlapsed"]) + e[2])
+                total_elapsed_time[-1].append(sum(p["elapsed"]) + e[2])
             else:
-                total_enlapsed_time[-1].append(sum(p["enlapsed"]) + e[0])
+                total_elapsed_time[-1].append(sum(p["elapsed"]) + e[0])
 
 #%%
 
@@ -288,23 +288,23 @@ else:
 markers = ["o", "o", "D", "D"]
 
 plt.figure()
-plt.title("Enlapsed total time for simulation of " + plot_title)
-for tp, tot, col, mark in zip(test_param, total_enlapsed_time, colors, markers):
+plt.title("elapsed total time for simulation of " + plot_title)
+for tp, tot, col, mark in zip(test_param, total_elapsed_time, colors, markers):
     plt.plot(tp, tot, '-', marker=mark, color=col, markersize=7)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 colors = ["r", "maroon", "darkorange", "orangered"]
 fig = plt.figure()
-plt.title("Enlapsed time for simulations of " + plot_title)
+plt.title("elapsed time for simulations of " + plot_title)
 for tp, tim, col, leg in zip(first_test_param, first_sim_time, colors, series_legend):
     plt.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
 for tp, tim, col, leg in zip(second_test_param, second_sim_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 box = fig.axes[0].get_position()
 box.y0 = box.y0 + .25 * (box.y1 - box.y0)
 box.y1 = box.y1 + .10 * (box.y1 - box.y0)
@@ -315,13 +315,13 @@ plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 colors = ["b", "navy", "cyan", "deepskyblue"]
 fig = plt.figure()
-plt.title("Enlapsed time for building of " + plot_title)
+plt.title("elapsed time for building of " + plot_title)
 for tp, tim, col, leg in zip(first_test_param, first_build_time, colors, series_legend):
     plt.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
 for tp, tim, col, leg in zip(second_test_param, second_build_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 box = fig.axes[0].get_position()
 box.y0 = box.y0 + .25 * (box.y1 - box.y0)
 box.y1 = box.y1 + .10 * (box.y1 - box.y0)
@@ -332,11 +332,11 @@ plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 colors = ["m", "darkmagenta", "blueviolet", "indigo"]
 fig = plt.figure()
-plt.title("Enlapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title)
 for tp, tim, col, leg in zip(second_test_param, second_flux_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 box = fig.axes[0].get_position()
 box.y0 = box.y0 + .15 * (box.y1 - box.y0)
 box.y1 = box.y1 + .10 * (box.y1 - box.y0)
@@ -356,20 +356,20 @@ markers = ["o", "o", "D", "D"]
 
 fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
 axes = [*[axes[0]]*2, *[axes[1]]*2]
-plt.suptitle("Enlapsed total time for simulation of " + plot_title)
-for ax, tp, tot, col, mark in zip(axes, test_param, total_enlapsed_time, colors, markers):
+plt.suptitle("elapsed total time for simulation of " + plot_title)
+for ax, tp, tot, col, mark in zip(axes, test_param, total_elapsed_time, colors, markers):
     ax.plot(tp, tot, '-', marker=mark, color=col, markersize=7)
 axes[0].legend(series_legend[:2])
 axes[2].legend(series_legend[2:])
-axes[0].set_ylabel("Enlapsed time [s]")
-axes[2].set_ylabel("Enlapsed time [s]")
+axes[0].set_ylabel("elapsed time [s]")
+axes[2].set_ylabel("elapsed time [s]")
 plt.xlabel(test_param_label)
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 colors = ["r", "maroon", "darkorange", "orangered"]
 fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
 axes = [*[axes[0]]*2, *[axes[1]]*2]
-plt.suptitle("Enlapsed time for simulations of " + plot_title)
+plt.suptitle("elapsed time for simulations of " + plot_title)
 for ax, tp, tim, col, leg in zip(axes, first_test_param, first_sim_time, colors, series_legend):
     ax.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
 for ax, tp, tim, col, leg in zip(axes, second_test_param, second_sim_time, colors, series_legend):
@@ -377,14 +377,14 @@ for ax, tp, tim, col, leg in zip(axes, second_test_param, second_sim_time, color
 plt.xlabel(test_param_label)
 axes[0].legend()
 axes[2].legend()
-axes[0].set_ylabel("Enlapsed time [s]")
-axes[2].set_ylabel("Enlapsed time [s]")
+axes[0].set_ylabel("elapsed time [s]")
+axes[2].set_ylabel("elapsed time [s]")
 plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 colors = ["b", "navy", "cyan", "deepskyblue"]
 fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
 axes = [*[axes[0]]*2, *[axes[1]]*2]
-plt.suptitle("Enlapsed time for building of " + plot_title)
+plt.suptitle("elapsed time for building of " + plot_title)
 for ax, tp, tim, col, leg in zip(axes, first_test_param, first_build_time, colors, series_legend):
     ax.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
 for ax, tp, tim, col, leg in zip(axes, second_test_param, second_build_time, colors, series_legend):
@@ -392,21 +392,21 @@ for ax, tp, tim, col, leg in zip(axes, second_test_param, second_build_time, col
 plt.xlabel(test_param_label)
 axes[0].legend(ncol=2)
 axes[2].legend(ncol=2)
-axes[0].set_ylabel("Enlapsed time [s]")
-axes[2].set_ylabel("Enlapsed time [s]")
+axes[0].set_ylabel("elapsed time [s]")
+axes[2].set_ylabel("elapsed time [s]")
 plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 colors = ["m", "darkmagenta", "blueviolet", "indigo"]
 fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
 axes = [*[axes[0]]*2, *[axes[1]]*2]
-plt.suptitle("Enlapsed time for loading flux of " + plot_title)
+plt.suptitle("elapsed time for loading flux of " + plot_title)
 for ax, tp, tim, col, leg in zip(axes, second_test_param, second_flux_time, colors, series_legend):
     ax.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
 axes[0].legend()
 axes[2].legend()
-axes[0].set_ylabel("Enlapsed time [s]")
-axes[2].set_ylabel("Enlapsed time [s]")
+axes[0].set_ylabel("elapsed time [s]")
+axes[2].set_ylabel("elapsed time [s]")
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

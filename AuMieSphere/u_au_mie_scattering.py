@@ -217,7 +217,7 @@ def main(from_um_factor, resolution, courant,
                    "wlen_range", "nfreq", "nazimuthal", "npolar", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
-                   "enlapsed", "parallel", "n_processes", "n_cores", "n_nodes",
+                   "elapsed", "parallel", "n_processes", "n_cores", "n_nodes",
                    "split_chunks_evenly", "near2far",
                    "script", "sysname", "path"]
     
@@ -283,7 +283,7 @@ def main(from_um_factor, resolution, courant,
     
     final_geometry = [*initial_geometry, nanoparticle]
           
-    enlapsed = []
+    elapsed = []
     
     n_processes = mp.count_processors()
     parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
@@ -539,7 +539,7 @@ def main(from_um_factor, resolution, courant,
         
         temp = time()
         sim.init_sim()
-        enlapsed.append( time() - temp )
+        elapsed.append( time() - temp )
         measure_ram()
         
         step_ram_function = lambda sim : measure_ram()
@@ -557,7 +557,7 @@ def main(from_um_factor, resolution, courant,
             # mp.Ez, # Component of field to check
             # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
             # 1e-3)) # Factor to decay
-        enlapsed.append( time() - temp )
+        elapsed.append( time() - temp )
         
         #% SAVE MID DATA
 
@@ -711,7 +711,7 @@ def main(from_um_factor, resolution, courant,
     
     temp = time()
     sim.init_sim()
-    enlapsed.append( time() - temp )
+    elapsed.append( time() - temp )
     measure_ram()
     
     #%% LOAD FLUX FROM FILE
@@ -741,7 +741,7 @@ def main(from_um_factor, resolution, courant,
     sim.load_minus_flux_data(box_z2, box_z2_data)
     if near2far and not separate_simulations_needed: 
         sim.load_minus_near2far_data(near2far_box, near2far_data)
-    enlapsed.append( time() - temp )
+    elapsed.append( time() - temp )
     del box_x1_data, box_x2_data, box_y1_data, box_y2_data
     del box_z1_data, box_z2_data
     if near2far and not separate_simulations_needed:  
@@ -764,7 +764,7 @@ def main(from_um_factor, resolution, courant,
         # mp.Ez, # Component of field to check
         # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
         # 1e-3)) # Factor to decay
-    enlapsed.append( time() - temp )
+    elapsed.append( time() - temp )
     del temp
     # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
     

@@ -133,11 +133,11 @@ plt.xlabel("Wavelength range maximum [nm]")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET ENLAPSED TIME COMPARED
+#%% GET elapsed TIME COMPARED
 
 wlen_range_max = [[vu.find_numbers(s)[0] for s in ser] for ser in series]
-enlapsed_time = [[p["enlapsed"] for p in par] for par in params]
-total_enlapsed_time = [[sum(p["enlapsed"]) for p in par] for par in params]
+elapsed_time = [[p["elapsed"] for p in par] for par in params]
+total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
 
 first_wlen_range_max = []
 second_wlen_range_max = []
@@ -146,7 +146,7 @@ first_sim_time = []
 second_flux_time = []
 second_build_time = []
 second_sim_time = []
-for enl, wlm in zip(enlapsed_time, wlen_range_max):
+for enl, wlm in zip(elapsed_time, wlen_range_max):
     first_wlen_range_max.append( [] )
     first_build_time.append( [] )
     first_sim_time.append( [] )
@@ -172,37 +172,37 @@ for enl, wlm in zip(enlapsed_time, wlen_range_max):
             print(f"Unknown error in wlen_range_max {wl} of", wlm)
 
 plt.figure()
-plt.title("Enlapsed total time for simulation of " + plot_title)
-for wlm, tot in zip(wlen_range_max, total_enlapsed_time):
+plt.title("elapsed total time for simulation of " + plot_title)
+for wlm, tot in zip(wlen_range_max, total_elapsed_time):
     plt.plot(wlm, tot, '.', markersize=12)
 plt.legend(["Meep R", "Meep JC"], loc="lower right")
 plt.xlabel("Wavelength range maximum [nm]")
-plt.ylabel("Enlapsed time [s]")
+plt.ylabel("elapsed time [s]")
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 plt.figure()
-plt.title("Enlapsed time for simulations of " + plot_title)
+plt.title("elapsed time for simulations of " + plot_title)
 plt.plot(first_wlen_range_max[0], first_sim_time[0], 'D-', color="r", label="Sim I")
 plt.plot(second_wlen_range_max[0], second_sim_time[0], 's-', color="r", label="Sim II")
 plt.xlabel("Wavelength range maximum [nm]")
-plt.ylabel("Enlapsed time in simulations [s]")
+plt.ylabel("elapsed time in simulations [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for building of " + plot_title)
+plt.title("elapsed time for building of " + plot_title)
 plt.plot(first_wlen_range_max[0], first_build_time[0], 'D-', color="b", label="Sim I")
 plt.plot(second_wlen_range_max[0], second_build_time[0], 's-', color="b", label="Sim II")
 plt.xlabel("Wavelength range maximum [nm]")
-plt.ylabel("Enlapsed time in building [s]")
+plt.ylabel("elapsed time in building [s]")
 plt.legend()
 plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 plt.figure()
-plt.title("Enlapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title)
 plt.plot(second_wlen_range_max[0], second_flux_time[0], 's-', color="m", label="Sim II")
 plt.xlabel("Wavelength range maximum [nm]")
-plt.ylabel("Enlapsed time in loading flux [s]")
+plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
 #%% PLOT NORMALIZED

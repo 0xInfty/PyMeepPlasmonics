@@ -184,7 +184,7 @@ def main(from_um_factor, resolution_wlen, courant,
     surface_box_size = (1 - flux_padd_factor) * flux_box_size
     
     # Computation
-    enlapsed = []
+    elapsed = []
     
     n_processes = mp.count_processors()
     parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
@@ -213,7 +213,7 @@ def main(from_um_factor, resolution_wlen, courant,
                    "flux_box_size", "surface_box_size", "flux_padd_factor",
                    "cell_width", "pml_width", "air_width",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
-                   "enlapsed", "parallel", "n_processes", "split_chunks_evenly", 
+                   "elapsed", "parallel", "n_processes", "split_chunks_evenly", 
                    "script", "sysname", "path"]
     
     #%% GENERAL GEOMETRY SETUP
@@ -426,7 +426,7 @@ def main(from_um_factor, resolution_wlen, courant,
     
     temp = time()
     sim.init_sim()
-    enlapsed.append( time() - temp )
+    elapsed.append( time() - temp )
     measure_ram()
 
     #%% BASE SIMULATION: SIMULATION :D
@@ -444,7 +444,7 @@ def main(from_um_factor, resolution_wlen, courant,
         # mp.Ez, # Component of field to check
         # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
         # 1e-3)) # Factor to decay
-    enlapsed.append( time() - temp )
+    elapsed.append( time() - temp )
     del temp
     # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
         
@@ -702,7 +702,7 @@ def main(from_um_factor, resolution_wlen, courant,
         
         temp = time()
         sim.init_sim()
-        enlapsed.append( time() - temp )
+        elapsed.append( time() - temp )
         measure_ram()
     
         #% FURTHER SIMULATION: SIMULATION :D
@@ -720,7 +720,7 @@ def main(from_um_factor, resolution_wlen, courant,
             # mp.Ez, # Component of field to check
             # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
             # 1e-3)) # Factor to decay
-        enlapsed.append( time() - temp )
+        elapsed.append( time() - temp )
         del temp
         # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
             
