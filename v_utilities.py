@@ -435,6 +435,26 @@ NUMPY_ARRAY = NumpyArrayParamType()
 
 #%%
 
+def camel(string):
+    
+    return string[0].upper() + string[1:].lower()
+
+#%%
+
+class BilingualManager:
+    
+    def __init__(self, english=True):
+        
+        self.english = english
+    
+    def choose(self, english_string, spanish_string):
+        if self.english:
+            return english_string
+        else:
+            return spanish_string
+
+#%%
+
 def find_numbers(string):
 
     """Returns a list of numbers found on a given string
