@@ -382,7 +382,7 @@ def main(from_um_factor, resolution, courant,
         plt.xlim(-cell_width/2, cell_width/2)
         plt.ylim(-cell_width/2, cell_width/2)
         plt.xlabel("Position X [Meep Units]")
-        plt.ylabel("Position Y [Meep Units]")
+        plt.ylabel("Position Z [Meep Units]")
         
         plt.annotate(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                 (5, 5),
@@ -412,7 +412,7 @@ def main(from_um_factor, resolution, courant,
         
     if load_flux:
         try:
-            flux_path = vm.check_midflux(params)[0]
+            flux_path = vm.check_midflux(params)[-1]
             flux_needed = False
         except:
             flux_needed = True
@@ -421,7 +421,7 @@ def main(from_um_factor, resolution, courant,
         
     if load_chunks and not split_chunks_evenly:
         try:
-            chunks_path = vm.check_chunks(params)[0]
+            chunks_path = vm.check_chunks(params)[-1]
             chunk_layout = os.path.join(chunks_path, "Layout.h5")
             chunks_needed = False
         except:
