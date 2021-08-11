@@ -827,3 +827,7 @@ class SingleParticleCell:
         return 2 * (pml + empty + nanoparticle_size) # Meep units
     
     # def get_pml(self, from_um_factor):
+        
+    # def get_geometry(self, from_um_factor, with_surface=True):
+        
+    
