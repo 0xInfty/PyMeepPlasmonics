@@ -24,10 +24,6 @@ sys.path.append(syshome)
 import click as cli
 import h5py as h5
 import meep as mp
-try: 
-    from mpi4py import MPI
-except:
-    print("No mpi4py module found!")
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -594,7 +590,7 @@ def main(from_um_factor, resolution, courant,
             vm.save_chunks(sim, params, path)
             
         if parallel:
-            f = h5.File(file("MidRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
+            f = vs.parallel_hdf_file(file("MidRAM.h5"), "w")
             current_process = mp.my_rank()
             f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
             f["RAM"][:, current_process] = used_ram
@@ -917,7 +913,7 @@ def main(from_um_factor, resolution, courant,
         vm.save_chunks(sim, params, path)        
     
     if parallel:
-        f = h5.File(file("RAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
+        f = vs.parallel_hdf_file(file("RAM.h5"), "w")
         current_process = mp.my_rank()
         f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
         f["RAM"][:, current_process] = used_ram
@@ -941,9 +937,9 @@ def main(from_um_factor, resolution, courant,
     
     if parallel_assign(0) and surface_index==submerged_index and make_plots:
         plt.figure()
-        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Radius',
-                             'Scattering de esfera de {} con radio {:.1f} nm'
-                             ).format(material, r*from_um_factor*1e3 ))
+        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
+                             'Scattering de esfera de {} con diámetro {:.1f} nm'
+                             ).format(material, 2*r*from_um_factor*1e3 ))
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',
                  label=trs.choose('Theory', 'Teoría'))
@@ -958,22 +954,22 @@ def main(from_um_factor, resolution, courant,
     
     if parallel_assign(1) and make_plots:
         plt.figure()
+        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
+                             'Scattering de esfera de {} con diámetro {:.1f} nm'
+                             ).format(material, 2*r*from_um_factor*1e3 ))
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         plt.xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
         plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
                               'Eficiencia de scattering [σ/πr$^{2}$]'))
         plt.legend()
-        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Radius',
-                             'Scattering de esfera de {} con radio {:.1f} nm'
-                             ).format(material, r*from_um_factor*1e3 ))
         plt.tight_layout()
         plt.savefig(file("Meep.png"))
         
     if parallel_assign(0) and surface_index==submerged_index and make_plots:
         plt.figure()
-        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Radius',
-                             'Scattering de esfera de {} con radio {:.1f} nm'
-                             ).format(material, r*from_um_factor*1e3 ))
+        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
+                             'Scattering de esfera de {} con diámetro {:.1f} nm'
+                             ).format(material, 2*r*from_um_factor*1e3 ))
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',
                  label=trs.choose('Theory', 'Teoría'))
         plt.xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
@@ -988,9 +984,9 @@ def main(from_um_factor, resolution, courant,
     if parallel_assign(1) and surface_index==submerged_index and make_plots:
         fig, axes = plt.subplots(nrows=2, sharex=True)
         fig.subplots_adjust(hspace=0)
-        plt.suptitle(trs.choose('Scattering of {} Sphere With {:.1f} nm Radius',
-                                'Scattering de esfera de {} con radio {:.1f} nm'
-                                ).format(material, r*from_um_factor*1e3 ))
+        plt.suptitle(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
+                                'Scattering de esfera de {} con diámetro {:.1f} nm'
+                                ).format(material, 2*r*from_um_factor*1e3 ))
         axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         axes[0].yaxis.tick_right()
         axes[0].set_ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
@@ -1016,9 +1012,9 @@ def main(from_um_factor, resolution, courant,
         
         fig, ax = plt.subplots(3, 2, sharex=True)
         fig.subplots_adjust(hspace=0, wspace=.05)
-        plt.suptitle(trs.choose('Final flux of {} Sphere With {:.1f} nm Radius',
-                                'Flujo final de esfera de {} con radio {:.1f} nm'
-                                ).format(material, r*from_um_factor*1e3 ))
+        plt.suptitle(trs.choose('Final flux of {} Sphere With {:.1f} nm Diameter',
+                                'Flujo final de esfera de {} con diámetro {:.1f} nm'
+                                ).format(material, 2*r*from_um_factor*1e3 ))
         for a in ax[:,1]:
             a.yaxis.tick_right()
             a.yaxis.set_label_position("right")
@@ -1041,10 +1037,10 @@ def main(from_um_factor, resolution, courant,
     
         fig = plt.figure()
         plt.suptitle(trs.choose(
-            'Angular Pattern of {} Sphere With {:.1f} nm Radius at {:.1f} nm',
-            'Patrón angular de esfera de {} con radio {:.1f} nm a {:.1f} nm'
+            'Angular Pattern of {} Sphere With {:.1f} nm Diameter at {:.1f} nm',
+            'Patrón angular de esfera de {} con diámetro {:.1f} nm a {:.1f} nm'
             ).format(material,
-                     r*from_um_factor*1e3, 
+                     2*r*from_um_factor*1e3, 
                      from_um_factor*1e3/freqs[freq_index] ))
         ax = fig.add_subplot(1,1,1, projection='3d')
         ax.plot_surface(
@@ -1067,10 +1063,10 @@ def main(from_um_factor, resolution, courant,
         
         plt.figure()
         plt.suptitle(trs.choose(
-            'Angular Pattern of {} Sphere With {:.1f} nm Radius at {:.1f} nm',
-            'Patrón angular de esfera de {} con radio {:.1f} nm a {:.1f} nm'
+            'Angular Pattern of {} Sphere With {:.1f} nm Diameter at {:.1f} nm',
+            'Patrón angular de esfera de {} con diámetro {:.1f} nm a {:.1f} nm'
             ).format(material,
-                     r*from_um_factor*1e3, 
+                     2*r*from_um_factor*1e3, 
                      from_um_factor*1e3/freqs[freq_index] ))
         ax_plain = plt.axes()
         for i in index:
@@ -1093,10 +1089,10 @@ def main(from_um_factor, resolution, courant,
         
         plt.figure()
         plt.suptitle(trs.choose(
-            'Angular Pattern of {} Sphere With {:.1f} nm Radius at {:.1f} nm',
-            'Patrón angular de esfera de {} con radio {:.1f} nm a {:.1f} nm'
+            'Angular Pattern of {} Sphere With {:.1f} nm Diameter at {:.1f} nm',
+            'Patrón angular de esfera de {} con diámetro {:.1f} nm a {:.1f} nm'
             ).format(material,
-                     r*from_um_factor*1e3, 
+                     2*r*from_um_factor*1e3, 
                      from_um_factor*1e3/freqs[freq_index] ))
                      
         ax_plain = plt.axes()
@@ -1117,10 +1113,10 @@ def main(from_um_factor, resolution, courant,
         
         plt.figure()
         plt.suptitle(trs.choose(
-            'Angular Pattern of {} Sphere With {:.1f} nm Radius at {:.1f} nm',
-            'Patrón angular de esfera de {} con radio {:.1f} nm a {:.1f} nm'
+            'Angular Pattern of {} Sphere With {:.1f} nm Diameter at {:.1f} nm',
+            'Patrón angular de esfera de {} con diámetro {:.1f} nm a {:.1f} nm'
             ).format(material,
-                     r*from_um_factor*1e3, 
+                     2*r*from_um_factor*1e3, 
                      from_um_factor*1e3/freqs[freq_index] ))
         ax_plain = plt.axes()
         for i in index:
