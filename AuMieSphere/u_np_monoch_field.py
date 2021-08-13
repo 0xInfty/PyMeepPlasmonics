@@ -16,16 +16,13 @@ else:
 
 import sys
 sys.path.append(syshome)
+sys.path.append(syshome+"/PlotRoutines")
 
 import click as cli
 import imageio as mim
 import h5py as h5
 import matplotlib.pyplot as plt
 import meep as mp
-try: 
-    from mpi4py import MPI
-except:
-    print("No mpi4py module found!")
 import numpy as np
 import os
 from time import time
@@ -33,6 +30,10 @@ from v_materials import import_medium
 import v_meep as vm
 import v_save as vs
 import v_utilities as vu
+from np_monoch_field import plots_monoch_field
+
+used_ram, swapped_ram, measure_ram = vm.ram_manager()
+measure_ram()
 
 #%% COMMAND LINE FORMATTER
 
@@ -63,10 +64,9 @@ import v_utilities as vu
 @cli.option("--pml-wlen-factor", "-pml", "pml_wlen_factor", 
             type=float, default=0.38,
             help="PML layer width expressed in multiples of maximum wavelength")
-@cli.option("--time-factor-cell", "-tfc", "time_factor_cell", 
+@cli.option("--time-period-factor", "-tpfc", "time_period_factor", 
             type=float, default=10,
-            help="Simulation total time expressed as multiples of time \
-                required to go through the cell")
+            help="Simulation total time expressed as multiples of periods")
 @cli.option("--series", "-s", type=str, 
             help="Series name used to create a folder and save files")
 @cli.option("--folder", "-f", type=str, 
@@ -78,15 +78,21 @@ import v_utilities as vu
             help="Number of cores used to run the program in parallel")
 @cli.option("--n-nodes", "-nn", "n_nodes", type=int, default=0,
             help="Number of nodes used to run the program in parallel")
-@cli.option("--save-hfield", "-savh", "save_hfield", type=bool, default=False,
-            help="Whether to also save magnetic field or not")
+@cli.option("--hfield", "-hf", "hfield", type=bool, default=False,
+            help="Whether to also save and analyse magnetic field or not")
+@cli.option("--make-plots", "-plt", "make_plots", 
+            type=bool, default=True,
+            help="Whether to make plots while running or not.")
+@cli.option("--make-gifs", "-gifs", "make_gifs", 
+            type=bool, default=False,
+            help="Whether to make gifs while running or not.")
 def main(from_um_factor, resolution, courant,
          r, material, paper, wlen, submerged_index, 
          empty_r_factor, pml_wlen_factor, 
-         time_factor_cell,
+         time_period_factor,
          series, folder,
          n_cores, n_nodes, split_chunks_evenly,
-         save_hfield):
+         hfield, make_plots, make_gifs):
     
     #%% DEFAULT PARAMETERS
     
@@ -110,7 +116,7 @@ def main(from_um_factor, resolution, courant,
     empty_r_factor = 0.5
     
     # Sim temporal dimension
-    time_factor_cell = 10    
+    time_period_factor = 10    
     
     # Files configuration
     series = None
@@ -124,14 +130,16 @@ def main(from_um_factor, resolution, courant,
     split_chunks_evenly = True
     
     # Routine configuration
-    save_hfield = True
+    hfield = True
+    make_plots = True
+    make_gifs = True
     """
     
     #%% ADDITIONAL PARAMETERS
     
     # Field Measurements
-    period_line = 1
-    period_plane = 1
+    n_period_line = 100
+    n_period_plane = 100
     
     # Routine configuration
     english = False
@@ -144,26 +152,33 @@ def main(from_um_factor, resolution, courant,
     
     # Frequency and wavelength
     wlen = wlen / ( from_um_factor * 1e3 ) # Wavelength now in Meep units
+    period = submerged_index * wlen
     
     # Space configuration
     pml_width = pml_wlen_factor * wlen # 0.5 * wlen
     empty_width = empty_r_factor * r # 0.5 * max(wlen_range)
+    
+    # Time configuration
+    until_time = time_period_factor * period
+    period_line = period / n_period_line
+    period_plane = period / n_period_line    
     
     # Computation time
     elapsed = []
     
     # Saving directories
     if series is None:
-        series = f"AuSphereField{2*r*from_um_factor*1e3:.0f}WLen{wlen*from_um_factor*1e3:.0f}"
+        series = f"TestAuSphereField{2*r*from_um_factor*1e3:.0f}WLen{wlen*from_um_factor*1e3:.0f}"
     if folder is None:
         folder = "AuMieSphere/AuSphereField"
     
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", "submerged_index", "wlen", 
                    "cell_width", "pml_width", "empty_width", "source_center",
-                   "until_time", "time_factor_cell", "period_line", "period_plane",
+                   "until_time", "time_period_factor", 
+                   "n_period_line", "n_period_plane", "period_line", "period_plane",
                    "elapsed", "parallel", "n_processes", "n_cores", "n_nodes",
-                   "split_chunks_evenly", "save_hfield",
+                   "split_chunks_evenly", "hfield",
                    "script", "sysname", "path"]
     
     #%% GENERAL GEOMETRY SETUP
@@ -192,7 +207,9 @@ def main(from_um_factor, resolution, courant,
     # The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
     
-    until_time = time_factor_cell * cell_width * submerged_index
+    until_time = until_time - until_time%(courant/resolution)
+    period_line = period_line - period_line%(courant/resolution)
+    period_plane = period_plane - period_plane%(courant/resolution)
     
     geometry = [mp.Sphere(material=medium,
                           center=mp.Vector3(),
@@ -223,7 +240,8 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT CELL
 
-    if parallel_assign(0):
+    if parallel_assign(0) and make_plots:
+        
         fig, ax = plt.subplots()
         
         # PML borders
@@ -319,6 +337,8 @@ def main(from_um_factor, resolution, courant,
     #     print(f"Recommended maximum courant factor is {max_courant}")
     # del stable, max_courant
     
+    measure_ram()
+    
     sim = mp.Simulation(resolution=resolution,
                         Courant=courant,
                         geometry=geometry,
@@ -330,9 +350,13 @@ def main(from_um_factor, resolution, courant,
                         output_single_precision=True,
                         split_chunks_evenly=split_chunks_evenly)
     
+    measure_ram()
+    
     temp = time()
     sim.init_sim()
     elapsed.append(time()-temp)
+    
+    measure_ram()
     
     #%% DEFINE SAVE STEP FUNCTIONS
     
@@ -353,7 +377,7 @@ def main(from_um_factor, resolution, courant,
     to_do_while_running = [mp.at_every(period_line, save_line),
                            mp.at_every(period_plane, save_plane)]
     
-    if save_hfield:
+    if hfield:
         save_hline = mp.in_volume(sampling_line, 
                                   mp.to_appended("HLines",
                                                  mp.output_hfield_y))
@@ -364,7 +388,17 @@ def main(from_um_factor, resolution, courant,
                                mp.at_every(period_line, save_hline),
                                mp.at_every(period_plane, save_hplane)]
     
+    step_ram_function = lambda sim : measure_ram()
+    
+    to_do_while_running = [*to_do_while_running,
+                           mp.at_beginning(step_ram_function), 
+                           mp.at_time(int(until_time / 2), 
+                                      step_ram_function),
+                           mp.at_end(step_ram_function)]
+    
     #%% RUN!
+    
+    measure_ram()
     
     filename_prefix = sim.filename_prefix
     sim.filename_prefix = "Field"    
@@ -412,7 +446,7 @@ def main(from_um_factor, resolution, courant,
             
         del f, keys, oldk, newk, k, kpar, array
     
-        if save_hfield:
+        if hfield:
             
             hfiles = ["Field-HLines", "Field-HPlanes"]
             for hfil, fil in zip(hfiles, files):
@@ -436,238 +470,33 @@ def main(from_um_factor, resolution, courant,
             del hfiles, f, fh, keys, oldk, newk, k
           
         del files
+        
+    if parallel:
+        f = vs.parallel_hdf_file(file("RAM.h5"), "w")
+        current_process = mp.my_rank()
+        f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
+        f["RAM"][:, current_process] = used_ram
+        for a in params: f["RAM"].attrs[a] = params[a]
+        f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
+        f["SWAP"][:, current_process] = swapped_ram
+        for a in params: f["SWAP"].attrs[a] = params[a]
+    else:
+        f = h5.File(file("RAM.h5"), "w")
+        f.create_dataset("RAM", data=used_ram)
+        for a in params: f["RAM"].attrs[a] = params[a]
+        f.create_dataset("SWAP", data=swapped_ram)
+        for a in params: f["SWAP"].attrs[a] = params[a]
+    f.close()
+    del f
     
     mp.all_wait()
     
-    # #%% GET READY TO LOAD DATA
+    #%% GET READY TO LOAD DATA
     
-    # if parallel: 
-    #     f = h5.File(file("Field-Lines.h5"), "r+", 
-    #                 driver='mpio', comm=MPI.COMM_WORLD)
-    # else:
-    #     f = h5.File(file(fil + ".h5"), "r+")
-    # results_line = f["Ez"]
-    
-    # if parallel: 
-    #     g = h5.File(file("Field-Planes.h5"), "r+", 
-    #                 driver='mpio', comm=MPI.COMM_WORLD)
-    # else:
-    #     g = h5.File(file("Field-Planes.h5"), "r+")
-    # results_plane = g["Ez"]
-    
-    # t_line = np.arange(0, until_time, period_line)
-    # t_plane = np.arange(0, until_time, period_plane)
-    
-    # x, y, z, more = sim.get_array_metadata()
-    # del more
-    
-    # #%% GENERAL USEFUL FUNCTIONS
-    
-    # t_line_index = lambda t0 : np.argmin(np.abs(t_line - t0))
-    # t_plane_index = lambda t0 : np.argmin(np.abs(t_plane - t0))
-    
-    # x_index = lambda x0 : np.argmin(np.abs(x - x0))
-    # y_index = lambda y0 : np.argmin(np.abs(y - y0))
-    # z_index = lambda z0 : np.argmin(np.abs(z - z0))
-    
-    # #%% SHOW SOURCE
-    
-    # source_index = x_index(source_center)
-    # source_field = np.asarray(results_line[source_index, :])
-    
-    # plt.figure()
-    # plt.plot(t_line, source_field)
-    # plt.xlabel("Tiempo [u.Mp.]")
-    # plt.ylabel("Campo eléctrico Ez [uMp]")
-    
-    # plt.savefig(file("Source.png"))
-    
-    # #%% MAKE FOURIER FOR SOURCE
-    
-    # fourier = np.abs(np.fft.rfft(source_field))
-    # fourier_freq = np.fft.rfftfreq(len(source_field), d=period_line)
-    # fourier_wlen = 1 / fourier_freq
-    
-    # plt.figure()
-    # plt.plot(fourier_freq, fourier, 'k', linewidth=3)
-    # plt.xlabel("Frecuencia [u.Mp.]")
-    # plt.ylabel("Transformada del campo eléctrico Ez [u.a.]")
-    
-    # plt.savefig(file("SourceFFT.png"))
-    
-    # #%% MAKE PLANE GIF
-    
-    # # What should be parameters
-    # nframes_step = 1
-    # nframes = int(results_plane.shape[-1]/nframes_step)
-    # call_series = lambda i : results_plane[:,:,i].T
-    # label_function = lambda i : 'Tiempo: {:.1f} u.Mp.'.format(i*period_plane)
-    
-    # # Animation base
-    # fig = plt.figure()
-    # ax = plt.subplot()
-    # lims = (np.min(results_plane), np.max(results_plane))
-    
-    # def draw_pml_box():
-    #     plt.hlines(z_index(-cell_width/2 + pml_width), 
-    #                 y_index(-cell_width/2 + pml_width), 
-    #                 y_index(cell_width/2 - pml_width),
-    #                 linestyle=":", color='k')
-    #     plt.hlines(z_index(cell_width/2 - pml_width), 
-    #                 y_index(-cell_width/2 + pml_width), 
-    #                 y_index(cell_width/2 - pml_width),
-    #                 linestyle=":", color='k')
-    #     plt.vlines(y_index(-cell_width/2 + pml_width), 
-    #                 z_index(-cell_width/2 + pml_width), 
-    #                 z_index(cell_width/2 - pml_width),
-    #                 linestyle=":", color='k')
-    #     plt.vlines(y_index(cell_width/2 - pml_width), 
-    #                 z_index(-cell_width/2 + pml_width), 
-    #                 z_index(cell_width/2 - pml_width),
-    #                 linestyle=":", color='k')
-    
-    # def make_pic_plane(i):
-    #     ax.clear()
-    #     plt.imshow(call_series(i), interpolation='spline36', cmap='RdBu', 
-    #                 vmin=lims[0], vmax=lims[1])
-    #     ax.text(-.1, -.105, label_function(i), transform=ax.transAxes)
-    #     draw_pml_box()
-    #     plt.show()
-    #     plt.xlabel("Distancia Y [u.Mp.]")
-    #     plt.ylabel("Distancia Z [u.Mp.]")
-    #     return ax
-    
-    # def make_gif_plane(gif_filename):
-    #     pics = []
-    #     for i in range(nframes):
-    #         ax = make_pic_plane(i*nframes_step)
-    #         plt.savefig('temp_pic.png') 
-    #         pics.append(mim.imread('temp_pic.png')) 
-    #         print(str(i+1)+'/'+str(nframes))
-    #     mim.mimsave(gif_filename+'.gif', pics, fps=5)
-    #     os.remove('temp_pic.png')
-    #     print('Saved gif')
-    
-    # make_gif_plane(file("PlaneX=0"))
-    # plt.close(fig)
-    # # del fig, ax, lims, nframes_step, nframes, call_series, label_function
-    
-    # ### HASTA ACÁ LLEGUÉ
-    
-    # #%% GET Z LINE ACROSS SPHERE
-    
-    # index_to_space = lambda i : i/resolution - cell_width/2
-    # space_to_index = lambda x : round(resolution * (x + cell_width/2))
-    
-    # z_profile = np.asarray(results_plane[:, space_to_index(0), :])
-    
-    # #%% MAKE LINES GIF
-    
-    # # What should be parameters
-    # nframes_step = 1
-    # nframes = int(z_profile.shape[0]/nframes_step)
-    # call_series = lambda i : z_profile[i, :]
-    # label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_plane)
-    
-    # # Animation base
-    # fig = plt.figure()
-    # ax = plt.subplot()
-    # lims = (np.min(z_profile), np.max(z_profile))
-    # shape = call_series(0).shape[0]
-    
-    # def draw_pml_box():
-    #     plt.vlines(-cell_width/2 + pml_width, 
-    #                 -cell_width/2 + pml_width, 
-    #                 cell_width/2 - pml_width,
-    #                 linestyle=":", color='k')
-    #     plt.vlines(cell_width/2 - pml_width, 
-    #                 -cell_width/2 + pml_width, 
-    #                 cell_width/2 - pml_width,
-    #                 linestyle=":", color='k')
-    
-    # def make_pic_line(i):
-    #     ax.clear()
-    #     plt.plot(np.linspace(-cell_width/2, cell_width/2, shape), 
-    #               call_series(i))
-    #     ax.set_ylim(*lims)
-    #     ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
-    #     draw_pml_box()
-    #     plt.xlabel("Distancia en z (u.a.)")
-    #     plt.ylabel("Campo eléctrico Ez (u.a.)")
-    #     plt.show()
-    #     return ax
-    
-    # def make_gif_line(gif_filename):
-    #     pics = []
-    #     for i in range(nframes):
-    #         ax = make_pic_line(i*nframes_step)
-    #         plt.savefig('temp_pic.png') 
-    #         pics.append(mim.imread('temp_pic.png')) 
-    #         print(str(i+1)+'/'+str(nframes))
-    #     mim.mimsave(gif_filename+'.gif', pics, fps=5)
-    #     os.remove('temp_pic.png')
-    #     print('Saved gif')
-    
-    # make_gif_line(file("AxisZ"))
-    # plt.close(fig)
-    # # del fig, ax, lims, nframes_step, nframes, call_series, label_function
-    
-    # #%% MAKE LINES GIF
-    
-    # # What should be parameters
-    # nframes_step = 1
-    # nframes = int(results_line.shape[0]/nframes_step)
-    # call_series = lambda i : results_line[i]
-    # label_function = lambda i : 'Tiempo: {:.1f} u.a.'.format(i*period_line)
-    
-    # # Animation base
-    # fig = plt.figure()
-    # ax = plt.subplot()
-    # lims = (np.min(results_line), np.max(results_line))
-    # shape = call_series(0).shape[0]
-    
-    # def draw_pml_box():
-    #     plt.vlines(-cell_width/2 + pml_width, 
-    #                 -cell_width/2 + pml_width, 
-    #                 cell_width/2 - pml_width,
-    #                 linestyle=":", color='k')
-    #     plt.vlines(cell_width/2 - pml_width, 
-    #                 -cell_width/2 + pml_width, 
-    #                 cell_width/2 - pml_width,
-    #                 linestyle=":", color='k')
-    
-    # def make_pic_line(i):
-    #     ax.clear()
-    #     plt.plot(np.linspace(-cell_width/2, cell_width/2, shape), 
-    #               call_series(i))
-    #     ax.set_ylim(*lims)
-    #     ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
-    #     draw_pml_box()
-    #     plt.xlabel("Distancia en x (u.a.)")
-    #     plt.ylabel("Campo eléctrico Ez (u.a.)")
-    #     plt.show()
-    #     return ax
-    
-    # def make_gif_line(gif_filename):
-    #     pics = []
-    #     for i in range(nframes):
-    #         ax = make_pic_line(i*nframes_step)
-    #         plt.savefig('temp_pic.png') 
-    #         pics.append(mim.imread('temp_pic.png')) 
-    #         print(str(i+1)+'/'+str(nframes))
-    #     mim.mimsave(gif_filename+'.gif', pics, fps=5)
-    #     os.remove('temp_pic.png')
-    #     print('Saved gif')
-    
-    # make_gif_line(file("AxisX"))
-    # plt.close(fig)
-    # # del fig, ax, lims, nframes_step, nframes, call_series, label_function
-    
-    
-    #%%
-    
-    # f.close()
-    # g.close()
+    if make_plots or make_gifs:
+        
+        plots_monoch_field(series, folder, hfield, 
+                           make_plots, make_gifs, trs.english)
     
     sim.reset_meep()
 
