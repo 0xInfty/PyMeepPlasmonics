@@ -203,7 +203,7 @@ def parallel_manager(process_total_number, parallel):
             if process_number == 0:
                 return mp.am_master()
             else:
-                return mp.my_rank() == 1
+                return mp.my_rank() == process_number
         else:
             return True
     
@@ -503,6 +503,82 @@ def check_chunks(params):
     except IndexError:
         print("Chunks database must be empty!")
         return [None]
+
+#%%
+
+def recognize_component(component):
+    
+    components_dict = {"Ex": mp.Ex,
+                       "Ey": mp.Ey,
+                       "Ez": mp.Ez,
+                       "Hx": mp.Hx,
+                       "Hy": mp.Hy,
+                       "Hz": mp.Hz}
+    components_keys = list(components_dict.keys())
+    components_values = list(components_dict.values())
+    
+    if isinstance(component, str):
+        try:
+            return components_dict[vu.camel(component)]
+        except:
+            raise ValueError("Unrecognized component")
+            
+    elif isinstance(component, int):
+        try:
+            return components_keys[components_values.index(component)]
+        except:
+            raise ValueError("Unrecognized component")
+        
+    else:
+        raise ValueError("Unrecognized format for component")
+        
+#%%
+        
+def recognize_direction(direction):
+    
+    direction_dict = {"X": mp.X,
+                         "Y": mp.Y,
+                         "Z": mp.Z}
+    direction_vect_dict = {"X": mp.Vector3(1,0,0),
+                           "Y": mp.Vector3(0,1,0),
+                           "Z": mp.Vector3(0,0,1)}
+    direction_keys = list(direction_dict.keys())
+    direction_values = list(direction_dict.values())
+    direction_vect_values = list(direction_vect_dict.values())
+    
+    if isinstance(direction, mp.Vector3):
+        try:
+            return direction_keys[direction_vect_values.index(direction)]
+        except:
+            return direction
+    
+    elif isinstance(direction, str):
+        try:
+            return direction_dict[vu.camel(direction)]
+        except:
+            raise ValueError("Unrecognized direction")
+            
+    elif isinstance(direction, int):
+        try:
+            return direction_keys[direction_values.index(direction)]
+        except:
+            raise ValueError("Unrecognized direction")
+        
+    else:
+        raise ValueError("Unrecognized format for direction")
+        
+#%%
+
+class SimpleUnitsConverter:
+    
+    def __init__(self, from_um_factor):
+        self.from_um_factor = from_um_factor
+    
+    def to_nm(self, mp_length):
+        return mp_length * (1e3 * self.from_um_factor)
+    
+    def from_nm(self, nm_length):
+        return nm_length / (1e3 * self.from_um_factor)
 
 #%%
 
