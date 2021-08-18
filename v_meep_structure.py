@@ -10,6 +10,18 @@ from copy import deepcopy
 import numpy as np
 import meep as mp
 import v_materials as vmt
+import v_meep as vm
+
+
+#%%
+
+nanoparticle_params = ["r", "d", "h", "a", "b", "c",
+                       "material", "paper", "standing", "transversal", "shape"]
+surroundings_params = ["submerged_index", "surface_index",
+                       "overlap", "displacement", "normal", "side"]
+source_params = ["wlen_range", "polarization", "normal", "side", "cutoff"]
+# "wlen", "wlen_center", "wlen_width"
+cell_params = ["pml_wlen_factor", "empty_r_factor", "flux_padd_points"]
 
 #%%
 
@@ -75,10 +87,11 @@ class SimpleNanoparticle:
     -------
     get_info()
         Prints information on the NP.
-    get_geometry(from_um_factor)
-        Returns the Meep NP instance, scaled using from_um_factor, which 
-        specifies Meep's length unit in um, i.e. from_um_factor=10e-3 stands 
-        for a Meep length unit of 0.01 um, which is equivalent to 10 nm.
+    get_geometry(cell, from_um_factor)
+        Returns the Meep NP instance, scaled using the cell parameters and 
+        from_um_factor, which specifies Meep's length unit in um, i.e. 
+        from_um_factor=10e-3 stands for a Meep length unit of 0.01 um, which 
+        is equivalent to 10 nm.
     
     See Also
     --------
@@ -337,7 +350,7 @@ class SimpleNanoparticle:
         
         return self.size / (1e3 * from_um_factor) # Meep units
     
-    def get_geometry(self, from_um_factor):
+    def get_geometry(self, cell, from_um_factor):
                 
         geometry = deepcopy(self._structure)
         if self.r is not None and self.h is None:
@@ -358,20 +371,30 @@ class SimpleNanoparticle:
     def get_info(self):
         
         print(f"{self.material} {self.paper} {self.shape}")
+        print(f"Size = {list(self.size)} nm")
+        print("Center = [0, 0, 0] nm")
         orientation = ""
         if self.standing:
-            orientation += "standing, "
+            orientation += "Standing, "
         else:
-            orientation += "not standing, "
+            orientation += "Not standing, "
         if self.transversal:
             orientation += "transversal"
         else:
             orientation += "not transversal"
         print(orientation)
-        self._structure.info()
-        print(f"size = ({str(list(self.size))[1:-1]})")
-        print("all expressed in nm")
         print("with x normal to possible sustrate and zx incidence plane")
+    
+    def get_params(self, from_um_factor=None):
+                
+        params = {}
+        for key in nanoparticle_params:
+            try:
+                params[key] = eval(f"self.{key}")
+            except:
+                params[key] = None
+        
+        return params
         
 #%%
 
@@ -388,11 +411,15 @@ class NoNanoparticle:
     """
     
     def __init__(self):
-                
+        
         self.size = mp.Vector3()
         
         return
             
+    def get_size(self, from_um_factor):
+        
+        return
+    
     def get_geometry(self, from_um_factor):
                 
         return # Meep units
@@ -400,7 +427,234 @@ class NoNanoparticle:
     def get_info(self):
         
         print("No nanoparticle")
+    
+    def get_params(self, from_um_factor=None):
+                
+        params = {}
+        for key in nanoparticle_params:
+            try:
+                params[key] = eval(f"self.{key}")
+            except:
+                params[key] = None
         
+        return params
+
+    
+#%%
+
+class Surroundings:
+    
+    """Representation of the sustrate and the surrounding medium"""
+    
+    def __init__(self,
+                 nanoparticle=NoNanoparticle(),
+                 submerged_index=0,
+                 surface_index=0,
+                 overlap=0,
+                 displacement=None,
+                 normal=mp.X,
+                 side=-1):
+        
+        self._nanoparticle = nanoparticle
+        
+        if isinstance(submerged_index, str):
+            submerged_index = vmt.recognize_material(submerged_index)
+        if submerged_index != 0:
+            self._submerged_index = submerged_index
+        else:
+            self._submerged_index = 1
+        self._submerged_material = vmt.recognize_material(self._submerged_index)
+
+        if isinstance(surface_index, str):
+            surface_index = vmt.recognize_material(surface_index)
+        if surface_index != 0:
+            self._surface_index = surface_index
+        else:
+            self._surface_index = self._submerged_index
+        self._surface_material = vmt.recognize_material(self._surface_index)
+        
+        if overlap is None and displacement is None:
+            raise ValueError("Either overlap or displacement is accepted. Not both!")
+        elif overlap is not None:
+            self._overlap = overlap
+            self._displacement = overlap - self._nanoparticle.size.x / 2
+        elif displacement is not None:
+            self._displacement = displacement
+            self._overlap = displacement + self._nanoparticle.size.x / 2
+        
+        self._normal = normal
+        self._side = 1
+       
+    @property
+    def submerged_index(self):
+        return self._submerged_index
+    
+    @submerged_index.setter
+    def submerged_index(self, value):
+        if isinstance(value, str):
+            value = vmt.recognize_material(value)
+        if self._submerged_index == self._surface_index:
+            self.surface_index = value
+        self._submerged_index = value
+        self._submerged_material = vmt.recognize_material(value)
+        
+    @property
+    def surface_index(self):
+        return self._surface_index
+    
+    @surface_index.setter
+    def surface_index(self, value):
+        if isinstance(value, str):
+            value = vmt.recognize_material(value)
+        self._surface_index = value
+        self._surface_material = vmt.recognize_material(value)
+       
+    @property
+    def submerged_material(self):
+        return self._submerged_material
+    
+    @property
+    def surface_material(self):
+        return self._surface_material
+       
+    @submerged_material.setter
+    @surface_material.setter
+    def negator(self, value):
+        raise ValueError("This property cannot be set manually! Run geometry.")        
+       
+    @property
+    def overlap(self):
+        return self._overlap
+    
+    @overlap.setter
+    def overlap(self, value):
+        self._overlap = value
+        self._displacement = value - self._nanoparticle.size.x / 2
+        
+    @property
+    def displacement(self):
+        return self._displacement
+    
+    @displacement.setter
+    def displacement(self, value):
+        self._displacement = value
+        self._overlap = value + self._nanoparticle.size.x / 2
+        
+    @property
+    def normal(self):
+        return self._normal
+    
+    @normal.setter
+    def normal(self, value):            
+        if isinstance(value, int):
+            if value < 2:
+                self._normal = value
+            else:
+                raise ValueError("Hey! If int, must be either \
+                                 0 (X), 1 (Y) or 2 (Z)")
+        elif isinstance(value, str):
+            if "x" == value.lower():
+                self._normal = mp.X
+            elif "y" == value.lower():
+                self._normal = mp.Y
+            elif "z" == value.lower():
+                self._normal = mp.Z
+            else:
+                raise ValueError("Hey! If string, must have length 0 and \
+                                 refer to one of the axis")
+        else:
+            raise ValueError("Hey! Must be an integer; i.e. mp.Z; \
+                             or a string referring to one of the axis")
+                             
+    @property
+    def side(self):
+        return self._side
+    
+    @side.setter
+    def side(self, value):
+        if abs(value) == 1:
+            self._side = int(value)
+        else:
+            raise ValueError("Hey! Must be either 1 or -1.")
+        
+    def get_medium(self):
+        
+        return mp.Medium(index=self.submerged_index)
+        
+    def get_center(self, cell, from_um_factor):
+        
+        cell_size = cell.get_size(from_um_factor) # Meep Units
+        nanoparticle_size = self._nanoparticle.get_size(from_um_factor) # Meep Units
+        overlap = self.overlap / (1e3 * from_um_factor) # Meep Units
+        
+        if self.normal == mp.X:
+            surface_center = nanoparticle_size.x / 2 - overlap / 2 + cell_size.x / 4
+            surface_center = self.side * surface_center * mp.Vector3(x=1)
+        elif self.normal == mp.Y:
+            surface_center = nanoparticle_size.y / 2 - overlap / 2 + cell_size.y / 4
+            surface_center = self.side * surface_center * mp.Vector3(y=1)
+        elif self.normal == mp.Z:
+            surface_center = nanoparticle_size.z / 2 - overlap / 2 + cell_size.z / 4
+            surface_center = self.side * surface_center * mp.Vector3(z=1)
+            
+        return surface_center # Meep Units
+        
+    def get_size(self, cell, from_um_factor):
+        
+        cell_size = cell.get_cell_size() # Meep Units
+        nanoparticle_size = self._nanoparticle.get_size(from_um_factor) # Meep Units
+        overlap = self.overlap / (1e3 * from_um_factor) # Meep Units
+        
+        if self.normal == mp.X:
+            surface_size = cell_size.x / 2 - nanoparticle_size.x + overlap
+            surface_size = surface_size * mp.Vector3(1,0,0) + cell_size * mp.Vector3(0,1,1)
+        elif self.normal == mp.Y:
+            surface_size = cell_size.y / 2 - nanoparticle_size.y + overlap
+            surface_size = surface_size * mp.Vector3(0,1,0) + cell_size * mp.Vector3(1,0,1)
+        elif self.normal == mp.Z:
+            surface_size = cell_size.z / 2 - nanoparticle_size.z + overlap
+            surface_size = surface_size * mp.Vector3(0,0,1) + cell_size * mp.Vector3(1,1,0)
+            
+        return surface_size # Meep Units
+    
+    def get_geometry(self, cell, from_um_factor):
+        
+        if self.surface_index != self.submerged_index:
+        
+            surface_center = self.get_center(cell, from_um_factor) # Meep Units
+            surface_size = self.get_size(cell, from_um_factor) # Meep Units
+            
+            return mp.Block(material=mp.Medium(index=self.surface_index),
+                            center=surface_center,
+                            size=surface_size)
+        
+        else: return
+    
+    def get_info(self):
+        
+        print(f"Surrounding media {self.submerged_material.lower()} " +
+              f"with n = {self.submerged_index}")
+        if self.surface_index != self.submerged_index:
+            print(f"Surface media {self.surface_material.lower()} " +
+                  f"with n = {self.surface_index}")
+            if self.side == 1: position = "positive"
+            else: position = "negative"
+            print(f"Normal {vm.recognize_direction(self.normal)}, " +
+                  f"situated on {position} side of the axis")
+            print(f"Overlap {self.overlap} nm <=> "+
+                  f"Displacement {self.displacement} nm")
+        
+    def get_params(self, from_um_factor=None):
+                
+        params = {}
+        for key in surroundings_params:
+            try:
+                params[key] = eval(f"self.{key}")
+            except:
+                params[key] = None
+        
+        return params
+
 #%%
 
 class PlanePulseSource:
@@ -412,18 +666,83 @@ class PlanePulseSource:
     """
     
     def __init__(self,
-                 wlen_range=np.array([450, 600]),
+                 wlen_min=None,
+                 wlen_max=None,
+                 wlen_center=None,
+                 wlen_width=None,
                  polarization=mp.Ez,
                  normal=mp.Vector3(1,0,0),
                  side=-1,
                  cutoff=3.2):
         
-        self._wlen_range = wlen_range
+        if wlen_center is not None and wlen_width is not None:
+            if wlen_min is not None and wlen_min != wlen_center - wlen_width/2:
+                raise ValueError("Wavelength indicators make no sense")
+            if wlen_max is not None and wlen_max != wlen_center + wlen_width/2:
+                raise ValueError("Wavelength indicators make no sense")
+            self._wlen_range = np.array([wlen_center - wlen_width/2,
+                                         wlen_center + wlen_width/2])
+            self.wlen_center = wlen_center
+            self.wlen_width = wlen_width
+        elif wlen_min is not None and wlen_max is not None:
+            if wlen_center is not None and wlen_center != (wlen_min + wlen_max)/2:
+                raise ValueError("Wavelength indicators make no sense")
+            if wlen_width is not None and wlen_width != wlen_max - wlen_min:
+                raise ValueError("Wavelength indicators make no sense")
+            if wlen_min >= wlen_max:
+                raise ValueError("Wavelength indicators make no sense")
+            self._wlen_range = np.array([wlen_min, wlen_max])
+            self.wlen_min = wlen_min
+            self.wlen_max = wlen_max
+        else:
+            raise ValueError("Must specify either wlen_min, wlen_max or " +
+                             "wlen_center, wlen_width")
+            
+        self._wlen_range = np.array([self.wlen_min, self.wlen_max])
         self._polarization = polarization
         self._normal = normal
         self._side = side
         self._cutoff = cutoff
     
+    @property
+    def wlen_min(self):
+        return self._wlen_range[0]
+    
+    @wlen_min.setter
+    def wlen_min(self, value):
+        if value < self.wlen_range[1]:
+            self._wlen_range[0] = value
+        else:
+            raise ValueError(f"Minimum wavelength must be smaller than {self.wlen_range[1]}")
+
+    @property
+    def wlen_max(self):
+        return self._wlen_range[1]
+    
+    @wlen_max.setter
+    def wlen_max(self, value):
+        if value > self.wlen_range[0]:
+            self._wlen_range[1] = value
+        else:
+            raise ValueError(f"Maximum wavelength must be bigger than {self.wlen_range[0]}")
+    
+    @property
+    def wlen_center(self):
+        return np.mean(self._wlen_range)
+
+    @wlen_center.setter
+    def wlen_center(self, value):
+        self.wlen_range = [value - self.wlen_width/2, 
+                           value + self.wlen_width/2]
+
+    @property
+    def wlen_width(self):
+        return np.diff(self._wlen_range)[0]
+    
+    @wlen_width.setter
+    def wlen_width(self, value):
+        self.wlen_range = [self.wlen_center - value/2, 
+                           self.wlen_center + value/2]    
     @property
     def wlen_range(self):
         return self._wlen_range
@@ -432,7 +751,7 @@ class PlanePulseSource:
     def wlen_range(self, value):
         try:
             if len(value) == 2:
-                self._wlen_range = np.array(*value)
+                self._wlen_range = np.array(value)
             else:
                 raise ValueError("Hey! Must be iterable of length 2.")
         except:
@@ -531,8 +850,8 @@ class PlanePulseSource:
         
     def get_center(self, cell, from_um_factor):
         
-        cell_size = cell.get_cell_size(from_um_factor) # Meep Units
-        pml_width = cell.get_pml_width(from_um_factor) # Meep Units
+        cell_size = cell.get_cell_size() # Meep Units
+        pml_width = cell.get_pml_width() # Meep Units
         
         if self.normal == mp.X:
             center = self.side * (0.5 * cell_size.x - pml_width) * mp.Vector3(x=1)
@@ -556,7 +875,7 @@ class PlanePulseSource:
             
         return size # Meep Units
     
-    def get_source(self, cell, from_um_factor):
+    def get_geometry(self, cell, from_um_factor):
             
         freq_range = self.get_frequency(from_um_factor) # Meep Units
         freq_center = np.mean(freq_range) # Meep Units
@@ -572,6 +891,29 @@ class PlanePulseSource:
                          size=self.get_size(cell, from_um_factor),
                          component=self.polarization)
     
+    def get_info(self):
+        
+        print("Gaussian source with wavefront plane")
+        print(f"Mean wavelength: {np.mean(self.wlen_range):.0f} nm")
+        print(f"Bandwidth: {np.diff(self.wlen_range)[0]:.0f} nm")
+        print(f"Wavelength range: {self.wlen_range[0]:.0f} - {self.wlen_range[1]:.0f} nm")
+        if self.side == 1: position = "positive"
+        else: position = "negative"
+        print(f"Normal direction: {vm.recognize_direction(self.normal)}, " +
+              f"situated on {position} side of the axis")
+        print(f"Polarization: {vm.recognize_component(self.polarization)}")
+    
+    def get_params(self, from_um_factor=None):
+                
+        params = {}
+        for key in source_params:
+            try:
+                params[key] = eval(f"self.{key}")
+            except:
+                params[key] = None
+        
+        return params
+    
 #%%
 
 class NoSource:
@@ -583,183 +925,41 @@ class NoSource:
     PlanePulseSource
     """
     
-    def __init__(self):
-            
-        self.wlen_range = np.array([350, 800])
-        self.polarization = mp.Ez
-        self.normal = mp.Vector3(1,0,0)
-        self.side = -1
-        self.cutoff = 3.2
-    
     def get_wavelength(self, from_um_factor):
         
-        return np.array([250, 850]) / (1e3 * from_um_factor) # Meep Units, visible spectrum
+        return
     
     def get_frequency(self, from_um_factor):
         
-        return  1 / self.get_wavelength(from_um_factor) # Meep Units, from highest to lowest
+        return
         
     def get_center(self, cell, from_um_factor):
         
-        return mp.Vector3() # Meep Units
+        return
         
     def get_size(self, cell, from_um_factor):
         
-        return mp.Vector3() # Meep Units
+        return
     
     def get_source(self, cell, from_um_factor):
         
         return
     
-#%%
+    def get_info(self):
+        
+        print("No source")
+    
+    def get_params(self, from_um_factor=None):
+                
+        params = {}
+        for key in source_params:
+            try:
+                params[key] = eval(f"self.{key}")
+            except:
+                params[key] = None
+        
+        return params
 
-class Surroundings:
-    
-    """Representation of the sustrate and the surrounding medium"""
-    
-    def __init__(self,
-                 nanoparticle=NoNanoparticle(),
-                 submerged_index=0,
-                 surface_index=0,
-                 overlap=0,
-                 displacement=0,
-                 normal=mp.X,
-                 side=-1):
-        
-        self._nanoparticle = None
-        
-        if submerged_index != 0:
-            self.submerged_index = submerged_index
-        else:
-            self.submerged_index = 1
-        
-        if surface_index != 0:
-            self.surface_index = surface_index
-        else:
-            self.surface_index = submerged_index
-        
-        if overlap != 0 and displacement != 0:
-            raise ValueError("Either overlap or displacement is accepted. Not both!")
-        elif overlap != 0:
-            self._overlap = overlap
-            self._displacement = overlap - self._nanoparticle.size.x / 2
-        else:
-            self._displacement = displacement
-            self._overlap = displacement + self._nanoparticle.size.x / 2
-        
-        self._normal = normal
-        self._side = 1
-       
-       # ESTOY CON NANOPARTICLE SIZE 
-       
-    @property
-    def overlap(self):
-        return self._overlap
-    
-    @overlap.setter
-    def overlap(self, value):
-        self._overlap = value
-        self._displacement = value - self._nanoparticle.size.x / 2
-        
-    @property
-    def displacement(self):
-        return self._displacement
-    
-    @displacement.setter
-    def displacement(self, value):
-        self._displacement = value
-        self._overlap = value + self._nanoparticle.size.x / 2
-        
-    @property
-    def normal(self):
-        return self._normal
-    
-    @normal.setter
-    def normal(self, value):            
-        if isinstance(value, int):
-            if value < 2:
-                self._normal = value
-            else:
-                raise ValueError("Hey! If int, must be either \
-                                 0 (X), 1 (Y) or 2 (Z)")
-        elif isinstance(value, str):
-            if "x" == value.lower():
-                self._normal = mp.X
-            elif "y" == value.lower():
-                self._normal = mp.Y
-            elif "z" == value.lower():
-                self._normal = mp.Z
-            else:
-                raise ValueError("Hey! If string, must have length 0 and \
-                                 refer to one of the axis")
-        else:
-            raise ValueError("Hey! Must be an integer; i.e. mp.Z; \
-                             or a string referring to one of the axis")
-                             
-    @property
-    def side(self):
-        return self._side
-    
-    @side.setter
-    def side(self, value):
-        if abs(value) == 1:
-            self._side = int(value)
-        else:
-            raise ValueError("Hey! Must be either 1 or -1.")
-        
-    def get_center(self, cell, from_um_factor):
-        
-        cell_size = cell.get_cell_size(from_um_factor) # Meep Units
-        nanoparticle_size = self._nanoparticle.get_size() # Meep Units
-        overlap = self.overlap / (1e3 * from_um_factor) # Meep Units
-        
-        if self.normal == mp.X:
-            surface_center = nanoparticle_size.x / 2 - overlap / 2 + cell_size.x / 4
-            surface_center = self.side * surface_center * mp.Vector3(x=1)
-        elif self.normal == mp.Y:
-            surface_center = nanoparticle_size.y / 2 - overlap / 2 + cell_size.y / 4
-            surface_center = self.side * surface_center * mp.Vector3(y=1)
-        elif self.normal == mp.Z:
-            surface_center = nanoparticle_size.z / 2 - overlap / 2 + cell_size.z / 4
-            surface_center = self.side * surface_center * mp.Vector3(z=1)
-            
-        return surface_center # Meep Units
-        
-    def get_size(self, cell, from_um_factor):
-        
-        cell_size = cell.get_cell_size(from_um_factor) # Meep Units
-        nanoparticle_size = self._nanoparticle.get_size() # Meep Units
-        overlap = self.overlap / (1e3 * from_um_factor) # Meep Units
-        
-        if self.normal == mp.X:
-            surface_size = cell_size.x / 2 - nanoparticle_size.x + overlap
-            surface_size = surface_size * mp.Vector3(1,0,0) + cell_size * mp.Vector3(0,1,1)
-        elif self.normal == mp.Y:
-            surface_size = cell_size.y / 2 - nanoparticle_size.y + overlap
-            surface_size = surface_size * mp.Vector3(0,1,0) + cell_size * mp.Vector3(1,0,1)
-        elif self.normal == mp.Z:
-            surface_size = cell_size.z / 2 - nanoparticle_size.z + overlap
-            surface_size = surface_size * mp.Vector3(0,0,1) + cell_size * mp.Vector3(1,1,0)
-            
-        return surface_size # Meep Units
-    
-    def get_medium(self):
-        
-        return mp.Medium(index=self.submerged_index)
-    
-    def get_geometry(self, cell, from_um_factor):
-        
-        if self.surface_index != self.submerged_index:
-        
-            surface_center = self.get_center(cell, from_um_factor) # Meep Units
-            surface_size = self.get_size(cell, from_um_factor) # Meep Units
-            
-            return mp.Block(material=mp.Medium(index=self.surface_index),
-                            center=surface_center,
-                            size=surface_size)
-        
-        else: return
-    
 #%%
 
 class SingleParticleCell:
@@ -781,7 +981,6 @@ class SingleParticleCell:
         self._empty_r_factor = empty_r_factor
         self._flux_padd_points = flux_padd_points
         
-    
     @property
     def pml_wlen_factor(self):
         return self._pml_wlen_factor
@@ -807,6 +1006,7 @@ class SingleParticleCell:
         self._flux_padd_points = value
         
     def get_pml_width(self, from_um_factor):
+        
         wavelength = self._source.get_wavelength(from_um_factor)
         try:
             max_wavelength = max(wavelength) / (1e3 * from_um_factor) # Meep units
@@ -816,18 +1016,74 @@ class SingleParticleCell:
     
     def get_empty_width(self, from_um_factor):
         
-        nanoparticle_size = self._nanoparticle.get_size() # Meep units
+        nanoparticle_size = self._nanoparticle.get_size(from_um_factor) # Meep units
         return self.empty_r_factor * max(nanoparticle_size) # Meep units
 
-    def get_cell_size(self, from_um_factor):
+    def get_size(self, from_um_factor):
         
         pml = self.get_pml_width(from_um_factor) * mp.Vector3(1,1,1) # Meep units
         empty = self.get_empty_width(from_um_factor) * mp.Vector3(1,1,1) # Meep units
-        nanoparticle_size = self._nanoparticle.get_size() # Meep units
+        nanoparticle_size = self._nanoparticle.get_size(from_um_factor) # Meep units
         return 2 * (pml + empty + nanoparticle_size) # Meep units
     
-    # def get_pml(self, from_um_factor):
+    def get_boundary_layers(self, from_um_factor):
         
-    # def get_geometry(self, from_um_factor, with_surface=True):
+        return [mp.PML(thickness=self.get_pml_width(from_um_factor))]
         
+    def get_geometry(self, from_um_factor, with_nanoparticle=True):
+        
+        nanoparticle_geometry = self._nanoparticle.get_geometry(from_um_factor)
+        surface_geometry = self._surroundings.get_geometry(self, from_um_factor)
+                
+        if with_nanoparticle:
+            return [surface_geometry, nanoparticle_geometry]
+        else:
+            return [nanoparticle_geometry]
     
+    def get_sources(self, from_um_factor):
+        
+        source = self._source.get_geometry(self, from_um_factor)
+        return [source]
+    
+    def set_sim(self, from_um_factor, with_nanoparticle=True):
+        
+        sim_configuration = dict(
+            geometry = self.get_geometry(from_um_factor, with_nanoparticle),
+            sources = self.get_sources(from_um_factor),
+            cell_size = self.get_size(from_um_factor),
+            default_material = self._source.get_medium(),
+            boundary_layers = self.get_boundary_layers(from_um_factor))
+        
+        return sim_configuration
+        
+    def get_info(self):
+            
+        print("Single Nanoparticle Cell")
+        print(f"Isotropic PML set by 'pml_wlen_factor' {self.pml_wlen_factor}")
+        print(f"Cell width set by PML, nanoparticle's size and 'empty_r_factor' {self.empty_r_factor}")
+        print("")
+
+        self._nanoparticle.get_info()
+        print("")
+        
+        self._surroundings.get_info()
+        print("")
+        
+        self._source.get_info()
+    
+    def get_params(self, from_um_factor=None):
+                
+        params = {}
+        for key in source_params:
+            try:
+                params[key] = eval(f"self.{key}")
+            except:
+                params[key] = None
+        
+        if from_um_factor is not None:
+            params["pml_width"] = self.get_pml_width(from_um_factor)
+            params["empty_width"] = self.get_empty_width(from_um_factor)
+            params["cell_size"] = np.array(self.get_size(from_um_factor))
+            params["source_position"] = self._source.get_center(self, from_um_factor)
+        
+        return params
