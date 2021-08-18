@@ -49,7 +49,7 @@ measure_ram()
             help="Conversion of 1 μm to my length unit (i.e. 10e-3=10nm/1μm)")
 @cli.option("--resolution-wlen", "-res", "resolution_wlen", 
             default=8, type=int,
-            help="Spatial resolution. Minimum number of points in maximum wavelength")
+            help="Spatial resolution. Minimum number of points in minimum wavelength")
 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
 @cli.option("--courant", "-c", "courant", 
             type=float, default=0.5,
@@ -73,18 +73,18 @@ measure_ram()
 @cli.option("--nfreq", "-nfreq", "nfreq", 
             type=int, default=100,
             help="Quantity of frequencies to sample in wavelength range")
-@cli.option("--air-wlen-factor", "-air", "air_r_factor", 
-            type=float, default=0.15,
+@cli.option("--empty-wlen-factor", "-empty", "empty_wlen_factor", 
+            type=float, default=0.22,
             help="Empty layer width expressed in multiples of maximum wavelength")
 @cli.option("--pml-wlen-factor", "-pml", "pml_wlen_factor", 
             type=float, default=0.38,
             help="PML layer width expressed in multiples of maximum wavelength")
 @cli.option("--flux-wlen-factor", "-flux", "flux_wlen_factor", 
-            type=float, default=0.1,
-            help="Flux box side expressed in multiples of maximum wavelength")
-@cli.option("--padd-wlen-factor", "-padd", "padd_wlen_factor", 
-            type=float, default=0.1,
-            help="Flux box extra padding expressed in multiples of maximum wavelength")
+            type=float, default=0.15,
+            help="Flux box half size expressed in multiples of maximum wavelength")
+@cli.option("--flux-padd-factor", "-padd", "flux_padd_factor", 
+            type=float, default=.05,
+            help="Flux box extra padding expressed in grid points")
 @cli.option("--time-factor-cell", "-tfc", "time_factor_cell", 
             type=float, default=1.2,
             help="First simulation total time expressed as multiples of time \
@@ -96,8 +96,6 @@ measure_ram()
             help="Series name used to create a folder and save files")
 @cli.option("--folder", "-f", type=str, default=None,
             help="Series folder used to save files")
-@cli.option("--parallel", "-par", type=bool, default=False,
-            help="Whether the program is being run in parallel or in serial")
 @cli.option("--split-chunks-evenly", "-chev", "split_chunks_evenly", 
             type=bool, default=True,
             help="Whether to split chunks evenly or not during parallel run")
@@ -108,7 +106,8 @@ measure_ram()
 def main(from_um_factor, resolution_wlen, courant, 
          submerged_index, displacement, surface_index, 
          wlen_center, wlen_width, nfreq, standing,
-         air_wlen_factor, pml_wlen_factor, flux_padd_factor,
+         empty_wlen_factor, pml_wlen_factor, #flux_padd_factor,
+         flux_wlen_factor, flux_padd_factor,
          time_factor_cell, second_time_factor,
          series, folder, n_cores, n_nodes, split_chunks_evenly):
 
@@ -116,13 +115,13 @@ def main(from_um_factor, resolution_wlen, courant,
     """
     # Simulation size
     from_um_factor = 100e-3 # Conversion of 1 μm to my length unit (=100nm/1μm)
-    resolution_wlen = 80 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+    resolution_wlen = 16 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
     courant = 0.5
     
     # Cell specifications
     displacement = 50 # Displacement of the surface relative to the dipole
-    submerged_index = 1.33 # 1.33 for water
-    surface_index = 1.54 # 1.54 for glass
+    submerged_index = 1 # 1.33 for water
+    surface_index = 1 # 1.54 for glass
     
     # Frequency and wavelength
     wlen_center = 650 # Main wavelength range in nm
@@ -132,28 +131,31 @@ def main(from_um_factor, resolution_wlen, courant,
     
     # Box dimensions
     pml_wlen_factor = 0.38
-    air_wlen_factor = 0.25
-    flux_padd_factor = 0.1
+    empty_wlen_factor = 0.22
+    flux_wlen_factor = 0.10
+    flux_padd_factor = .05
     
     # Simulation time
     time_factor_cell = 1.2
     second_time_factor = 10
     
     # Saving directories
-    series = "2ndTest"
-    folder = "Test/TestDipole/DipoleStandingGlass/Disp50"
+    series = "TestSpyderMonoch" # "2nd"
+    folder = "Test/TestDipole/DipoleStanding" # DataAnalysis/DipoleStandingGlassTest"
     
-    # Configuration
-    parallel = False
-    n_processes = 1
+    # Run configuration
+    n_cores = 1
+    n_nodes = 1
     split_chunks_evenly = True
     """
 
     #%% MORE INPUT PARAMETERS
     
     # Simulation size
-    resolution = (from_um_factor * 1e3) * resolution_wlen / (wlen_center + wlen_width/2)
+    resolution = (from_um_factor * 1e3) * resolution_wlen / (wlen_center - wlen_width/2)
     resolution = int( np.ceil(resolution/2) ) * 2
+    # resolution = 20
+    padd_points = 2
     
     # Frequency and wavelength
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
@@ -178,10 +180,22 @@ def main(from_um_factor, resolution_wlen, courant,
     
     # Space configuration
     pml_width = pml_wlen_factor * (wlen_center + wlen_width/2) # 0.5 * max(wlen_range)
-    air_width = air_wlen_factor * (wlen_center + wlen_width/2)
-    flux_box_size = min( 2 * air_width ,
-                         2 * ( displacement + flux_padd_factor * 2 * air_width ) )
-    surface_box_size = (1 - flux_padd_factor) * flux_box_size
+    empty_width = max(empty_wlen_factor * (wlen_center + wlen_width/2),
+                      displacement + padd_points / resolution)
+    if submerged_index != surface_index:
+        flux_box_size = 2 * empty_width * (1 - flux_padd_factor)
+    else:
+        flux_box_size = 2 * flux_wlen_factor * (wlen_center + wlen_width/2)
+    if flux_box_size == 2 * empty_width:
+       flux_box_size = flux_box_size - padd_points/resolution 
+    surface_box_size = flux_box_size * (1 - flux_padd_factor)
+    if surface_box_size == flux_box_size:
+        surface_box_size = surface_box_size - padd_points/resolution
+    
+    if 2*empty_width <= flux_box_size:
+        raise ValueError("Flux box is too big compared to empty space!")
+    if displacement >= 0.8 * empty_width:
+        raise ValueError("Displacement is too big compared to empty space!")
     
     # Computation
     elapsed = []
@@ -210,38 +224,35 @@ def main(from_um_factor, resolution_wlen, courant,
                    "submerged_index", "displacement", "surface_index",
                    "wlen_center", "wlen_width", "cutoff", "standing",
                    "nfreq", "nazimuthal", "npolar", 
-                   "flux_box_size", "surface_box_size", "flux_padd_factor",
-                   "cell_width", "pml_width", "air_width",
+                   "flux_box_size", "surface_box_size", 
+                   "empty_wlen_factor", "flux_wlen_factor", "flux_padd_factor",
+                   "cell_width", "pml_width", "empty_width",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
                    "elapsed", "parallel", "n_processes", "split_chunks_evenly", 
                    "script", "sysname", "path"]
     
     #%% GENERAL GEOMETRY SETUP
     
-    air_width = air_width - air_width%(1/resolution)
+    ### ROUND UP ACCORDING TO GRID DISCRETIZATION
     
-    pml_width = pml_width - pml_width%(1/resolution)
-    pml_layers = [mp.PML(thickness=pml_width)]
+    empty_width = vu.round_to_multiple(empty_width, 1/resolution, round_up=True)
+    pml_width = vu.round_to_multiple(pml_width, 1/resolution, round_up=True)
     
     # symmetries = [mp.Mirror(mp.Y), 
     #               mp.Mirror(mp.Z, phase=-1)]
     # Two mirror planes reduce cell size to 1/4
     # Issue related that lead me to comment this lines:
     # https://github.com/NanoComp/meep/issues/1484
-
-    cell_width = 2 * (pml_width + air_width)
-    cell_width = cell_width - cell_width%(1/resolution)
+        
+    displacement = vu.round_to_multiple(displacement, 1/resolution, round_up=False)
+    flux_box_size = vu.round_to_multiple(flux_box_size, 1/resolution, round_up=False)
+    surface_box_size = vu.round_to_multiple(surface_box_size, 1/resolution, round_up=False)
+    
+    ### DEFINE OBJETS
+    
+    pml_layers = [mp.PML(thickness=pml_width)]
+    cell_width = 2 * (pml_width + empty_width)
     cell_size = mp.Vector3(cell_width, cell_width, cell_width)
-    
-    # surface_center = r/4 - displacement/2 + cell_width/4
-    # surface_center = surface_center - surface_center%(1/resolution)
-    # displacement = r/2 + cell_width/2 - 2*surface_center
-    
-    displacement = displacement - displacement%(1/resolution)
-    
-    flux_box_size = flux_box_size - flux_box_size%(1/resolution)
-    
-    surface_box_size = surface_box_size - surface_box_size%(1/resolution)
    
     if surface_index != submerged_index:
         # Cell filled with submerged_index, with a glass below.
@@ -274,15 +285,22 @@ def main(from_um_factor, resolution_wlen, courant,
         polarization = mp.Ex
         
     sources = [mp.Source(mp.GaussianSource(freq_center,
-                                           fwidth=freq_width,
-                                           is_integrated=True,
-                                           cutoff=cutoff),
+                                            fwidth=freq_width,
+                                            is_integrated=True,
+                                            cutoff=cutoff),
                           center=mp.Vector3(),
                           component=polarization)]
     # Point pulse, polarized parallel or perpendicular to surface
     # (its size parameter is null and it is centered at zero)
     # >> The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
+    
+    # sources = [mp.Source(mp.ContinuousSource(wavelength=wlen_center,
+    #                                          is_integrated=True,
+    #                                          cutoff=cutoff,
+    #                                          width=0),
+    #                       center=mp.Vector3(),
+    #                       component=polarization)]
     
     until_after_sources = time_factor_cell * cell_width * submerged_index
     # Enough time for the pulse to pass through all the cell
@@ -312,7 +330,8 @@ def main(from_um_factor, resolution_wlen, courant,
                         default_material=initial_background,
                         output_single_precision=True,
                         split_chunks_evenly=split_chunks_evenly,
-                        geometry=initial_geometry)
+                        geometry=initial_geometry)#,
+                        #force_complex_fields=True)
     
     measure_ram()
     
@@ -378,7 +397,7 @@ def main(from_um_factor, resolution_wlen, courant,
         
         # Source
         ax.plot(0, 0, "o", color="r", zorder=5, 
-                label=trs.choose("Point Dipole", "Dipolo puntual") + 
+                label=trs.choose("Point Dipole ", "Dipolo puntual ") + 
                                  f"{wlen_center * from_um_factor * 1e3:.0f} nm")
         
         # Flux box
@@ -438,88 +457,106 @@ def main(from_um_factor, resolution_wlen, courant,
             mp.at_time(int(second_time_factor * until_after_sources / 2), 
                        step_ram_function),
             mp.at_end(step_ram_function),
+            # until=second_time_factor * until_after_sources )
             until_after_sources=second_time_factor * until_after_sources )
-        #     mp.stop_when_fields_decayed(
-        # np.mean(wlen_range), # dT = mean period of source
-        # mp.Ez, # Component of field to check
-        # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
-        # 1e-3)) # Factor to decay
+            # mp.stop_when_fields_decayed(
+            #     np.mean(wlen_range), # dT = mean period of source
+            #     mp.Ez, # Component of field to check
+            #     mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
+            #     1e-3)) # Factor to decay
     elapsed.append( time() - temp )
     del temp
     # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
+    
+    if parallel_assign(0): print("Ended simulation block")
         
     #%% BASE SIMULATION: ANGULAR PATTERN ANALYSIS
 
-    freqs = np.linspace(freq_center - freq_center/2, freq_center + freq_width/2, nfreq)
-    wlens = 1/freqs
-
-    # fraunhofer_distance = 8 * (r**2) / min(wlen_range)        
-    # radial_distance = max( 10 * fraunhofer_distance , 1.5 * cell_width/2 ) 
-    # radius of far-field circle must be at least Fraunhofer distance
-    
-    radial_distance = cell_width
-    azimuthal_angle = np.arange(0, 2 + 2/nazimuthal, 2/nazimuthal) # in multiples of pi
-    polar_angle = np.arange(0, 1 + 1/npolar, 1/npolar)
-    
-    poynting_x = []
-    poynting_y = []
-    poynting_z = []
-    poynting_r = []
-    
-    for phi in azimuthal_angle:
+    if parallel_assign(0):
         
-        poynting_x.append([])
-        poynting_y.append([])
-        poynting_z.append([])
-        poynting_r.append([])
+        freqs = np.linspace(freq_center - freq_center/2, freq_center + freq_width/2, nfreq)
+        wlens = 1/freqs
         
-        for theta in polar_angle:
-            
-            farfield_dict = sim.get_farfields(near2far_box, 1,
-                                              where=mp.Volume(
-                                                  center=mp.Vector3(radial_distance * np.cos(np.pi * phi) * np.sin(np.pi * theta),
-                                                                    radial_distance * np.sin(np.pi * phi) * np.sin(np.pi * theta),
-                                                                    radial_distance * np.cos(np.pi * theta))))
-            
-            Px = farfield_dict["Ey"] * np.conjugate(farfield_dict["Hz"])
-            Px -= farfield_dict["Ez"] * np.conjugate(farfield_dict["Hy"])
-            Py = farfield_dict["Ez"] * np.conjugate(farfield_dict["Hx"])
-            Py -= farfield_dict["Ex"] * np.conjugate(farfield_dict["Hz"])
-            Pz = farfield_dict["Ex"] * np.conjugate(farfield_dict["Hy"])
-            Pz -= farfield_dict["Ey"] * np.conjugate(farfield_dict["Hx"])
-            
-            Px = np.real(Px)
-            Py = np.real(Py)
-            Pz = np.real(Pz)
-            
-            poynting_x[-1].append( Px )
-            poynting_y[-1].append( Py )
-            poynting_z[-1].append( Pz )
-            poynting_r[-1].append( np.sqrt( np.square(Px) + np.square(Py) + np.square(Pz) ) )
+        radial_distance = cell_width
+        azimuthal_angle = np.arange(0, 2 + 2/nazimuthal, 2/nazimuthal) # in multiples of pi
+        polar_angle = np.arange(0, 1 + 1/npolar, 1/npolar)
         
-    del phi, theta, farfield_dict, Px, Py, Pz
+        poynting_x = np.zeros((nazimuthal+1, npolar+1, nfreq))
+        poynting_y = np.zeros((nazimuthal+1, npolar+1, nfreq))
+        poynting_z = np.zeros((nazimuthal+1, npolar+1, nfreq))
+        poynting_r = np.zeros((nazimuthal+1, npolar+1, nfreq))
+        
+        if surface_index != submerged_index:
+            polar_limit = np.arcsin(displacement/radial_distance) + .5
+            sim_polar_angle = polar_angle[polar_angle <= polar_limit]
+        else:
+            sim_polar_angle = polar_angle
+        
+        for i, phi in enumerate(azimuthal_angle):
+            
+            for j, theta in enumerate(sim_polar_angle):
+                
+                farfield_dict = sim.get_farfields(near2far_box, 1,
+                                                  where=mp.Volume(
+                                                      center=mp.Vector3(radial_distance * np.cos(np.pi * phi) * np.sin(np.pi * theta),
+                                                                        radial_distance * np.sin(np.pi * phi) * np.sin(np.pi * theta),
+                                                                        radial_distance * np.cos(np.pi * theta))))
+                
+                Px = farfield_dict["Ey"] * np.conjugate(farfield_dict["Hz"])
+                Px -= farfield_dict["Ez"] * np.conjugate(farfield_dict["Hy"])
+                Py = farfield_dict["Ez"] * np.conjugate(farfield_dict["Hx"])
+                Py -= farfield_dict["Ex"] * np.conjugate(farfield_dict["Hz"])
+                Pz = farfield_dict["Ex"] * np.conjugate(farfield_dict["Hy"])
+                Pz -= farfield_dict["Ey"] * np.conjugate(farfield_dict["Hx"])
+                
+                Px = np.real(Px)
+                Py = np.real(Py)
+                Pz = np.real(Pz)
+                
+                poynting_x[i, j, :] = Px
+                poynting_y[i, j, :] = Py
+                poynting_z[i, j, :] = Pz
+                poynting_r[i, j, :] = np.sqrt( np.square(Px) + np.square(Py) + np.square(Pz) )
+            
+        del phi, theta, farfield_dict, Px, Py, Pz
+        
+    # mp.all_wait()
+    if parallel_assign(0): print("Ended calculation of far field")
     
-    poynting_x = np.array(poynting_x)
-    poynting_y = np.array(poynting_y)
-    poynting_z = np.array(poynting_z)
-    poynting_r = np.array(poynting_r)
-
+    if submerged_index == surface_index and parallel_assign(0):
+    
+        max_poynting_r = np.max(np.abs(poynting_r))
+        
+        poynting_x = np.array(poynting_x) / max_poynting_r
+        poynting_y = np.array(poynting_y) / max_poynting_r
+        poynting_z = np.array(poynting_z) / max_poynting_r
+        poynting_r = np.array(poynting_r) / max_poynting_r
+        
+        if parallel_assign(0): print("Normalized")
+    
     #%% BASE SIMULATION: SAVE DATA
     
     for p in params_list: params[p] = eval(p)
     
     os.chdir(path)
-    sim.save_near2far("BaseNear2Far", near2far_box)
-    if parallel_assign(0):
-            f = h5.File("BaseNear2Far.h5", "r+")
+    sim_filename = sim.filename_prefix
+    sim.filename_prefix = "Base"
+    sim.save_near2far("Near2Far", near2far_box)
+    mp.all_wait()
+    
+    if parallel_assign(0): print("Saved near2far flux data")
+    
+    if parallel_assign(1):
+            f = h5.File(file("Base-Near2Far.h5"), "r+")
             for key, par in params.items():
                 f[ list(f.keys())[0] ].attrs[key] = par
             f.close()
             del f
-    os.chdir(syshome)
-
-    if parallel_assign(1):
-            f = h5.File(file("BaseResults.h5"), "w")
+    
+    if parallel_assign(0): print("Added params to near2far file.")
+        
+    if parallel_assign(0):
+            f = h5.File(file("Base-Results.h5"), "w")
             f["Px"] = poynting_x
             f["Py"] = poynting_y
             f["Pz"] = poynting_z
@@ -529,29 +566,38 @@ def main(from_um_factor, resolution_wlen, courant,
                     dset.attrs[key] = par
             f.close()
             del f
+            # print("Saved far fields")
+    mp.all_wait()
+    
+    if parallel_assign(0): print("Saved far fields")
         
     # if not split_chunks_evenly:
     #     vm.save_chunks(sim, params, path)
     
+    f = vs.parallel_hdf_file(file("Base-RAM.h5"), "w", parallel)
     if parallel:
-        f = h5.File(file("BaseRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
         current_process = mp.my_rank()
         f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
         f["RAM"][:, current_process] = used_ram
-        for a in params: f["RAM"].attrs[a] = params[a]
         f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
         f["SWAP"][:, current_process] = swapped_ram
-        for a in params: f["SWAP"].attrs[a] = params[a]
     else:
-        f = h5.File(file("BaseRAM.h5"), "w")
         f.create_dataset("RAM", data=used_ram)
-        for a in params: f["RAM"].attrs[a] = params[a]
         f.create_dataset("SWAP", data=swapped_ram)
-        for a in params: f["SWAP"].attrs[a] = params[a]
+    for a in params: f["RAM"].attrs[a] = params[a]
+    for a in params: f["SWAP"].attrs[a] = params[a]
     f.close()
     del f
     
+    if parallel_assign(0): print("Saved RAM")
+    
+    mp.all_wait()
+    sim.filename_prefix = sim_filename
     sim.reset_meep()
+    
+    os.chdir(path)
+    
+    if parallel_assign(0): print("Ready to go with further simulation")
     
     #%% FURTHER SIMULATION
         
@@ -580,24 +626,26 @@ def main(from_um_factor, resolution_wlen, courant,
         near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
             mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
                               size=mp.Vector3(0,flux_box_size,flux_box_size),
-                               weight=-1),
+                                weight=-1),
             mp.Near2FarRegion(center=mp.Vector3(x=+flux_box_size/2),
                               size=mp.Vector3(0,flux_box_size,flux_box_size),
-                               weight=+1),
+                                weight=+1),
             mp.Near2FarRegion(center=mp.Vector3(y=-flux_box_size/2),
                               size=mp.Vector3(flux_box_size,0,flux_box_size),
-                               weight=-1),
+                                weight=-1),
             mp.Near2FarRegion(center=mp.Vector3(y=+flux_box_size/2),
                               size=mp.Vector3(flux_box_size,0,flux_box_size),
-                               weight=+1),
+                                weight=+1),
             mp.Near2FarRegion(center=mp.Vector3(z=-flux_box_size/2),
                               size=mp.Vector3(flux_box_size,flux_box_size,0),
-                               weight=-1),
+                                weight=-1),
             mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
                               size=mp.Vector3(flux_box_size,flux_box_size,0),
-                               weight=+1))
+                                weight=+1))
         measure_ram()
         # used_ram.append(used_ram[-1])
+    
+    #%%
     
         # #%% PLOT CELL
     
@@ -607,24 +655,24 @@ def main(from_um_factor, resolution_wlen, courant,
             
             # PML borders
             pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
-                                           cell_width, cell_width,
-                                           fill=False, edgecolor="m", linestyle="dashed",
-                                           hatch='/', 
-                                           zorder=-20,
-                                           label=trs.choose("PML borders", "Bordes PML"))
+                                            cell_width, cell_width,
+                                            fill=False, edgecolor="m", linestyle="dashed",
+                                            hatch='/', 
+                                            zorder=-20,
+                                            label=trs.choose("PML borders", "Bordes PML"))
             pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
                                             -cell_width/2+pml_width), 
-                                           cell_width - 2*pml_width, cell_width - 2*pml_width,
-                                           facecolor="white", edgecolor="m", 
-                                           linestyle="dashed", linewidth=1, zorder=-10)
+                                            cell_width - 2*pml_width, cell_width - 2*pml_width,
+                                            facecolor="white", edgecolor="m", 
+                                            linestyle="dashed", linewidth=1, zorder=-10)
            
             # Surface medium
             surface_square = plt.Rectangle((-cell_width/2, -cell_width/2),
-                                           cell_width,
-                                           cell_width,
-                                           edgecolor="navy", hatch=r"\\", 
-                                           fill=False, zorder=-6,
-                                           label=trs.choose(fr"Surface $n$={surface_index}",
+                                            cell_width,
+                                            cell_width,
+                                            edgecolor="navy", hatch=r"\\", 
+                                            fill=False, zorder=-6,
+                                            label=trs.choose(fr"Surface $n$={surface_index}",
                                                             fr"Superficie $n$={surface_index}"))
             
             # Surrounding medium
@@ -632,27 +680,31 @@ def main(from_um_factor, resolution_wlen, courant,
                 submerged_color = "blue"
             else:
                 submerged_color = "white"            
-            surrounding_square_0 = plt.Rectangle((-displacement, -surface_box_size/2),
-                                                 surface_box_size/2 + displacement,
-                                                 surface_box_size,
-                                                 color="white", zorder=-4) 
+            surrounding_square_0 = plt.Rectangle((-surface_box_size/2, 
+                                                  -displacement),
+                                                  surface_box_size,
+                                                  surface_box_size/2 + displacement,
+                                                  color="white", zorder=-4) 
     
-            surrounding_square = plt.Rectangle((-displacement, -surface_box_size/2),
-                                               surface_box_size/2 + displacement,
-                                               surface_box_size,
-                                               color=submerged_color, alpha=.1, zorder=-3,
-                                               label=trs.choose(fr"Medium $n$={submerged_index}",
+            surrounding_square = plt.Rectangle((-surface_box_size/2, 
+                                                -displacement),
+                                                surface_box_size,
+                                                surface_box_size/2 + displacement,
+                                                color=submerged_color, alpha=.1, zorder=-3,
+                                                label=trs.choose(fr"Medium $n$={submerged_index}",
                                                                 fr"Medio $n$={submerged_index}"))
             
-            surrounding_square_2 = plt.Rectangle((-displacement, -surface_box_size/2),
-                                               surface_box_size/2 + displacement,
-                                               surface_box_size, zorder=-2,
-                                               edgecolor="navy", fill=False) 
+            surrounding_square_2 = plt.Rectangle((-surface_box_size/2, 
+                                                  -displacement),
+                                                surface_box_size, 
+                                                surface_box_size/2 + displacement,
+                                                zorder=-2,
+                                                edgecolor="navy", fill=False) 
             
             # Source
             ax.plot(0, 0, "o", color="r", zorder=5, 
                     label=trs.choose("Point Dipole", "Dipolo puntual") + 
-                                     f"{wlen_center * from_um_factor * 1e3:.0f} nm")
+                                      f"{wlen_center * from_um_factor * 1e3:.0f} nm")
             
             # Flux box
             flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
@@ -677,7 +729,7 @@ def main(from_um_factor, resolution_wlen, courant,
             box.y1 = box.y1 + .10 * (box.y1 - box.y0)
             ax.set_position(box)
             plt.legend(bbox_to_anchor=trs.choose( (1.47, 0.5), (1.54, 0.5) ), 
-                       loc="center right", frameon=False)
+                        loc="center right", frameon=False)
             
             fig.set_size_inches(7.5, 4.8)
             ax.set_aspect("equal")
@@ -688,8 +740,7 @@ def main(from_um_factor, resolution_wlen, courant,
             
             plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                                     f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
-                         (5, 5), xycoords='figure points')
-            plt.show()
+                          (5, 5), xycoords='figure points')
             
             plt.savefig(file("FurtherSimBox.png"))
             
@@ -697,6 +748,8 @@ def main(from_um_factor, resolution_wlen, courant,
             del surrounding_square, surrounding_square_0, surrounding_square_2
             del surface_square, submerged_color
             del fig, box, ax
+    
+    #%%
     
         #% FURTHER SIMULATION: INITIALIZE
         
@@ -712,174 +765,147 @@ def main(from_um_factor, resolution_wlen, courant,
         temp = time()
         sim.run(mp.at_beginning(step_ram_function), 
                 mp.at_time(int(second_time_factor * until_after_sources / 2), 
-                           step_ram_function),
+                            step_ram_function),
                 mp.at_end(step_ram_function),
                 until_after_sources=second_time_factor * until_after_sources )
-            #     mp.stop_when_fields_decayed(
-            # np.mean(wlen_range), # dT = mean period of source
-            # mp.Ez, # Component of field to check
-            # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
-            # 1e-3)) # Factor to decay
         elapsed.append( time() - temp )
         del temp
         # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
-            
-        #% FURTHER SIMULATION: ANGULAR PATTERN ANALYSIS
-            
-        poynting_x2 = []
-        poynting_y2 = []
-        poynting_z2 = []
-        poynting_r2 = []
         
-        for phi in azimuthal_angle:
-            
-            poynting_x2.append([])
-            poynting_y2.append([])
-            poynting_z2.append([])
-            poynting_r2.append([])
-            
-            for theta in polar_angle:
-                
-                farfield_dict = sim.get_farfields(near2far_box, 1,
-                                                  where=mp.Volume(
-                                                      center=mp.Vector3(radial_distance * np.cos(np.pi * phi) * np.sin(np.pi * theta),
-                                                                        radial_distance * np.sin(np.pi * phi) * np.sin(np.pi * theta),
-                                                                        radial_distance * np.cos(np.pi * theta))))
-                
-                Px = farfield_dict["Ey"] * np.conjugate(farfield_dict["Hz"])
-                Px -= farfield_dict["Ez"] * np.conjugate(farfield_dict["Hy"])
-                Py = farfield_dict["Ez"] * np.conjugate(farfield_dict["Hx"])
-                Py -= farfield_dict["Ex"] * np.conjugate(farfield_dict["Hz"])
-                Pz = farfield_dict["Ex"] * np.conjugate(farfield_dict["Hy"])
-                Pz -= farfield_dict["Ey"] * np.conjugate(farfield_dict["Hx"])
-                
-                Px = np.real(Px)
-                Py = np.real(Py)
-                Pz = np.real(Pz)
-                
-                poynting_x2[-1].append( Px )
-                poynting_y2[-1].append( Py )
-                poynting_z2[-1].append( Pz )
-                poynting_r2[-1].append( np.sqrt( np.square(Px) + np.square(Py) + np.square(Pz) ) )
+        if parallel_assign(0): print("Ended simulation")
         
-        del phi, theta, farfield_dict, Px, Py, Pz
+#         #% FURTHER SIMULATION: ANGULAR PATTERN ANALYSIS
+    
+        if parallel_assign(0):
+    
+            sim_polar_angle = polar_angle[polar_angle > polar_limit]
+            index_limit = list(polar_angle > polar_limit).index(True)
         
-        poynting_x2 = np.array(poynting_x2)
-        poynting_y2 = np.array(poynting_y2)
-        poynting_z2 = np.array(poynting_z2)
-        poynting_r2 = np.array(poynting_r2)
+            for i, phi in enumerate(azimuthal_angle):
+                
+                for j, theta in enumerate(sim_polar_angle):
+                    
+                    farfield_dict = sim.get_farfields(near2far_box, 1,
+                                                      where=mp.Volume(
+                                                          center=mp.Vector3(radial_distance * np.cos(np.pi * phi) * np.sin(np.pi * theta),
+                                                                            radial_distance * np.sin(np.pi * phi) * np.sin(np.pi * theta),
+                                                                            radial_distance * np.cos(np.pi * theta))))
+                    
+                    Px = farfield_dict["Ey"] * np.conjugate(farfield_dict["Hz"])
+                    Px -= farfield_dict["Ez"] * np.conjugate(farfield_dict["Hy"])
+                    Py = farfield_dict["Ez"] * np.conjugate(farfield_dict["Hx"])
+                    Py -= farfield_dict["Ex"] * np.conjugate(farfield_dict["Hz"])
+                    Pz = farfield_dict["Ex"] * np.conjugate(farfield_dict["Hy"])
+                    Pz -= farfield_dict["Ey"] * np.conjugate(farfield_dict["Hx"])
+                    
+                    Px = np.real(Px)
+                    Py = np.real(Py)
+                    Pz = np.real(Pz)
+                                    
+                    poynting_x[i, j+index_limit, :] = Px
+                    poynting_y[i, j+index_limit, :] = Py
+                    poynting_z[i, j+index_limit, :] = Pz
+                    poynting_r[i, j+index_limit, :] = np.sqrt( np.square(Px) + np.square(Py) + np.square(Pz) )
+                
+            del phi, theta, farfield_dict, Px, Py, Pz
+        
+        if parallel_assign(0): print("Ended calculation of far field")
+                
+        if parallel_assign(0):
+            poynting_x = np.array(poynting_x) / np.max(poynting_r)
+            poynting_y = np.array(poynting_y) / np.max(poynting_r)
+            poynting_z = np.array(poynting_z) / np.max(poynting_r)
+            poynting_r = np.array(poynting_r) / np.max(poynting_r)
+        
+        if parallel_assign(0): print("Normalized")
+
+        mp.all_wait()
+        
+        if parallel_assign(0): print("Ended mp.all_wait()")
     
         #% FURTHER SIMULATION: SAVE DATA
         
         for p in params_list: params[p] = eval(p)
         
         os.chdir(path)
-        sim.save_near2far("FurtherNear2Far", near2far_box)
-        if parallel_assign(0):
-                f = h5.File("FurtherNear2Far.h5", "r+")
+        sim_filename = sim.filename_prefix
+        sim.filename_prefix = "Further"
+        sim.save_near2far("Near2Far", near2far_box)
+        # mp.all_wait()
+        
+        if parallel_assign(0): print("Saved near2far flux data")
+        
+        if parallel_assign(1):
+                f = h5.File(file("Further-Near2Far.h5"), "r+")
                 for key, par in params.items():
                     f[ list(f.keys())[0] ].attrs[key] = par
                 f.close()
                 del f
+                print("Added params to near2far data")
         os.chdir(syshome)
     
-        if parallel_assign(1):
-                f = h5.File(file("FurtherResults.h5"), "w")
-                f["Px"] = poynting_x2
-                f["Py"] = poynting_y2
-                f["Pz"] = poynting_z2
-                f["Pr"] = poynting_r2
+        if parallel_assign(0):
+                f = h5.File(file("Further-Results.h5"), "w")
+                f["Px"] = poynting_x
+                f["Py"] = poynting_y
+                f["Pz"] = poynting_z
+                f["Pr"] = poynting_r
                 for dset in f.values():
                     for key, par in params.items():
                         dset.attrs[key] = par
                 f.close()
                 del f
-            
+                print("Saved poynting calculation")
+        mp.all_wait()
+        
         # if not split_chunks_evenly:
         #     vm.save_chunks(sim, params, path)
         
+        f = vs.parallel_hdf_file(file("Further-RAM.h5"), "w", parallel)
         if parallel:
-            f = h5.File(file("FurtherRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
             current_process = mp.my_rank()
             f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
             f["RAM"][:, current_process] = used_ram
-            for a in params: f["RAM"].attrs[a] = params[a]
             f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
             f["SWAP"][:, current_process] = swapped_ram
-            for a in params: f["SWAP"].attrs[a] = params[a]
         else:
-            f = h5.File(file("FurtherRAM.h5"), "w")
             f.create_dataset("RAM", data=used_ram)
-            for a in params: f["RAM"].attrs[a] = params[a]
             f.create_dataset("SWAP", data=swapped_ram)
-            for a in params: f["SWAP"].attrs[a] = params[a]
+        for a in params: f["RAM"].attrs[a] = params[a]
+        for a in params: f["SWAP"].attrs[a] = params[a]
         f.close()
         del f
+        
+        if parallel_assign(0): print("Saved RAM")
+        
+        sim.filename_prefix = sim_filename
+        os.chdir(syshome)
     
-    #%% NORMALIZE AND REARANGE DATA
-    
-    # if surface_index!=submerged_index:
-    #     max_poynting_r = np.max([np.max(np.abs(poynting_r)), 
-    #                              np.max(np.abs(poynting_r2))])
-    # else:
-    #     max_poynting_r = np.max(np.abs(poynting_r))
-    
-    # poynting_x = np.array(poynting_x) / max_poynting_r
-    # poynting_y = np.array(poynting_y) / max_poynting_r
-    # poynting_z = np.array(poynting_z) / max_poynting_r
-    # poynting_r = np.array(poynting_r) / max_poynting_r
-    
-    if surface_index!=submerged_index:
-        
-        poynting_x0 = np.array(poynting_x)
-        poynting_y0 = np.array(poynting_y)
-        poynting_z0 = np.array(poynting_z)
-        # poynting_r0 = np.array(poynting_r)
-        
-        # poynting_x2 = np.array(poynting_x2) / max_poynting_r
-        # poynting_y2 = np.array(poynting_y2) / max_poynting_r
-        # poynting_z2 = np.array(poynting_z2) / max_poynting_r
-        # poynting_r2 = np.array(poynting_r2) / max_poynting_r
-        
-        polar_limit = np.arcsin(displacement/radial_distance) + .5
-        
-        for i in range(len(polar_angle)):
-            if polar_angle[i] > polar_limit:
-                index_limit = i
-                break
-        
-        poynting_x[:, index_limit+1:, :] = poynting_x2[:, index_limit+1:, :]
-        poynting_y[:, index_limit+1:, :] = poynting_y2[:, index_limit+1:, :]
-        poynting_z[:, index_limit+1:, :] = poynting_z2[:, index_limit+1:, :]
-        poynting_r[:, index_limit+1:, :] = poynting_r2[:, index_limit+1:, :]
-        
-        poynting_x[:, index_limit, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_x2[:, index_limit, :], poynting_x0[:, index_limit, :])])
-        poynting_y[:, index_limit, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_y2[:, index_limit, :], poynting_y0[:, index_limit, :])])
-        poynting_z[:, index_limit, :] = np.array([[np.mean([p2, p0]) for p2, p0 in zip(poy2, poy0)] for poy2, poy0 in zip(poynting_z2[:, index_limit, :], poynting_z0[:, index_limit, :])])
-        poynting_r[:, index_limit, :] = np.sqrt( np.square(poynting_x[:, index_limit-1, :]) + np.square(poynting_y[:, index_limit-1, :]) + np.square(poynting_y[:, index_limit-1, :]))
+    #%% CHOOSE FINAL DATA TO SAVE AND DUMP ALL REST
 
-    #%% SAVE FINAL DATA
-    
-    if surface_index!=submerged_index and parallel_assign(0):
-        
-        os.remove(file("BaseRAM.h5"))
-        os.rename(file("FurtherRAM.h5"), file("RAM.h5"))
-    
-    elif parallel_assign(0):
-        
-        os.rename(file("BaseRAM.h5"), file("RAM.h5"))
-    
+    if parallel_assign(1):
+        if submerged_index != surface_index:
+            os.rename(file("Further-RAM.h5"), file("RAM.h5"))
+            os.remove(file("Base-RAM.h5"))
+            
+            os.rename(file("Further-Results.h5"), file("Results.h5"))
+            os.remove(file("Base-Results.h5"))
+        else:
+            os.rename(file("Base-RAM.h5"), file("RAM.h5"))
+            os.rename(file("Base-Results.h5"), file("Results.h5"))
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
-    if parallel_assign(1):
+    if parallel_assign(0):
     
-        freq_index = np.argmin(np.abs(freqs - freq_center))
+        wlen_chosen = wlen_center
+        freq_index = np.argmin(np.abs(freqs - 1/wlen_chosen))
     
         fig = plt.figure()
         plt.suptitle(trs.choose(
-            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm',
-            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm'))
+            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm for ',
+            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm para ') + 
+            f"{wlen_chosen * 1e3 * from_um_factor:.0f} nm")
         ax = fig.add_subplot(1,1,1, projection='3d')
         ax.plot_surface(
             poynting_x[:,:,freq_index], 
@@ -894,15 +920,17 @@ def main(from_um_factor, resolution_wlen, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
-    if parallel_assign(0):
+    if parallel_assign(1):
         
-        freq_index = np.argmin(np.abs(freqs - freq_center))
+        wlen_chosen = wlen_center
+        freq_index = np.argmin(np.abs(freqs - 1/wlen_chosen))
         index = [list(polar_angle).index(alpha) for alpha in [0, .25, .5, .75, 1]]
         
         plt.figure()
         plt.suptitle(trs.choose(
-            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm',
-            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm'))
+            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm for ',
+            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm para ') + 
+            f"{wlen_chosen * 1e3 * from_um_factor:.0f} nm")
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(poynting_x[:,i,freq_index], 
@@ -917,15 +945,17 @@ def main(from_um_factor, resolution_wlen, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
-    if parallel_assign(1):
+    if parallel_assign(0):
         
-        freq_index = np.argmin(np.abs(freqs - freq_center))
+        wlen_chosen = wlen_center
+        freq_index = np.argmin(np.abs(freqs - 1/wlen_chosen))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
         
         plt.figure()
         plt.suptitle(trs.choose(
-            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm',
-            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm'))
+            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm for ',
+            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm para ') + 
+            f"{wlen_chosen * 1e3 * from_um_factor:.0f} nm")
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(poynting_x[i,:,freq_index], 
@@ -939,13 +969,15 @@ def main(from_um_factor, resolution_wlen, courant,
         
     if parallel_assign(0):
         
-        freq_index = np.argmin(np.abs(freqs - freq_center))
+        wlen_chosen = wlen_center
+        freq_index = np.argmin(np.abs(freqs - 1/wlen_chosen))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
         
         plt.figure()
         plt.suptitle(trs.choose(
-            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm',
-            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm'))
+            f'Angular Pattern of Point Dipole at {from_um_factor * 1e3 * wlen_center:.0f} nm for ',
+            f'Patrón angular de dipolo puntual en {from_um_factor * 1e3 * wlen_center:.0f} nm para ') + 
+            f"{wlen_chosen * 1e3 * from_um_factor:.0f} nm")
         ax_plain = plt.axes()
         for i in index:
             ax_plain.plot(np.sqrt(np.square(poynting_x[i,:,freq_index]) + np.square(poynting_y[i,:,freq_index])), 
