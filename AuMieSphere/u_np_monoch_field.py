@@ -56,6 +56,11 @@ measure_ram()
 @cli.option("--index", "-i", "submerged_index", 
             type=float, default=1,
             help="Reflective index of sourrounding medium")
+@cli.option("--overlap", "-over", "overlap", default=0, type=float,
+            help="Overlap of sphere and surface in nm")
+@cli.option("--surface-index", "-si", "surface_index", 
+            type=float, default=None,
+            help="Reflective index of surface medium")
 @cli.option("--wlen", "-wl", "wlen", default=532, type=float,
             help="Wavelength expressed in nm")
 @cli.option("--empty-r-factor", "-empty", "empty_r_factor", 
@@ -87,7 +92,7 @@ measure_ram()
             type=bool, default=False,
             help="Whether to make gifs while running or not.")
 def main(from_um_factor, resolution, courant,
-         r, material, paper, wlen, submerged_index, 
+         r, material, paper, wlen, submerged_index, overlap, surface_index,
          empty_r_factor, pml_wlen_factor, 
          time_period_factor,
          series, folder,
@@ -106,7 +111,9 @@ def main(from_um_factor, resolution, courant,
     r = 51.5 # nm
     material = "Au"
     paper = "R"
+    overlap = 0 # Upwards displacement of the surface from the bottom of the sphere in nm
     submerged_index = 1 # 1.33 for water
+    surface_index = 1 # 1.54 for glass
     
     # Source configuration
     wlen = 532
@@ -173,7 +180,8 @@ def main(from_um_factor, resolution, courant,
         folder = "AuMieSphere/AuSphereField"
     
     params_list = ["from_um_factor", "resolution", "courant",
-                   "material", "r", "paper", "submerged_index", "wlen", 
+                   "material", "r", "paper", 
+                   "submerged_index", "wlen", "surface_index", "overlap",
                    "cell_width", "pml_width", "empty_width", "source_center",
                    "until_time", "time_period_factor", 
                    "n_period_line", "n_period_plane", "period_line", "period_plane",
@@ -211,11 +219,24 @@ def main(from_um_factor, resolution, courant,
     period_line = period_line - period_line%(courant/resolution)
     period_plane = period_plane - period_plane%(courant/resolution)
     
-    geometry = [mp.Sphere(material=medium,
-                          center=mp.Vector3(),
-                          radius=r)]
+    nanoparticle = mp.Sphere(material=medium,
+                             center=mp.Vector3(),
+                             radius=r)
     # Au sphere with frequency-dependant characteristics imported from Meep.
     
+    if surface_index != submerged_index:
+        surface = mp.Block(material=mp.Medium(index=surface_index),
+                           center=mp.Vector3(
+                               r/2 - overlap/2 + cell_width/4,
+                               0, 0),
+                           size=mp.Vector3(
+                               cell_width/2 - r + overlap,
+                               cell_width, cell_width))
+        geometry = [surface, nanoparticle]
+    else:
+        geometry = [nanoparticle]
+    # If required, a certain material surface underneath it
+
     n_processes = mp.count_processors()
     parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
     max_index = np.argmax(parallel_specs)
