@@ -30,7 +30,7 @@ from v_materials import import_medium
 import v_meep as vm
 import v_save as vs
 import v_utilities as vu
-from np_monoch_field import plots_monoch_field
+from np_monoch_field_plot import plots_monoch_field
 
 used_ram, swapped_ram, measure_ram = vm.ram_manager()
 measure_ram()
@@ -113,7 +113,7 @@ def main(from_um_factor, resolution, courant,
     paper = "R"
     overlap = 0 # Upwards displacement of the surface from the bottom of the sphere in nm
     submerged_index = 1 # 1.33 for water
-    surface_index = 1 # 1.54 for glass
+    surface_index = None # 1.54 for glass
     
     # Source configuration
     wlen = 532
@@ -156,6 +156,8 @@ def main(from_um_factor, resolution, courant,
     # Au sphere
     r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
     medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
+    if surface_index is None:
+        surface_index = submerged_index
     
     # Frequency and wavelength
     wlen = wlen / ( from_um_factor * 1e3 ) # Wavelength now in Meep units

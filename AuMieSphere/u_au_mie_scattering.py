@@ -133,7 +133,7 @@ def main(from_um_factor, resolution, courant,
     reference = "Meep"
     overlap = 0 # Upwards displacement of the surface from the bottom of the sphere in nm
     submerged_index = 1 # 1.33 for water
-    surface_index = 1 # 1.54 for glass
+    surface_index = None # 1.54 for glass
     
     # Frequency and wavelength
     wlen_range = np.array([450,600]) # Wavelength range in nm

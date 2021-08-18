@@ -121,7 +121,7 @@ def main(from_um_factor, resolution_wlen, courant,
     # Cell specifications
     displacement = 50 # Displacement of the surface relative to the dipole
     submerged_index = 1 # 1.33 for water
-    surface_index = 1 # 1.54 for glass
+    surface_index = None # 1.54 for glass
     
     # Frequency and wavelength
     wlen_center = 650 # Main wavelength range in nm
@@ -645,8 +645,6 @@ def main(from_um_factor, resolution_wlen, courant,
         measure_ram()
         # used_ram.append(used_ram[-1])
     
-    #%%
-    
         # #%% PLOT CELL
     
         if parallel_assign(0):
@@ -749,8 +747,6 @@ def main(from_um_factor, resolution_wlen, courant,
             del surface_square, submerged_color
             del fig, box, ax
     
-    #%%
-    
         #% FURTHER SIMULATION: INITIALIZE
         
         temp = time()
@@ -774,7 +770,7 @@ def main(from_um_factor, resolution_wlen, courant,
         
         if parallel_assign(0): print("Ended simulation")
         
-#         #% FURTHER SIMULATION: ANGULAR PATTERN ANALYSIS
+        #% FURTHER SIMULATION: ANGULAR PATTERN ANALYSIS
     
         if parallel_assign(0):
     
