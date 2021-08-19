@@ -255,7 +255,7 @@ def main(from_um_factor, resolution, courant,
     # >> The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
     
-    until_after_sources = time_factor_cell * cell_width * max( submerged_index, surface_index )
+    until_after_sources = time_factor_cell * cell_width  # Should multiply and divide by index
     # Enough time for the pulse to pass through all the cell
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 

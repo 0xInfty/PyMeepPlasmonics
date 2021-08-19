@@ -302,7 +302,7 @@ def main(from_um_factor, resolution_wlen, courant,
     #                       center=mp.Vector3(),
     #                       component=polarization)]
     
-    until_after_sources = time_factor_cell * cell_width * submerged_index
+    until_after_sources = time_factor_cell * cell_width  # Should multiply and divide by submerged_index
     # Enough time for the pulse to pass through all the cell
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 

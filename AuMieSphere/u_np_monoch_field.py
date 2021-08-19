@@ -168,7 +168,7 @@ def main(from_um_factor, resolution, courant,
     empty_width = empty_r_factor * r # 0.5 * max(wlen_range)
     
     # Time configuration
-    until_time = time_period_factor * period
+    until_time = time_period_factor * wlen # Should multiply and divide by submerged_index
     period_line = period / n_period_line
     period_plane = period / n_period_line    
     
@@ -438,36 +438,37 @@ def main(from_um_factor, resolution, courant,
     for p in params_list: params[p] = eval(p)
     
     volumes = [sampling_line, sampling_plane]
-    periods = [period_line, period_plane]
     dimensions = []
-    for vol, per in zip(volumes, periods):
-        t = np.arange(0, until_time, per)
+    for vol in volumes:
         x, y, z, more = sim.get_array_metadata(vol=vol)
-        dimensions.append([t, x, y, z])
-    del t, x, y, z, more
-    del volumes, periods, vol, per
+        dimensions.append([x, y, z])
+    del x, y, z, more
+    del volumes, vol
     
     if parallel_assign(0):
         
         files = ["Field-Lines", "Field-Planes"]
-        for fil, dims in zip(files, dimensions):
+        periods = [period_line, period_plane]
+        for fil, dims, per in zip(files, periods, dimensions):
             
             f = h5.File(file(fil + ".h5"), "r+")
             keys = [vu.camel(k) for k in f.keys()]
             for oldk, newk in zip(list(f.keys()), keys):
                 f[newk] = f[oldk]
                 del f[oldk]
-        
-            for k, array in zip(["T", "X","Y","Z"], dims): 
+            
+            f["T"] = np.arange(0, f["Ez"].shape[-1] * per, per)
+            for k, array in zip(["X","Y","Z"], dims): 
                 f[k] = array
             
             for k in f.keys(): 
                 for kpar in params.keys(): 
-                    f[k].attrs[kpar] = params[kpar] 
+                    f[k].attrs[kpar] = params[kpar]
             
             f.close()
             
         del f, keys, oldk, newk, k, kpar, array
+        del periods, per
     
         if hfield:
             
