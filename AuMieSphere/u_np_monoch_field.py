@@ -179,7 +179,7 @@ def main(from_um_factor, resolution, courant,
     if series is None:
         series = f"TestAuSphereField{2*r*from_um_factor*1e3:.0f}WLen{wlen*from_um_factor*1e3:.0f}"
     if folder is None:
-        folder = "AuMieSphere/AuSphereField"
+        folder = "Test/Field"
     
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", 
@@ -454,8 +454,11 @@ def main(from_um_factor, resolution, courant,
             f = h5.File(file(fil + ".h5"), "r+")
             keys = [vu.camel(k) for k in f.keys()]
             for oldk, newk in zip(list(f.keys()), keys):
-                f[newk] = f[oldk]
-                del f[oldk]
+                try:
+                    f[newk] = f[oldk]
+                    del f[oldk]
+                except:
+                    pass
             
             f["T"] = np.arange(0, f["Ez"].shape[-1] * per, per)
             for k, array in zip(["X","Y","Z"], dims): 
