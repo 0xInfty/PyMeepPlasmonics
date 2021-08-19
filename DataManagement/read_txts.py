@@ -40,9 +40,9 @@ for p in params:
 params = fixed_params
 del p, problem, solved, fixed, fixed_params
 
-enlapsed = [p["enlapsed"] for p in params]
-total = np.array([sum(e) for e in enlapsed])
-enlapsed = np.array(enlapsed)
+elapsed = [p["elapsed"] for p in params]
+total = np.array([sum(e) for e in elapsed])
+elapsed = np.array(elapsed)
 
 #%% PLOT
 

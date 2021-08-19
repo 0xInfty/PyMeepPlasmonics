@@ -77,7 +77,7 @@ sim.run(mp.at_beginning(mp.output_epsilon),
         mp.after_sources(h),
         until_after_sources=300)
 end = time()
-print("Enlapsed time: {:.2f}".format(end-start))
+print("elapsed time: {:.2f}".format(end-start))
 
 #%% SIMULATION: FIELDS
 
@@ -124,7 +124,7 @@ del i, w, path_i
 # (If we output at a single time, we might accidentally catch 
 # the Ez field when it is almost zero and get a distorted view.)
 
-print("Enlapsed time 2: {:.2f}".format(end[1]-start[1]))
+print("elapsed time 2: {:.2f}".format(end[1]-start[1]))
 
 #%% PLOTS :P
 

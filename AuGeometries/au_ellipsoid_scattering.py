@@ -47,7 +47,7 @@ nfreq = 100 # Number of frequencies to discretize range
 cutoff = 3.2
 
 # Computation time
-enlapsed = []
+elapsed = []
 time_factor_cell = 1.2
 until_after_sources = False
 second_time_factor = 10
@@ -162,7 +162,7 @@ box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
 
 temp = time()
 sim.init_sim()
-enlapsed.append( time() - temp )
+elapsed.append( time() - temp )
 
 """
 112x112x112 with resolution 4
@@ -203,7 +203,7 @@ sim.run(until_after_sources=until_after_sources)
     # mp.Ez, # Component of field to check
     # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
     # 1e-3)) # Factor to decay
-enlapsed.append( time() - temp )
+elapsed.append( time() - temp )
 
 """
 112x112x112 with resolution 2
@@ -254,7 +254,7 @@ params = dict(
     pml_width=pml_width,
     air_width=air_width,
     source_center=source_center,
-    enlapsed=enlapsed,
+    elapsed=elapsed,
     series=series,
     folder=folder,
     pc=pc,
@@ -364,7 +364,7 @@ box_z2 = sim.add_flux(freq_center, freq_width, nfreq,
 
 temp = time()
 sim.init_sim()
-enlapsed.append( time() - temp )
+elapsed.append( time() - temp )
 
 """
 112x112x112 with resolution 2
@@ -387,7 +387,7 @@ sim.load_minus_flux_data(box_y1, box_y1_data)
 sim.load_minus_flux_data(box_y2, box_y2_data)
 sim.load_minus_flux_data(box_z1, box_z1_data)
 sim.load_minus_flux_data(box_z2, box_z2_data)
-enlapsed.append( time() - temp )
+elapsed.append( time() - temp )
 del box_x1_data, box_x2_data, box_y1_data, box_y2_data
 del box_z1_data, box_z2_data
 
@@ -414,7 +414,7 @@ sim.run(until_after_sources=second_time_factor*until_after_sources)
     # mp.Ez, # Component of field to check
     # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
     # 1e-3)) # Factor to decay
-enlapsed.append( time() - temp )
+elapsed.append( time() - temp )
 del temp
 # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
 

@@ -367,6 +367,34 @@ def import_medium(name, from_um_factor=1, paper="R"):
     else:
         raise ValueError("No source found for that material")
 
+#%%
+    
+def recognize_material(material_or_index):
+    
+    materials_dict = {"Vacuum": 1,
+                      "Water": 1.33,
+                      "Glass": 1.54}
+    materials_short_dict = {"vac": "Vacuum",
+                            "wat": "Water",
+                            "gl": "Glass"}
+    materials_keys = list(materials_dict.keys())
+    materials_values = list(materials_dict.values())
+    
+    if isinstance(material_or_index, str):
+        for short_key, material in materials_short_dict.items():
+            if short_key in material_or_index.lower():
+                return materials_dict[material]
+        raise ValueError(f"Unrecognized material: must be in {materials_keys}")
+        
+    elif isinstance(material_or_index, float) or isinstance(material_or_index, int):
+        try:
+            return materials_keys[materials_values.index(material_or_index)]
+        except:
+            raise ValueError(f"Unrecognized material's index': must be in {materials_values}")
+            
+    else:
+        raise ValueError(f"Unrecognized format for material: must be in {materials_dict}")
+
 #%% EPSILON INTERPOLATION
 
 def epsilon_interpoler_from_n(wlen, complex_n):

@@ -32,7 +32,7 @@ home = vs.get_home()
 
 midflux_key_params = ["from_um_factor", "resolution", "courant", 
                       "wlen_range", "cutoff", "nfreq", 
-                      "submerged_index", "surface_index", "displacement",
+                      "submerged_index", "surface_index", "overlap",
                       "cell_width", "pml_width", "source_center", "flux_box_size",
                       "until_after_sources", 
                       "parallel", "n_processes", "n_cores", "n_nodes",
@@ -41,7 +41,7 @@ midflux_key_params = ["from_um_factor", "resolution", "courant",
 chunks_key_params = ["from_um_factor", "resolution", "courant", 
                      "wlen_range", "cutoff", "nfreq", 
                      "r", "material", "paper", "reference",
-                     "submerged_index", "surface_index", "displacement",
+                     "submerged_index", "surface_index", "overlap",
                      "cell_width", "pml_width", "source_center", "flux_box_size",
                      "until_after_sources", 
                      "parallel", "n_processes", "n_cores", "n_nodes",
@@ -159,18 +159,11 @@ def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5, print_log=Tru
 
 def check_stability(params):
     
-    if params["reference"]=="Meep": 
-        medium = vmt.import_medium(params["material"], 
-                                   from_um_factor=params["from_um_factor"], 
-                                   paper=params["paper"])
-        # Importing material constants dependant on frequency from Meep Library
-    elif params["reference"]=="RIinfo":
-        medium = vmt.MediumFromFile(params["material"], paper=params["paper"], 
-                                    reference=params["reference"], 
-                                    from_um_factor=params["from_um_factor"])
-        # Importing material constants dependant on frequency from external file
-    else:
-        raise ValueError("Reference for medium not recognized. Sorry :/")
+
+    medium = vmt.import_medium(params["material"], 
+                               from_um_factor=params["from_um_factor"], 
+                               paper=params["paper"])
+    # Importing material constants dependant on frequency from Meep Library
 
     stable_freq_res, max_courant_freq_res = verify_stability_freq_res(
         medium, params["resolution"], courant=params["courant"], print_log=True)
@@ -199,6 +192,22 @@ def check_stability(params):
     max_courant = min([max_courant_dim_index, max_courant_freq_res])
     
     return stable, max_courant    
+
+#%%
+
+def parallel_manager(process_total_number, parallel):
+    
+    def parallel_assign(process_number):
+        
+        if parallel and process_total_number > 1:
+            if process_number == 0:
+                return mp.am_master()
+            else:
+                return mp.my_rank() == process_number
+        else:
+            return True
+    
+    return parallel_assign
 
 #%%
 
@@ -494,6 +503,82 @@ def check_chunks(params):
     except IndexError:
         print("Chunks database must be empty!")
         return [None]
+
+#%%
+
+def recognize_component(component):
+    
+    components_dict = {"Ex": mp.Ex,
+                       "Ey": mp.Ey,
+                       "Ez": mp.Ez,
+                       "Hx": mp.Hx,
+                       "Hy": mp.Hy,
+                       "Hz": mp.Hz}
+    components_keys = list(components_dict.keys())
+    components_values = list(components_dict.values())
+    
+    if isinstance(component, str):
+        try:
+            return components_dict[vu.camel(component)]
+        except:
+            raise ValueError("Unrecognized component")
+            
+    elif isinstance(component, int):
+        try:
+            return components_keys[components_values.index(component)]
+        except:
+            raise ValueError("Unrecognized component")
+        
+    else:
+        raise ValueError("Unrecognized format for component")
+        
+#%%
+        
+def recognize_direction(direction):
+    
+    direction_dict = {"X": mp.X,
+                         "Y": mp.Y,
+                         "Z": mp.Z}
+    direction_vect_dict = {"X": mp.Vector3(1,0,0),
+                           "Y": mp.Vector3(0,1,0),
+                           "Z": mp.Vector3(0,0,1)}
+    direction_keys = list(direction_dict.keys())
+    direction_values = list(direction_dict.values())
+    direction_vect_values = list(direction_vect_dict.values())
+    
+    if isinstance(direction, mp.Vector3):
+        try:
+            return direction_keys[direction_vect_values.index(direction)]
+        except:
+            return direction
+    
+    elif isinstance(direction, str):
+        try:
+            return direction_dict[vu.camel(direction)]
+        except:
+            raise ValueError("Unrecognized direction")
+            
+    elif isinstance(direction, int):
+        try:
+            return direction_keys[direction_values.index(direction)]
+        except:
+            raise ValueError("Unrecognized direction")
+        
+    else:
+        raise ValueError("Unrecognized format for direction")
+        
+#%%
+
+class SimpleUnitsConverter:
+    
+    def __init__(self, from_um_factor):
+        self.from_um_factor = from_um_factor
+    
+    def to_nm(self, mp_length):
+        return mp_length * (1e3 * self.from_um_factor)
+    
+    def from_nm(self, nm_length):
+        return nm_length / (1e3 * self.from_um_factor)
 
 #%%
 

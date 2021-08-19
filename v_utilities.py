@@ -435,6 +435,41 @@ NUMPY_ARRAY = NumpyArrayParamType()
 
 #%%
 
+class BilingualManager:
+    
+    def __init__(self, english=True):
+        
+        self.english = english
+    
+    def choose(self, english_string, spanish_string):
+        if self.english:
+            return english_string
+        else:
+            return spanish_string
+
+#%%
+
+def camel(string):
+    
+    return string[0].upper() + string[1:].lower()
+
+#%%
+
+def round_to_multiple(numerator, denominator, round_up=False):
+    
+    if round_up:
+        result = np.ceil(numerator / denominator) * denominator
+    else:
+        result = np.floor(numerator / denominator) * denominator
+
+    sign = np.sign(numerator)
+    if sign == -1: result = min(result, -denominator)
+    else: result = max(result, denominator)
+    
+    return result
+
+#%%
+
 def find_numbers(string):
 
     """Returns a list of numbers found on a given string

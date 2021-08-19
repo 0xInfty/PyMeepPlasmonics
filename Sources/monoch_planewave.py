@@ -81,7 +81,7 @@ sources = [mp.Source(mp.ContinuousSource(wavelength=wlen,
 
 symmetries = [mp.Mirror(mp.Y), mp.Mirror(mp.Z, phase=-1)]
 
-enlapsed = []
+elapsed = []
 
 path = os.path.join(home, folder, "{}Results".format(series))
 if not os.path.isdir(path): vs.new_dir(path)
@@ -125,7 +125,7 @@ to_do_while_running = [mp.at_every(period_line, save_line),
 temp = time()
 sim.run(*to_do_while_running, until=run_time)
 del f, g
-enlapsed.append(time() - temp)
+elapsed.append(time() - temp)
 
 #%% SAVE METADATA
 
