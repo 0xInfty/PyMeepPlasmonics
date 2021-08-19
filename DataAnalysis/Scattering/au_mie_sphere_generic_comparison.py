@@ -17,6 +17,9 @@ from v_materials import import_medium
 import v_save as vs
 import v_utilities as vu
 
+english = False
+trs = vu.BilingualManager(english=english)
+
 #%% PARAMETERS
 
 # Saving directories
@@ -28,7 +31,7 @@ home = vs.get_home()
 test_param_string = "courant"
 test_param_in_params = True
 test_param_position = -2
-test_param_label = "Courant Factor"
+test_param_label = trs.choose("Courant Factor", "Factor de Courant")
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, -2)]*2
@@ -39,11 +42,11 @@ series_mustnt = ["Failed"]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
-plot_title = "Au 103 nm sphere in water"
+plot_title_ending = trs.choose("Au 103 nm sphere in water", "esfera de Au con 103 nm en agua")
 series_legend = ["500-650 nm", "500-700 nm"]
 series_colors = [plab.cm.Reds, plab.cm.Blues]
 series_linestyles = ["solid"]*2
-plot_make_big = False
+plot_make_big = True
 plot_file = lambda n : os.path.join(home, "DataAnalysis/Courant" + n)
 
 #%% LOAD DATA
@@ -106,7 +109,6 @@ minor_division = [[fum * 1e3 / res for fum, res in zip(frum, reso)] for frum, re
 width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in params] 
 grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
 memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
-
 
 #%% LOAD MIE DATA
 
@@ -173,16 +175,21 @@ markers = ["o", "o", "D", "D"]
 
 fig, [ax1, ax2] = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
 
-plt.suptitle("Difference in scattering for " + plot_title)
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
 
-ax1.set_ylabel("$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
+ax1.set_ylabel(trs.choose("Difference in wavelength ", 
+                          "Diferencia en longitud de onda ") + 
+               "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
 for tp, mwl, col, mar, leg in zip(test_param, max_wlen_diff, colors, markers, series_legend):
     ax1.plot(tp, mwl, color=col, marker=mar, markersize=7, linestyle="")
 ax1.grid(True)
 ax1.set_xticks(resolution[ np.argmax([len(res) for res in resolution]) ])
 ax1.legend(series_legend)
 
-ax2.set_ylabel("MSD( $\sigma^{MEEP} - \sigma^{MIE}$ )")
+ax2.set_ylabel(trs.choose("Mean squared difference ",
+                          "Diferencia cuadrática media ") 
+               + "MSD( $C^{MEEP} - C^{MIE}$ )")
 for tp, mr, col, mar, leg in zip(test_param, mean_residual, colors, markers, series_legend):
     ax2.plot(tp, mr, color=col, marker=mar, markersize=7, linestyle="")
 ax2.grid(True)
@@ -206,14 +213,17 @@ else:
 
 markers = ["o", "o", "D", "D"]
 plt.figure()
-plt.title("Difference in scattering maximum for " + plot_title)
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
 for tp, mwl, col, mar in zip(test_param, max_wlen_diff, colors, markers):
     plt.plot(tp, mwl, color=col, marker=mar, markersize=7, linestyle="")
 plt.grid(True)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
 plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
-plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
+plt.ylabel(trs.choose("Difference in wavelength ", 
+                      "Diferencia en longitud de onda ") + 
+           "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
 #%% MEAN RESIDUAL
@@ -226,14 +236,17 @@ else:
 markers = ["o", "o", "D", "D"]
 
 plt.figure()
-plt.title("Mean quadratic difference in effiency for " + plot_title)
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
 for tp, mr, col, mar in zip(test_param, mean_residual, colors, markers):
     plt.plot(tp, mr, marker=mar, color=col, markersize=7, linestyle="")
 plt.grid(True)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
 plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
-plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
+plt.ylabel(trs.choose("Mean squared difference ",
+                      "Diferencia cuadrática media ") 
+           + "MSD( $C^{MEEP} - C^{MIE}$ )")
 vs.saveplot(plot_file("QuaDiffJoint.png"), overwrite=True)
 
 #%% MEAN RESIDUAL LEFT AND RIGHT
@@ -254,7 +267,8 @@ colors_left = colors_left*2
 markers = ["o", "o", "D", "D"]
 
 plt.figure()
-plt.title("Mean quadratic difference in effiency for " + plot_title)
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
 lines = []
 medium_lines = []
 lines_legend = []
@@ -284,7 +298,9 @@ first_legend = plt.legend(lines, lines_legend)
 second_legend = plt.legend(medium_lines, medium_lines_legend, loc="center left")
 plt.gca().add_artist(first_legend)
 plt.xlabel(test_param_label)
-plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
+plt.ylabel(trs.choose("Mean squared difference ",
+                      "Diferencia cuadrática media ") 
+           + "MSD( $C^{MEEP} - C^{MIE}$ )")
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
 #%% MEAN RESIDUAL SUBPLOTS
@@ -297,13 +313,16 @@ else:
 markers = ["o", "D"]
 
 fig, axes = plt.subplots(2, sharex=True, gridspec_kw={"hspace":0})
-plt.suptitle("Mean quadratic difference in effiency for " + plot_title)
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
 for i in range(len(axes)):
     axes[i].plot(test_param[i], mean_residual[i], "k", 
                  marker=markers[i], markersize=7, linestyle="")
     axes[i].grid(True)
     axes[i].legend([series_legend[i]])
-    axes[i].set_ylabel("MSD( $C^{MEEP} - C^{MIE}$ )")
+    axes[i].set_ylabel(trs.choose("Mean squared difference ",
+                                  "Diferencia cuadrática media ") 
+                       + "MSD( $C^{MEEP} - C^{MIE}$ )")
 axes[1].yaxis.tick_right()
 axes[1].yaxis.set_label_position("right")
 plt.xlabel(test_param_label)
@@ -324,7 +343,8 @@ else:
 markers = ["o", "D"]
 
 fig, axes = plt.subplots(2, sharex=True, gridspec_kw={"hspace":0})
-plt.suptitle("Mean quadratic difference in effiency for " + plot_title)
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
 for i in range(len(axes)):
     axes[i].plot(test_param[i], mean_residual_right[i], "red", 
                  marker=markers[i], markersize=7, linestyle="")
@@ -336,7 +356,9 @@ for i in range(len(axes)):
     axes[i].legend([series_legend[i] + " left",
                     series_legend[i] + " right",
                     series_legend[i] + " all"])
-    axes[i].set_ylabel("MSD( $C^{MEEP} - C^{MIE}$ )")
+    axes[i].set_ylabel(trs.choose("Mean squared difference ",
+                                  "Diferencia cuadrática media ") 
+                       + "MSD( $C^{MEEP} - C^{MIE}$ )")
 axes[1].yaxis.tick_right()
 axes[1].yaxis.set_label_position("right")
 plt.xlabel(test_param_label)
@@ -400,25 +422,28 @@ else:
 markers = ["o", "o", "D", "D"]
 
 plt.figure()
-plt.title("elapsed total time for simulation of " + plot_title)
+plt.suptitle(trs.choose("Elapsed total time for ", 
+                        "Tiempo transcurrido total para ") + plot_title_ending)
 for tp, tot, col, mark in zip(test_param, total_elapsed_time, colors, markers):
     plt.plot(tp, tot, '-', marker=mark, color=col, markersize=7)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
 plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
-plt.ylabel("elapsed time [s]")
+plt.ylabel(trs.choose("Elapsed time [s]", "Tiempo transcurrido [s]"))
 vs.saveplot(plot_file("ComparedTotTime.png"), overwrite=True)
         
 colors = ["r", "maroon", "darkorange", "orangered"]
 fig = plt.figure()
-plt.title("elapsed time for simulations of " + plot_title)
+plt.suptitle(trs.choose("Elapsed time for simulation of ", 
+                        "Tiempo transcurrido para simulación de ") + plot_title_ending)
 for tp, tim, col, leg in zip(first_test_param, first_sim_time, colors, series_legend):
     plt.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
 for tp, tim, col, leg in zip(second_test_param, second_sim_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
 plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
-plt.ylabel("elapsed time in simulations [s]")
+plt.ylabel(trs.choose("Elapsed time in simulations [s]", 
+                      "Tiempo transcurrido en simulaciones [s]"))
 box = fig.axes[0].get_position()
 box.y0 = box.y0 + .25 * (box.y1 - box.y0)
 box.y1 = box.y1 + .10 * (box.y1 - box.y0)
@@ -429,14 +454,16 @@ plt.savefig(plot_file("ComparedSimTime.png"), bbox_inches='tight')
 
 colors = ["b", "navy", "cyan", "deepskyblue"]
 fig = plt.figure()
-plt.title("elapsed time for building of " + plot_title)
+plt.suptitle(trs.choose("Elapsed time for building of ", 
+                        "Tiempo transcurrido para construcción de ") + plot_title_ending)
 for tp, tim, col, leg in zip(first_test_param, first_build_time, colors, series_legend):
     plt.plot(tp, tim, 'D-', color=col, label=leg + " Sim I")
 for tp, tim, col, leg in zip(second_test_param, second_build_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
 plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
-plt.ylabel("elapsed time in building [s]")
+plt.ylabel(trs.choose("Elapsed time in building [s]", 
+                      "Tiempo transcurrido en construcción [s]"))
 box = fig.axes[0].get_position()
 box.y0 = box.y0 + .25 * (box.y1 - box.y0)
 box.y1 = box.y1 + .10 * (box.y1 - box.y0)
@@ -447,12 +474,15 @@ plt.savefig(plot_file("ComparedBuildTime.png"), bbox_inches='tight')
 
 colors = ["m", "darkmagenta", "blueviolet", "indigo"]
 fig = plt.figure()
-plt.title("elapsed time for loading flux of " + plot_title)
+plt.title("elapsed time for loading flux of " + plot_title_ending)
+plt.suptitle(trs.choose("Elapsed time for loading flux of ", 
+                        "Tiempo transcurrido para cargar flujo de ") + plot_title_ending)
 for tp, tim, col, leg in zip(second_test_param, second_flux_time, colors, series_legend):
     plt.plot(tp, tim, 's-', color=col, label=leg + " Sim II")
 plt.xlabel(test_param_label)
 plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
-plt.ylabel("elapsed time in loading flux [s]")
+plt.ylabel(trs.choose("Elapsed time in loading flux [s]", 
+                      "Tiempo transcurrido en carga de flujo [s]"))
 box = fig.axes[0].get_position()
 box.y0 = box.y0 + .15 * (box.y1 - box.y0)
 box.y1 = box.y1 + .10 * (box.y1 - box.y0)
@@ -463,24 +493,42 @@ plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
 #%% ALL RAM MEMORY
 
-reference = ["Módulos",
-             "Parámetros",
-             "Inicial (Sim I)",
-             "mp.Simulation (Sim I)",
-             "Flujo (Sim I)",
-             "sim.init_sim() (Sim I)",
-             "Principio (Sim I)",
-             "Mitad (Sim I)",
-             "Final (Sim I)",
-             "Inicial (Sim II)",
-             r"mp.Simulation (Sim II)",
-             "Flujo (Sim II)",
-             "sim.init_sim() (Sim II)",
-             "load_midflux() (Sim II)",
-             "Flujo negado (Sim II)",
-             "Principio (Sim II)",
-             "Mitad (Sim II)",
-             "Final (Sim II)"]
+reference = trs.choose(["Modules",
+                        "Parameters",
+                        "Initial (Sim I)",
+                        "mp.Simulation (Sim I)",
+                        "Flux (Sim I)",
+                        "sim.init_sim() (Sim I)",
+                        "Beginnings (Sim I)",
+                        "Middle (Sim I)",
+                        "Ending (Sim I)",
+                        "Initial (Sim II)",
+                        r"mp.Simulation (Sim II)",
+                        "Flux (Sim II)",
+                        "sim.init_sim() (Sim II)",
+                        "load_midflux() (Sim II)",
+                        "Minus flux (Sim II)",
+                        "Beginnings (Sim II)",
+                        "Middle (Sim II)",
+                        "Ending (Sim II)"],
+                       ["Módulos",
+                        "Parámetros",
+                        "Inicial (Sim I)",
+                        "mp.Simulation (Sim I)",
+                        "Flujo (Sim I)",
+                        "sim.init_sim() (Sim I)",
+                        "Principio (Sim I)",
+                        "Mitad (Sim I)",
+                        "Final (Sim I)",
+                        "Inicial (Sim II)",
+                        r"mp.Simulation (Sim II)",
+                        "Flujo (Sim II)",
+                        "sim.init_sim() (Sim II)",
+                        "load_midflux() (Sim II)",
+                        "Flujo negado (Sim II)",
+                        "Principio (Sim II)",
+                        "Mitad (Sim II)",
+                        "Final (Sim II)"])
 
 total_ram = [[np.array([sum(ur) for ur in p["used_ram"]]) for p in par] for par in params]
 max_ram = [[p["used_ram"][:, np.argmax([sum(ur) for ur in p["used_ram"].T]) ] for p in par] for par in params]
@@ -514,16 +562,27 @@ for i in range(len(series)):
         lines_legend.append(series_label[i](series[i][j]))
         
 patches = []
-patches.append( plt.axvspan(*["Inicial (Sim I)", "Principio (Sim I)"], alpha=0.15, color='grey', zorder=1) )
-patches.append( plt.axvspan(*["Principio (Sim I)", "Final (Sim I)"], alpha=0.3, color='grey', zorder=1) )
-patches.append( plt.axvspan(*["Inicial (Sim II)", "Principio (Sim II)"], alpha=0.1, color='gold', zorder=1) )
-patches.append( plt.axvspan(*["Principio (Sim II)", "Final (Sim II)"], alpha=0.2, color='gold', zorder=1) )
-patches_legend = ["Configuration Sim I", "Running Sim I",
-                  "Configuration Sim II", "Running Sim II"]
+patches.append( plt.axvspan(*trs.choose(["Initial (Sim I)", "Beginnings (Sim I)"],
+                                        ["Inicial (Sim I)", "Principio (Sim I)"]), 
+                            alpha=0.15, color='grey', zorder=1) )
+patches.append( plt.axvspan(*trs.choose(["Beginnings (Sim I)", "Ending (Sim I)"], 
+                                        ["Principio (Sim I)", "Final (Sim I)"]),
+                            alpha=0.3, color='grey', zorder=1) )
+patches.append( plt.axvspan(*trs.choose(["Initial (Sim II)", "Beginnings (Sim II)"],
+                                        ["Inicial (Sim II)", "Principio (Sim II)"]), 
+                            alpha=0.1, color='gold', zorder=1) )
+patches.append( plt.axvspan(*trs.choose(["Beginnings (Sim II)", "Ending (Sim II)"], 
+                                        ["Principio (Sim II)", "Final (Sim II)"]),
+                            alpha=0.2, color='gold', zorder=1) )
+patches_legend = trs.choose(["Configuration Sim I", "Running Sim I",
+                             "Configuration Sim II", "Running Sim II"],
+                            ["Configuración Sim I", "Corrida Sim I",
+                             "Configuración Sim II", "Corrida Sim II"])
         
 plt.xticks(rotation=-30, ha="left")
 plt.grid(True)
-plt.ylabel("RAM Memory Per Subprocess [GiB]")
+plt.ylabel(trs.choose("RAM Memory Per Subprocess [GiB]",
+                      "Memoria RAM por subproceso [GiB]"))
 
 plt.legend(lines, lines_legend)
 mng = plt.get_current_fig_manager()
@@ -559,20 +618,30 @@ for i in range(len(series)):
         k += 1
 
 patches = []
-patches.append( plt.axvspan(reference.index("Inicial (Sim I)"), 
-                            reference.index("Principio (Sim I)"), 
+patches.append( plt.axvspan(reference.index(trs.choose("Initial (Sim I)",
+                                                       "Inicial (Sim I)")), 
+                            reference.index(trs.choose("Beginnings (Sim I)",
+                                                       "Principio (Sim I)")), 
                             alpha=0.15, color='grey', zorder=1) )
-patches.append( plt.axvspan(reference.index("Principio (Sim I)"), 
-                            reference.index("Final (Sim I)"), 
+patches.append( plt.axvspan(reference.index(trs.choose("Beginnings (Sim I)",
+                                                       "Principio (Sim I)")), 
+                            reference.index(trs.choose("Ending (Sim I)",
+                                                       "Final (Sim I)")), 
                             alpha=0.3, color='grey', zorder=1) )
-patches.append( plt.axvspan(reference.index("Inicial (Sim II)"),
-                            reference.index("Principio (Sim II)"), 
+patches.append( plt.axvspan(reference.index(trs.choose("Initial (Sim II)",
+                                                       "Inicial (Sim II)")), 
+                            reference.index(trs.choose("Beginnings (Sim II)",
+                                                       "Principio (Sim II)")), 
                             alpha=0.1, color='gold', zorder=1) )
-patches.append( plt.axvspan(reference.index("Principio (Sim II)"),
-                            reference.index("Final (Sim II)"), 
+patches.append( plt.axvspan(reference.index(trs.choose("Beginnings (Sim II)",
+                                                       "Principio (Sim II)")), 
+                            reference.index(trs.choose("Ending (Sim II)",
+                                                       "Final (Sim II)")), 
                             alpha=0.2, color='gold', zorder=1) )
-patches_legend = ["Configuration Sim I", "Running Sim I",
-                  "Configuration Sim II", "Running Sim II"]
+patches_legend = trs.choose(["Configuration Sim I", "Running Sim I",
+                             "Configuration Sim II", "Running Sim II"],
+                            ["Configuración Sim I", "Corrida Sim I",
+                             "Configuración Sim II", "Corrida Sim II"])
 
 if params[0][0]["sysname"]=="MC":
     plt.ylim(0, 16)
@@ -584,7 +653,7 @@ plt.xlim(0, len(reference))
 plt.xticks(np.arange(len(reference)), reference)
 plt.xticks(rotation=-30, ha="left")
 plt.grid(True)
-plt.ylabel("Total RAM Memory [GiB]")
+plt.ylabel(trs.choose("Total RAM Memory [GiB]", "Memoria RAM Total [GiB]"))
 
 plt.legend(lines, lines_legend)
 # first_legend = plt.legend(lines, lines_legend)
@@ -593,7 +662,7 @@ second_legend = plt.legend(patches, patches_legend, loc="center left")
 plt.gca().add_artist(first_legend)
 
 second_ax = plt.twinx()
-second_ax.set_ylabel("Total RAM Memory [%]")
+second_ax.set_ylabel(trs.choose("Total RAM Memory [%]", "Memoria RAM Total [%]"))
 second_ax.set_ylim(0, 100)
 second_ax.set_zorder(0)
 
@@ -605,15 +674,24 @@ plt.savefig(plot_file("AllTotalRAM.png"), bbox_inches='tight')
 
 #%% COMPARE SIMULATIONS I AND II
 
-crossed_reference = ["Inicial",
-                     "mp.Simulation",
-                     "Flujo",
-                     "sim.init_sim()",
-                     "load_midflux()",
-                     "Flujo negado",
-                     "Principio",
-                     "Mitad",
-                     "Final"]
+crossed_reference = trs.choose(["Initial",
+                                "mp.Simulation",
+                                "Flux",
+                                "sim.init_sim()",
+                                "load_midflux()",
+                                "Minus flux",
+                                "Beginnings",
+                                "Middle",
+                                "Ending"],
+                               ["Inicial",
+                                "mp.Simulation",
+                                "Flujo",
+                                "sim.init_sim()",
+                                "load_midflux()",
+                                "Flujo negado",
+                                "Principio",
+                                "Mitad",
+                                "Final"])
 
 index_sim_I = []
 reference_sim_I = []
@@ -694,13 +772,19 @@ for i in range(len(series)):
             second_lines_legend.append("Sim II")
         
 patches = []
-patches.append( plt.axvspan(*["Inicial", "Principio"], alpha=0.15, color='peru', zorder=1) )
-patches.append( plt.axvspan(*["Principio", "Final"], alpha=0.3, color='peru', zorder=1) )
-patches_legend = ["Configuration", "Running"]
+patches.append( plt.axvspan(*trs.choose(["Initial", "Beginnings"],
+                                        ["Inicial", "Principio"]), 
+                            alpha=0.15, color='peru', zorder=1) )
+patches.append( plt.axvspan(*trs.choose(["Beginnings", "Ending"],
+                                        ["Principio", "Final"]), 
+                            alpha=0.3, color='peru', zorder=1) )
+patches_legend = trs.choose(["Configuration", "Running"],
+                            ["Configuración", "Corrida"])
         
 plt.xticks(rotation=-30, ha="left")
 plt.grid(True)
-plt.ylabel("Dedicated RAM Memory Per Subprocess [GiB]")
+plt.ylabel(trs.choose("Dedicated RAM Memory Per Subprocess [GiB]",
+                      "Memoria RAM dedicada por subproceso [GiB]"))
 
 plt.legend(lines, lines_legend)
 mng = plt.get_current_fig_manager()
@@ -719,8 +803,8 @@ plt.savefig(plot_file("AllRAMCommon.png"), bbox_inches='tight')
 
 #%% KEY POINTS OF COMPARISON
 
-key_reference = ["Principio", "Mitad"]
-key_mask = ["Antes", "Durante"]
+key_reference = trs.choose(["Beginnings", "Ending"], ["Principio", "Mitad"])
+key_mask = trs.choose(["Before", "During"], ["Antes", "Durante"])
 
 key_index_sim_I = []
 key_index_sim_II = []
@@ -793,14 +877,14 @@ plt.xlim(0, len(key_reference))
 plt.xticks(np.arange(len(key_reference)), key_mask)
 plt.xticks(rotation=0, ha="left")
 plt.grid(True)
-plt.ylabel("Total RAM Memory [GiB]")
+plt.ylabel(trs.choose("Total RAM Memory [GiB]", "Memoria RAM Total [GiB]"))
 
 first_legend = plt.legend(lines, lines_legend, loc="upper left", ncol=2)
 second_legend = plt.legend(second_lines, second_lines_legend, loc="center left")
 plt.gca().add_artist(first_legend)
 
 second_ax = plt.twinx()
-second_ax.set_ylabel("Total RAM Memory [%]")
+second_ax.set_ylabel(trs.choose("Total RAM Memory [%]", "Memoria RAM Total [%]"))
 second_ax.set_ylim(0, 100)
 second_ax.set_zorder(0)
 
@@ -839,8 +923,8 @@ for i in range(len(series)):
                         zorder=2)
         k += 1
 
-axes[0].set_title("Simulation I")
-axes[1].set_title("Simulation II")
+axes[0].set_title(trs.choose("Simulation I", "Simulación I"))
+axes[1].set_title(trs.choose("Simulation II", "Simulación II"))
 
 if params[0][0]["sysname"]=="MC":
     axes[0].set_ylim(0, 16)
@@ -853,13 +937,13 @@ for ax in axes:
     ax.set_xticks(np.arange(len(key_reference)))
     ax.set_xticklabels(key_mask, rotation=0, ha="left")
     ax.grid(True, axis="y")
-axes[0].set_ylabel("Total RAM Memory [GiB]")
+axes[0].set_ylabel(trs.choose("Total RAM Memory [GiB]", "Memoria RAM Total [GiB]"))
 
 # axes[0].legend(lines, lines_legend, loc="upper left")
 axes[0].legend(lines, lines_legend, loc="upper left", ncol=2)
 
 second_ax = axes[1].twinx()
-second_ax.set_ylabel("Total RAM Memory [%]")
+second_ax.set_ylabel(trs.choose("Total RAM Memory [%]", "Memoria RAM Total [%]"))
 second_ax.set_ylim(0, 100)
 second_ax.set_zorder(0)
 
@@ -947,13 +1031,17 @@ for i in range(len(series)):
     
     # Points
     axes[i][0].plot(test_param[i], [tr[0] for tr in total_ram_key_sim_I[i]], 
-                    marker="o", linestyle="", color=colors[i][0], label="Before Sim I")
+                    marker="o", linestyle="", color=colors[i][0], 
+                    label=trs.choose("Before Sim I", "Antes de Sim I"))
     axes[i][0].plot(test_param[i], [tr[1] for tr in total_ram_key_sim_I[i]], 
-                    marker="o", linestyle="", color=colors[i][1], label="During Sim I")
+                    marker="o", linestyle="", color=colors[i][1], 
+                    label=trs.choose("During Sim I", "Durante Sim I"))
     axes[i][0].plot(test_param[i], [tr[0] for tr in total_ram_key_sim_II[i]], 
-                    marker="D", linestyle="", color=colors[i][0], label="Before Sim II")
+                    marker="D", linestyle="", color=colors[i][0], 
+                    label=trs.choose("Before Sim II", "Antes de Sim II"))
     axes[i][0].plot(test_param[i], [tr[1] for tr in total_ram_key_sim_II[i]], 
-                    marker="D", linestyle="", color=colors[i][1], label="During Sim II")
+                    marker="D", linestyle="", color=colors[i][1], 
+                    label=trs.choose("During Sim II", "Durante Sim II"))
     
     # Residuum
     axes[i][1].plot(test_param[i], np.array([tr[0] for tr in total_ram_key_sim_I[i]]) - 
@@ -961,42 +1049,45 @@ for i in range(len(series)):
                                                      parameters_sim_I[i][0][0][0],
                                                      parameters_sim_I[i][0][1][0],
                                                      parameters_sim_I[i][0][2][0]), 
-                    marker="o", linestyle="", color=colors[i][0], label="Before Sim I")
+                    marker="o", linestyle="", color=colors[i][0], 
+                    label=trs.choose("Before Sim I", "Antes de Sim I"))
     axes[i][1].plot(test_param[i], np.array([tr[1] for tr in total_ram_key_sim_I[i]]) - 
                                     cubic_simple_fit(np.array(test_param[i]), 
                                                      parameters_sim_I[i][1][0][0],
                                                      parameters_sim_I[i][1][1][0],
                                                      parameters_sim_I[i][1][2][0]), 
-                    marker="o", linestyle="", color=colors[i][1], label="After Sim I")
+                    marker="o", linestyle="", color=colors[i][1], 
+                    label=trs.choose("During Sim I", "Durante Sim I"))
     axes[i][1].plot(test_param[i], np.array([tr[0] for tr in total_ram_key_sim_II[i]]) - 
                                     cubic_simple_fit(np.array(test_param[i]), 
                                                      parameters_sim_II[i][0][0][0],
                                                      parameters_sim_II[i][0][1][0],
                                                      parameters_sim_II[i][0][2][0]), 
-                    marker="D", linestyle="", color=colors[i][0], label="Before Sim II")
+                    marker="D", linestyle="", color=colors[i][0], 
+                    label=trs.choose("Before Sim II", "Antes de Sim II"))
     axes[i][1].plot(test_param[i], np.array([tr[1] for tr in total_ram_key_sim_II[i]]) - 
                                     cubic_simple_fit(np.array(test_param[i]), 
                                                      parameters_sim_II[i][1][0][0],
                                                      parameters_sim_II[i][1][1][0],
                                                      parameters_sim_II[i][1][2][0]), 
-                    marker="D", linestyle="", color=colors[i][1], label="After Sim II")
+                    marker="D", linestyle="", color=colors[i][1], 
+                    label=trs.choose("During Sim II", "Durante Sim II"))
     
-    axes[i][0].set_ylabel("Total RAM [GiB]")
-    axes[i][1].set_ylabel("Residua [GiB]")
+    axes[i][0].set_ylabel(trs.choose("Total RAM [GiB]", "RAM Total [GiB]"))
+    axes[i][1].set_ylabel(trs.choose("Residua [GiB]", "Residuos [GiB]"))
     
     axes[i][1].xaxis.set_ticks( [] )
     axes[i][1].xaxis.set_ticklabels( [] )
-    axes[i][0].set_xlabel("Resolution")
+    axes[i][0].set_xlabel(trs.choose("Resolution", "Resolución"))
     axes[i][0].xaxis.set_ticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
-    
 
     axes[i][0].legend()
-    
 
-axes[0][0].set_title("Vacuum")
-axes[1][0].set_title("Water")
+axes[0][0].set_title(trs.choose("Vacuum", "Vacío"))
+axes[1][0].set_title(trs.choose("Water", "Agua"))
 
-plt.suptitle("Fitted total RAM before and during simulations")
+plt.suptitle(trs.choose("Fitted total RAM before and during simulations",
+                        "RAM total ajustada antes y durante la simulación"))
 
 axes[1][0].yaxis.tick_right()
 axes[1][1].yaxis.tick_right()
@@ -1012,7 +1103,8 @@ colors = [sc(np.linspace(0,1,len(s)+3))[3:]
           for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
-plt.title("Normalized scattering for " + plot_title)
+plt.title(trs.choose("Normalized Scattering for ",
+                     "Dispersión normalizada para ") + plot_title_ending)
 for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
                                      series_label, colors, series_linestyles):
 
@@ -1022,11 +1114,14 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
                  linestyle=pls, color=spc, label=psl(ss))
 
 plt.plot(data[0][-1][:,0], theory[0][-1] / max(theory[0][-1]), 
-         linestyle="dotted", color='red', label="Mie Theory Vacuum")
+         linestyle="dotted", color='red', label=trs.choose("Mie Theory Vacuum",
+                                                           "Teoría de Mie en vacío"))
 plt.plot(data[-1][-1][:,0], theory[-1][-1] / max(theory[-1][-1]), 
-         linestyle="dotted", color='blue', label="Mie Theory Water")
-plt.xlabel("Wavelength [nm]")
-plt.ylabel("Normalized Scattering Cross Section")
+         linestyle="dotted", color='blue', label=trs.choose("Mie Theory Water",
+                                                           "Teoría de Mie en agua"))
+plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de Onda [nm]"))
+plt.ylabel(trs.choose("Normalized Scattering Cross Section",
+                      "Sección eficaz de dispersión normalizada"))
 box = fig.axes[0].get_position()
 box.x1 = box.x1 - .15 * (box.x1 - box.x0)
 fig.axes[0].set_position(box)
@@ -1043,7 +1138,8 @@ colors = [sc(np.linspace(0,1,len(s)+3))[3:]
           for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
-plt.title("Scattering for " + plot_title)
+plt.title(trs.choose("Scattering for ",
+                     "Dispersión para ") + plot_title_ending)
 for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
                                      series_label, colors, series_linestyles):
 
@@ -1053,11 +1149,14 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
                  linestyle=pls, color=spc, label=psl(ss))
             
 plt.plot(data[0][-1][:,0], theory[0][-1] * np.pi * (params[0][-1]["r"] * params[0][-1]["from_um_factor"] * 1e3)**2,
-         linestyle="dotted", color='red', label="Mie Theory Vacuum")
+         linestyle="dotted", color='red', label=trs.choose("Mie Theory Vacuum",
+                                                           "Teoría de Mie en vacío"))
 plt.plot(data[-1][-1][:,0], theory[-1][-1] * np.pi * (params[-1][-1]["r"] * params[-1][-1]["from_um_factor"] * 1e3)**2,
-         linestyle="dotted", color='blue', label="Mie Theory Water")
-plt.xlabel("Wavelength [nm]")
-plt.ylabel(r"Scattering Cross Section [nm$^2$]")
+         linestyle="dotted", color='blue', label=trs.choose("Mie Theory Water",
+                                                           "Teoría de Mie en agua"))
+plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de Onda [nm]"))
+plt.ylabel(trs.choose(r"Scattering Cross Section [nm$^2$]",
+                      r"Sección eficaz de dispersión [nm$^2$]"))
 box = fig.axes[0].get_position()
 box.x1 = box.x1 - .15 * (box.x1 - box.x0)
 fig.axes[0].set_position(box)
@@ -1070,7 +1169,8 @@ colors = [sc(np.linspace(0,1,len(s)+3))[3:]
           for sc, s in zip(series_colors, series)]
 
 plt.figure()
-plt.title("Scattering for " + plot_title)
+plt.title(trs.choose("Scattering Difference for ",
+                     "Diferencia en dispersión para ") + plot_title_ending)
 for s, d, t, p, sc, psl, pc, pls in zip(series, data, theory, params, series_column, 
                                         series_label, colors, series_linestyles):
 
@@ -1079,8 +1179,9 @@ for s, d, t, p, sc, psl, pc, pls in zip(series, data, theory, params, series_col
         plt.plot(sd[:,0],  (sd[:,1] - st) * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
                  linestyle=pls, color=spc, label=psl(ss))
             
-plt.xlabel("Wavelength [nm]")
-plt.ylabel(r"Difference in Scattering Cross Section [nm$^2$]")
+plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de Onda [nm]"))
+plt.ylabel(trs.choose(r"Difference in Scattering Cross Section [nm$^2$]",
+                      r"Diferencia en sección eficaz de dispersión [nm$^2$]"))
 plt.legend()
 if plot_make_big:
     mng = plt.get_current_fig_manager()
