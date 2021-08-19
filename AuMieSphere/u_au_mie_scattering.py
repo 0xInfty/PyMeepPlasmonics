@@ -27,15 +27,16 @@ import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from time import time#, sleep
 import PyMieScatt as ps
 import v_materials as vmt
 import v_meep as vm
 import v_save as vs
 import v_utilities as vu
 
-used_ram, swapped_ram, measure_ram = vm.ram_manager()
-measure_ram()
+rm = vm.RAManager()
+rm.measure()
+
+tm = vm.TimeManager()
 
 #%% COMMAND LINE FORMATTER
 
@@ -165,6 +166,11 @@ def main(from_um_factor, resolution, courant,
     """
 
     #%% MORE INPUT PARAMETERS
+       
+    # Simulation size
+    resolution_wlen = 8
+    resolution_bandwidth = 10
+    resolution_nanoparticle = 5
     
     # Frequency and wavelength
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
@@ -175,6 +181,36 @@ def main(from_um_factor, resolution, courant,
     english = False
     
     ### TREATED INPUT PARAMETERS
+    
+    # Computation
+    n_processes = mp.count_processors()
+    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
+    max_index = np.argmax(parallel_specs)
+    for index, item in enumerate(parallel_specs): 
+        if item == 0: parallel_specs[index] = 1
+    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
+                                          max(parallel_specs))
+    n_processes, n_cores, n_nodes = parallel_specs
+    parallel = max(parallel_specs) > 1
+    del parallel_specs, max_index, index, item
+                    
+    parallel_assign, parallel_log = vm.parallel_manager(n_processes, parallel)
+    
+    # Simulation size
+    resolution_wlen = (from_um_factor * 1e3) * resolution_wlen / max(wlen_range)
+    resolution_wlen = int( np.ceil(resolution_wlen/2) ) * 2
+    resolution_nanoparticle = (from_um_factor * 1e3) * resolution_nanoparticle / (2 * r)
+    resolution_nanoparticle = int( np.ceil(resolution_nanoparticle/2) ) * 2
+    resolution_bandwidth = (from_um_factor * 1e3) * resolution_bandwidth / (max(wlen_range) - min(wlen_range))
+    resolution_bandwidth = int( np.ceil(resolution_bandwidth/2) ) * 2
+    min_resolution = max(resolution_wlen, 
+                         resolution_bandwidth,
+                         resolution_nanoparticle)
+    
+    if min_resolution > resolution:
+        parallel_log(f"Resolution will be raised from {resolution} to {min_resolution}")
+    resolution = min_resolution
+    del min_resolution
     
     # Nanoparticle specifications: Sphere in Vacuum :)
     r = r / ( from_um_factor * 1e3 ) # Now in Meep units
@@ -213,7 +249,7 @@ def main(from_um_factor, resolution, courant,
                    "wlen_range", "nfreq", "nazimuthal", "npolar", "cutoff", "flux_box_size",
                    "cell_width", "pml_width", "air_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
-                   "elapsed", "parallel", "n_processes", "n_cores", "n_nodes",
+                   "parallel", "n_processes", "n_cores", "n_nodes",
                    "split_chunks_evenly", "near2far",
                    "script", "sysname", "path"]
     
@@ -278,21 +314,6 @@ def main(from_um_factor, resolution, courant,
     # If required, a certain material surface underneath it
     
     final_geometry = [*initial_geometry, nanoparticle]
-          
-    elapsed = []
-    
-    n_processes = mp.count_processors()
-    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
-    max_index = np.argmax(parallel_specs)
-    for index, item in enumerate(parallel_specs): 
-        if item == 0: parallel_specs[index] = 1
-    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
-                                          max(parallel_specs))
-    n_processes, n_cores, n_nodes = parallel_specs
-    parallel = max(parallel_specs) > 1
-    del parallel_specs, max_index, index, item
-                    
-    parallel_assign = vm.parallel_manager(n_processes, parallel)
         
     home = vs.get_home()
     sysname = vs.get_sys_name()
@@ -400,17 +421,18 @@ def main(from_um_factor, resolution, courant,
         
     #%% FIRST RUN
     
-    measure_ram()
+    rm.measure_ram()
     
     params = {}
+    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
     
     stable, max_courant = vm.check_stability(params)
     if stable:
-        print("As a whole, the simulation should be stable")
+        parallel_log("As a whole, the simulation should be stable")
     else:
-        print("As a whole, the simulation could not be stable")
-        print(f"Recommended maximum courant factor is {max_courant}")
+        parallel_log("As a whole, the simulation could not be stable")
+        parallel_log(f"Recommended maximum courant factor is {max_courant}")
     del stable, max_courant
         
     if load_flux:
@@ -463,7 +485,7 @@ def main(from_um_factor, resolution, courant,
         
         #% FIRST RUN: SET UP
         
-        measure_ram()
+        rm.measure_ram()
         
         sim = mp.Simulation(resolution=resolution,
                             cell_size=cell_size,
@@ -480,7 +502,7 @@ def main(from_um_factor, resolution, courant,
         # >> k_point zero specifies boundary conditions needed
         # for the source to be infinitely extended
         
-        measure_ram()
+        rm.measure_ram()
 
         # Scattered power --> Computed by surrounding it with closed DFT flux box 
         # (its size and orientation are irrelevant because of Poynting's theorem) 
@@ -504,7 +526,7 @@ def main(from_um_factor, resolution, courant,
                                             size=mp.Vector3(flux_box_size,flux_box_size,0)))
         # Funny you can encase the sphere (r radius) so closely (2r-sided box)
         
-        measure_ram()
+        rm.measure_ram()
         
         if near2far:
             near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
@@ -526,23 +548,23 @@ def main(from_um_factor, resolution, courant,
                 mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
                                   size=mp.Vector3(flux_box_size,flux_box_size,0),
                                    weight=+1))
-            measure_ram()
+            rm.measure_ram()
         else:
             near2far_box = None
-            # used_ram.append(used_ram[-1])
+            # rm.used_ram.append(rm.used_ram[-1])
         
         #% FIRST RUN: INITIALIZE
         
-        temp = time()
+        tm.start_measure()
         sim.init_sim()
-        elapsed.append( time() - temp )
-        measure_ram()
+        tm.end_measure()
+        rm.measure_ram()
         
-        step_ram_function = lambda sim : measure_ram()
+        step_ram_function = lambda sim : rm.measure_ram()
         
         #% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
         
-        temp = time()
+        tm.start_measure()
         sim.run(mp.at_beginning(step_ram_function), 
                 mp.at_time(int(until_after_sources / 2), 
                            step_ram_function),
@@ -553,10 +575,11 @@ def main(from_um_factor, resolution, courant,
             # mp.Ez, # Component of field to check
             # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
             # 1e-3)) # Factor to decay
-        elapsed.append( time() - temp )
+        tm.end_measure()
         
         #% SAVE MID DATA
 
+        params["elapsed"] = tm.elapsed_time
         for p in params_list: params[p] = eval(p)
 
         flux_path =  vm.save_midflux(sim, box_x1, box_x2, box_y1, 
@@ -592,17 +615,17 @@ def main(from_um_factor, resolution, courant,
         if parallel:
             f = vs.parallel_hdf_file(file("MidRAM.h5"), "w")
             current_process = mp.my_rank()
-            f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
-            f["RAM"][:, current_process] = used_ram
+            f.create_dataset("RAM", (len(rm.used_ram), n_processes), dtype="float")
+            f["RAM"][:, current_process] = rm.used_ram
             for a in params: f["RAM"].attrs[a] = params[a]
-            f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
-            f["SWAP"][:, current_process] = swapped_ram
+            f.create_dataset("SWAP", (len(rm.used_ram), n_processes), dtype="int")
+            f["SWAP"][:, current_process] = rm.swapped_ram
             for a in params: f["SWAP"].attrs[a] = params[a]
         else:
             f = h5.File(file("MidRAM.h5"), "w")
-            f.create_dataset("RAM", data=used_ram)
+            f.create_dataset("RAM", data=rm.used_ram)
             for a in params: f["RAM"].attrs[a] = params[a]
-            f.create_dataset("SWAP", data=swapped_ram)
+            f.create_dataset("SWAP", data=rm.swapped_ram)
             for a in params: f["SWAP"].attrs[a] = params[a]
         f.close()
         del f
@@ -637,7 +660,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% SECOND RUN: SETUP
     
-    measure_ram()
+    rm.measure_ram()
     
     sim = mp.Simulation(resolution=resolution,
                         Courant=courant,
@@ -652,7 +675,7 @@ def main(from_um_factor, resolution, courant,
                         chunk_layout=chunk_layout)
                         # symmetries=symmetries,
     
-    measure_ram()
+    rm.measure_ram()
     
     box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
                           mp.FluxRegion(center=mp.Vector3(x=-flux_box_size/2),
@@ -673,7 +696,7 @@ def main(from_um_factor, resolution, courant,
                           mp.FluxRegion(center=mp.Vector3(z=+flux_box_size/2),
                                         size=mp.Vector3(flux_box_size,flux_box_size,0)))
     
-    measure_ram()
+    rm.measure_ram()
 
     if near2far and surface_index != submerged_index:
         near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
@@ -696,26 +719,26 @@ def main(from_um_factor, resolution, courant,
                               size=mp.Vector3(flux_box_size,flux_box_size,0),
                                weight=+1))
         separate_simulations_needed = False
-        measure_ram()
+        rm.measure_ram()
     else:
         near2far_box = None
         separate_simulations_needed = True
         
-        # used_ram.append(used_ram[-1])
+        # rm.used_ram.append(rm.used_ram[-1])
 
     #%% SECOND RUN: INITIALIZE
     
-    temp = time()
+    tm.start_measure()
     sim.init_sim()
-    elapsed.append( time() - temp )
-    measure_ram()
+    tm.end_measure()
+    rm.measure_ram()
     
     #%% LOAD FLUX FROM FILE
     
     vm.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
                     near2far_box, flux_path)
     
-    measure_ram()
+    rm.measure_ram()
 
     freqs = np.asarray(mp.get_flux_freqs(box_x1))
     box_x1_flux0 = np.asarray(mp.get_fluxes(box_x1))
@@ -728,7 +751,7 @@ def main(from_um_factor, resolution, courant,
     if near2far and not separate_simulations_needed: 
         near2far_data = sim.get_near2far_data(near2far_box)
      
-    temp = time()
+    tm.start_measure()
     sim.load_minus_flux_data(box_x1, box_x1_data)
     sim.load_minus_flux_data(box_x2, box_x2_data)
     sim.load_minus_flux_data(box_y1, box_y1_data)
@@ -737,19 +760,19 @@ def main(from_um_factor, resolution, courant,
     sim.load_minus_flux_data(box_z2, box_z2_data)
     if near2far and not separate_simulations_needed: 
         sim.load_minus_near2far_data(near2far_box, near2far_data)
-    elapsed.append( time() - temp )
+    tm.end_measure()
     del box_x1_data, box_x2_data, box_y1_data, box_y2_data
     del box_z1_data, box_z2_data
     if near2far and not separate_simulations_needed:  
         del near2far_data
     
-    measure_ram()
+    rm.measure_ram()
 
     #%% SECOND RUN: SIMULATION :D
     
-    step_ram_function = lambda sim : measure_ram()
+    step_ram_function = lambda sim : rm.measure_ram()
     
-    temp = time()
+    tm.start_measure()
     sim.run(mp.at_beginning(step_ram_function), 
             mp.at_time(int(second_time_factor * until_after_sources / 2), 
                        step_ram_function),
@@ -760,8 +783,7 @@ def main(from_um_factor, resolution, courant,
         # mp.Ez, # Component of field to check
         # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
         # 1e-3)) # Factor to decay
-    elapsed.append( time() - temp )
-    del temp
+    tm.end_measure()
     # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
     
     box_x1_flux = np.asarray(mp.get_fluxes(box_x1))
@@ -856,10 +878,11 @@ def main(from_um_factor, resolution, courant,
         poynting_r = np.array(poynting_r)
     
     elif separate_simulations_needed: 
-        print("Beware! Near2far is not supported yet for nanoparticle placed on a surface.")
+        parallel_log("Beware! Near2far is not supported yet for nanoparticle placed on a surface.")
 
     #%% SAVE FINAL DATA
     
+    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
 
     data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
@@ -915,17 +938,17 @@ def main(from_um_factor, resolution, courant,
     if parallel:
         f = vs.parallel_hdf_file(file("RAM.h5"), "w")
         current_process = mp.my_rank()
-        f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
-        f["RAM"][:, current_process] = used_ram
+        f.create_dataset("RAM", (len(rm.used_ram), n_processes), dtype="float")
+        f["RAM"][:, current_process] = rm.used_ram
         for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
-        f["SWAP"][:, current_process] = swapped_ram
+        f.create_dataset("SWAP", (len(rm.used_ram), n_processes), dtype="int")
+        f["SWAP"][:, current_process] = rm.swapped_ram
         for a in params: f["SWAP"].attrs[a] = params[a]
     else:
         f = h5.File(file("RAM.h5"), "w")
-        f.create_dataset("RAM", data=used_ram)
+        f.create_dataset("RAM", data=rm.used_ram)
         for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", data=swapped_ram)
+        f.create_dataset("SWAP", data=rm.swapped_ram)
         for a in params: f["SWAP"].attrs[a] = params[a]
     f.close()
     del f

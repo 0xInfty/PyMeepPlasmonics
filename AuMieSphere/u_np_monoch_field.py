@@ -19,21 +19,21 @@ sys.path.append(syshome)
 sys.path.append(syshome+"/PlotRoutines")
 
 import click as cli
-import imageio as mim
 import h5py as h5
 import matplotlib.pyplot as plt
 import meep as mp
 import numpy as np
 import os
-from time import time
 from v_materials import import_medium
 import v_meep as vm
 import v_save as vs
 import v_utilities as vu
 from np_monoch_field_plot import plots_monoch_field
 
-used_ram, swapped_ram, measure_ram = vm.ram_manager()
-measure_ram()
+rm = vm.RAManager()
+rm.measure()
+
+tm = vm.TimeManager()
 
 #%% COMMAND LINE FORMATTER
 
@@ -144,6 +144,10 @@ def main(from_um_factor, resolution, courant,
     
     #%% ADDITIONAL PARAMETERS
     
+    # Simulation size
+    resolution_wlen = 8
+    resolution_nanoparticle = 5
+    
     # Field Measurements
     n_period_line = 100
     n_period_plane = 100
@@ -152,6 +156,33 @@ def main(from_um_factor, resolution, courant,
     english = False
     
     #%% TREATED PARAMETERS
+    
+    # Computation
+    n_processes = mp.count_processors()
+    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
+    max_index = np.argmax(parallel_specs)
+    for index, item in enumerate(parallel_specs): 
+        if item == 0: parallel_specs[index] = 1
+    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
+                                          max(parallel_specs))
+    n_processes, n_cores, n_nodes = parallel_specs
+    parallel = max(parallel_specs) > 1
+    del parallel_specs, max_index, index, item
+                    
+    parallel_assign, parallel_log = vm.parallel_manager(n_processes, parallel)
+    
+    # Simulation size
+    resolution_wlen = (from_um_factor * 1e3) * resolution_wlen / wlen
+    resolution_wlen = int( np.ceil(resolution_wlen/2) ) * 2
+    resolution_nanoparticle = (from_um_factor * 1e3) * resolution_nanoparticle / (2 * r)
+    resolution_nanoparticle = int( np.ceil(resolution_nanoparticle/2) ) * 2
+    min_resolution = max(resolution_wlen, 
+                         resolution_nanoparticle)
+    
+    if min_resolution > resolution:
+        parallel_log(f"Resolution will be raised from {resolution} to {min_resolution}")
+    resolution = min_resolution
+    del min_resolution
     
     # Au sphere
     r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
@@ -170,10 +201,7 @@ def main(from_um_factor, resolution, courant,
     # Time configuration
     until_time = time_period_factor * wlen # Should multiply and divide by submerged_index
     period_line = period / n_period_line
-    period_plane = period / n_period_line    
-    
-    # Computation time
-    elapsed = []
+    period_plane = period / n_period_plane
     
     # Saving directories
     if series is None:
@@ -187,7 +215,7 @@ def main(from_um_factor, resolution, courant,
                    "cell_width", "pml_width", "empty_width", "source_center",
                    "until_time", "time_period_factor", 
                    "n_period_line", "n_period_plane", "period_line", "period_plane",
-                   "elapsed", "parallel", "n_processes", "n_cores", "n_nodes",
+                   "parallel", "n_processes", "n_cores", "n_nodes",
                    "split_chunks_evenly", "hfield",
                    "script", "sysname", "path"]
     
@@ -238,19 +266,6 @@ def main(from_um_factor, resolution, courant,
     else:
         geometry = [nanoparticle]
     # If required, a certain material surface underneath it
-
-    n_processes = mp.count_processors()
-    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
-    max_index = np.argmax(parallel_specs)
-    for index, item in enumerate(parallel_specs): 
-        if item == 0: parallel_specs[index] = 1
-    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
-                                          max(parallel_specs))
-    n_processes, n_cores, n_nodes = parallel_specs
-    parallel = max(parallel_specs) > 1
-    del parallel_specs, max_index, index, item
-                    
-    parallel_assign = vm.parallel_manager(n_processes, parallel)
     
     home = vs.get_home()
     sysname = vs.get_sys_name()
@@ -350,17 +365,18 @@ def main(from_um_factor, resolution, courant,
     #%% INITIALIZE
     
     params = {}
+    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
     
     # stable, max_courant = vm.check_stability(params)
     # if stable:
-    #     print("As a whole, the simulation should be stable")
+    #     parallel_log("As a whole, the simulation should be stable")
     # else:
-    #     print("As a whole, the simulation could not be stable")
-    #     print(f"Recommended maximum courant factor is {max_courant}")
+    #     parallel_log("As a whole, the simulation could not be stable")
+    #     parallel_log(f"Recommended maximum courant factor is {max_courant}")
     # del stable, max_courant
     
-    measure_ram()
+    rm.measure()
     
     sim = mp.Simulation(resolution=resolution,
                         Courant=courant,
@@ -373,13 +389,13 @@ def main(from_um_factor, resolution, courant,
                         output_single_precision=True,
                         split_chunks_evenly=split_chunks_evenly)
     
-    measure_ram()
+    rm.measure()
     
-    temp = time()
+    tm.start_measure()
     sim.init_sim()
-    elapsed.append(time()-temp)
+    tm.end_measure()
     
-    measure_ram()
+    rm.measure()
     
     #%% DEFINE SAVE STEP FUNCTIONS
     
@@ -411,7 +427,7 @@ def main(from_um_factor, resolution, courant,
                                mp.at_every(period_line, save_hline),
                                mp.at_every(period_plane, save_hplane)]
     
-    step_ram_function = lambda sim : measure_ram()
+    step_ram_function = lambda sim : rm.measure()
     
     to_do_while_running = [*to_do_while_running,
                            mp.at_beginning(step_ram_function), 
@@ -421,20 +437,20 @@ def main(from_um_factor, resolution, courant,
     
     #%% RUN!
     
-    measure_ram()
+    rm.measure()
     
     filename_prefix = sim.filename_prefix
     sim.filename_prefix = "Field"    
     os.chdir(path)
-    temp = time()
+    tm.start_measure()
     sim.run(*to_do_while_running, until=until_time)
-    elapsed.append(time() - temp)
+    tm.end_measure()
     os.chdir(syshome)
     sim.filename_prefix = filename_prefix
     
     #%% SAVE METADATA
     
-    params = {}
+    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
     
     volumes = [sampling_line, sampling_plane]
@@ -501,17 +517,17 @@ def main(from_um_factor, resolution, courant,
     if parallel:
         f = vs.parallel_hdf_file(file("RAM.h5"), "w")
         current_process = mp.my_rank()
-        f.create_dataset("RAM", (len(used_ram), n_processes), dtype="float")
-        f["RAM"][:, current_process] = used_ram
+        f.create_dataset("RAM", (len(rm.used_ram), n_processes), dtype="float")
+        f["RAM"][:, current_process] = rm.used_ram
         for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", (len(used_ram), n_processes), dtype="int")
-        f["SWAP"][:, current_process] = swapped_ram
+        f.create_dataset("SWAP", (len(rm.used_ram), n_processes), dtype="int")
+        f["SWAP"][:, current_process] = rm.swapped_ram
         for a in params: f["SWAP"].attrs[a] = params[a]
     else:
         f = h5.File(file("RAM.h5"), "w")
-        f.create_dataset("RAM", data=used_ram)
+        f.create_dataset("RAM", data=rm.used_ram)
         for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", data=swapped_ram)
+        f.create_dataset("SWAP", data=rm.swapped_ram)
         for a in params: f["SWAP"].attrs[a] = params[a]
     f.close()
     del f

@@ -21,7 +21,7 @@ import meep as mp
 import numpy as np
 import os
 import resource as res
-from time import sleep
+from time import sleep, time
 import v_materials as vmt
 import v_save as vs
 import v_utilities as vu
@@ -207,19 +207,12 @@ def parallel_manager(process_total_number, parallel):
         else:
             return True
     
-    return parallel_assign
-
-#%%
-
-def parallel_assign(process_number, process_total_number, parallel=True):
+    def parallel_log(string):
+        
+        if parallel_assign(0): print(string)
+        return
     
-    if parallel and process_total_number > 1:
-        if process_number == 0:
-            return mp.am_master()
-        else:
-            return mp.my_rank() == 1
-    else:
-        return True
+    return parallel_assign, parallel_log
 
 #%%
 
@@ -237,19 +230,87 @@ def ram_manager():
 
 #%%
 
+class RAManager:
+    
+    def __init__(self):
+        
+        self._used_ram = []
+        self._swapped_ram = []
+    
+    @property
+    def used_ram(self):
+        return self._used_ram
+    
+    @property
+    def swapped_ram(self):
+        return self._swapped_ram
+        
+    @used_ram.setter
+    @swapped_ram.setter
+    def negator(self):
+        raise AttributeError("This attribute cannot be changed this way!")
+    
+    def measure(self):
+        
+        ram = res.getrusage(res.RUSAGE_THREAD).ru_maxrss# / (1024**2)
+        swap = res.getrusage(res.RUSAGE_THREAD).ru_nswap
+        self._used_ram.append(ram)
+        self._swapped_ram.append(swap)
+    
+    def reset(self):
+        
+        self._used_ram = []
+        self._swapped_ram = []
+
+#%%
+
+class TimeManager:
+    
+    def __init__(self):
+        
+        self._elapsed_time = []
+        self._instant = None
+    
+    @property
+    def elapsed_time(self):
+        return self._elapsed_time
+            
+    @elapsed_time.setter
+    def negator(self):
+        raise AttributeError("This attribute cannot be changed this way!")
+    
+    def start_measure(self):
+        
+        self._instant = time()
+    
+    def end_measure(self):
+        
+        new_instant = time()
+        try:
+            self._elapsed_time.append( new_instant - self._instant )
+        except TypeError:
+            print("Must start measurement first!")
+        self._instant = None
+    
+    def reset(self):
+        self._elapsed_time = []
+
+#%%
+
 def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
                  near2far_box, params, path):
     
+    n_processes = mp.count_processors()
+    parallel = n_processes > 1
+    parallel_assign = parallel_manager(n_processes, parallel)[0]
     
-    parallel = params["parallel"]
-    n_processes = params["n_processes"]
     near2far = params["near2far"]
     
     dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
     dir_backup = os.path.join(home, f"FluxData/FluxDataDir{sysname}Backup.txt")
     new_flux_path = vs.datetime_dir(os.path.join(home, "FluxData/MidFlux"), 
                                     strftime="%Y%m%d%H%M%S")
-    if parallel_assign(0, n_processes, parallel):
+    if parallel_assign(0):
         os.makedirs(new_flux_path)
     else:
         sleep(.2)
@@ -268,7 +329,7 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2,
     sim.filename_prefix = filename_prefix
         
     database = vs.retrieve_footer(dir_file)
-    if parallel_assign(1, n_processes, parallel):
+    if parallel_assign(1):
         vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
     
     database["flux_path"].append( os.path.split(new_flux_path)[-1] )
@@ -282,7 +343,7 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2,
         except:
             raise ValueError(f"Missing key parameter: {key}")
     
-    if parallel_assign(0, n_processes, parallel):
+    if parallel_assign(0):
         vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
     
     return new_flux_path
@@ -380,14 +441,15 @@ def load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2,
 
 def save_chunks(sim, params, path):
     
-    parallel = params["parallel"]
-    n_processes = params["n_processes"]
+    n_processes = mp.count_processors()
+    parallel = n_processes > 1
+    parallel_assign = parallel_manager(n_processes, parallel)[0]
     
     dir_file = os.path.join(home, "ChunksData/ChunksDataDirectory.txt")
     dir_backup = os.path.join(home, f"ChunksData/ChunksDataDir{sysname}Backup.txt")
     new_chunks_path = vs.datetime_dir(os.path.join(home, "ChunksData/Chunks"), 
                                       strftime="%Y%m%d%H%M%S")
-    if parallel_assign(0, n_processes, parallel):
+    if parallel_assign(0):
         os.makedirs(new_chunks_path)
     else:
         sleep(.2)
@@ -401,7 +463,7 @@ def save_chunks(sim, params, path):
     sim.filename_prefix = filename_prefix
         
     database = vs.retrieve_footer(dir_file)
-    if parallel_assign(1, n_processes, parallel):
+    if parallel_assign(1):
         vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
     
     database["chunks_path"].append( os.path.split(new_chunks_path)[-1] )
@@ -415,7 +477,7 @@ def save_chunks(sim, params, path):
         except:
             raise ValueError(f"Missing key parameter: {key}")
     
-    if parallel_assign(0, n_processes, parallel):
+    if parallel_assign(0):
         vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
     
     return new_chunks_path
