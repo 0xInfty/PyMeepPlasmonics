@@ -123,7 +123,7 @@ vs.savetxt(chunks_file, np.array([]), footer=chunks_dir, overwrite=True)
 #%%
 
 blank_chunks_dir = {}
-for k in keys: blank_chunks_dir[k] = []
+for k in vm.chunks_key_params: blank_chunks_dir[k] = []
 
 vs.savetxt(os.path.join(home, "ChunksData/ChunksDataDirBlank.txt"), 
            np.array([]), footer=blank_chunks_dir, overwrite=True)

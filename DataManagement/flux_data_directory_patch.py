@@ -77,7 +77,7 @@ for i in range(n):
 #%%
 
 for k in keys:
-    flux_dir[k] = flux_dir[k][:-1]
+    flux_dir[k] = flux_dir[k][:-16]
 
 #%%
 
@@ -99,7 +99,7 @@ vs.savetxt(flux_file, np.array([]), footer=flux_dir, overwrite=True)
 #%%
 
 blank_flux_file = {}
-for k in keys: blank_flux_file[k] = []
+for k in vm.midflux_key_params: blank_flux_file[k] = []
 
 vs.savetxt(os.path.join(home, "FluxData/FluxDataDirBlank.txt"),
            np.array([]), footer=blank_flux_file, overwrite=True)
