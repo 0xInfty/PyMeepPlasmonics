@@ -190,7 +190,7 @@ def main(from_um_factor, resolution, courant,
     parallel = pm.parallel
     
     # Simulation size
-    resolution_wlen = (from_um_factor * 1e3) * resolution_wlen / max(wlen_range)
+    resolution_wlen = (from_um_factor * 1e3) * resolution_wlen / min(wlen_range)
     resolution_wlen = int( np.ceil(resolution_wlen) )
     resolution_nanoparticle = (from_um_factor * 1e3) * resolution_nanoparticle / (2 * r)
     resolution_nanoparticle = int( np.ceil(resolution_nanoparticle) )
