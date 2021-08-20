@@ -188,6 +188,7 @@ def main(from_um_factor, resolution, courant,
     # Space configuration
     pml_width = pml_wlen_factor * wlen # 0.5 * wlen
     empty_width = empty_r_factor * r # 0.5 * max(wlen_range)
+    cell_width = 2 * (pml_width + empty_width + r)
     
     # Time configuration
     until_time = time_period_factor * wlen # Should multiply and divide by submerged_index
@@ -212,33 +213,22 @@ def main(from_um_factor, resolution, courant,
     
     #%% GENERAL GEOMETRY SETUP
     
-    empty_width = empty_width - empty_width%(1/resolution)
+    ### ROUND UP ACCORDING TO GRID DISCRETIZATION
     
-    pml_width = pml_width - pml_width%(1/resolution)
-    pml_layers = [mp.PML(thickness=pml_width)]
-    
-    # symmetries = [mp.Mirror(mp.Y), 
-    #               mp.Mirror(mp.Z, phase=-1)]
-    # Two mirror planes reduce cell size to 1/4
-    
-    cell_width = 2 * (pml_width + empty_width + r)
-    cell_width = cell_width - cell_width%(1/resolution)
-    cell_size = mp.Vector3(cell_width, cell_width, cell_width)
-    
+    pml_width = vu.round_to_multiple(pml_width, 1/resolution, round_up=False)
+    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution, round_up=False)*2
+    empty_width = cell_width/2 - r - pml_width
+    overlap = vu.round_to_multiple(overlap - r, 1/resolution, round_up=False) + r
     source_center = -0.5*cell_width + pml_width
-    sources = [mp.Source(mp.ContinuousSource(wavelength=wlen, 
-                                             is_integrated=True),
-                         center=mp.Vector3(source_center),
-                         size=mp.Vector3(0, cell_width, cell_width),
-                         component=mp.Ez)]
-    # Ez-polarized monochromatic planewave 
-    # (its size parameter fills the entire cell in 2d)
-    # The planewave source extends into the PML 
-    # ==> is_integrated=True must be specified
     
-    until_time = until_time - until_time%(courant/resolution)
-    period_line = period_line - period_line%(courant/resolution)
-    period_plane = period_plane - period_plane%(courant/resolution)
+    until_time = vu.round_to_multiple(until_time, courant/resolution, round_up=True)
+    period_line = vu.round_to_multiple(period_line, courant/resolution, round_up=False)
+    period_plane = vu.round_to_multiple(period_plane, courant/resolution, round_up=False)
+    
+    ### DEFINE OBJETS
+    
+    pml_layers = [mp.PML(thickness=pml_width)]
+    cell_size = mp.Vector3(cell_width, cell_width, cell_width)
     
     nanoparticle = mp.Sphere(material=medium,
                              center=mp.Vector3(),
@@ -257,6 +247,16 @@ def main(from_um_factor, resolution, courant,
     else:
         geometry = [nanoparticle]
     # If required, a certain material surface underneath it
+    
+    sources = [mp.Source(mp.ContinuousSource(wavelength=wlen, 
+                                             is_integrated=True),
+                         center=mp.Vector3(source_center),
+                         size=mp.Vector3(0, cell_width, cell_width),
+                         component=mp.Ez)]
+    # Ez-polarized monochromatic planewave 
+    # (its size parameter fills the entire cell in 2d)
+    # The planewave source extends into the PML 
+    # ==> is_integrated=True must be specified
     
     home = vs.get_home()
     sysname = vs.get_sys_name()

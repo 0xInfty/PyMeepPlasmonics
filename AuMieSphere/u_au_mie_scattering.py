@@ -152,7 +152,7 @@ def main(from_um_factor, resolution, courant,
         second_time_factor = 10
         
         # Saving directories
-        series = "TestMonitor"
+        series = "Test/TestNPScatt"
         folder = "Test"
         
         # Configuration
@@ -230,12 +230,27 @@ def main(from_um_factor, resolution, courant,
     pml_width = pml_wlen_factor * max(wlen_range) # 0.5 * max(wlen_range)
     empty_width = empty_r_factor * r # 0.5 * max(wlen_range)
     flux_box_size = 2 * ( 1 + flux_r_factor ) * r
-       
+    cell_width = 2 * (pml_width + empty_width + r)
+    
+    # Time configuration
+    until_after_sources = time_factor_cell * cell_width
+    # Enough time for the pulse to pass through all the cell
+    # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
+    
     # Saving directories
     if series is None:
         series = "Test"
     if folder is None:
         folder = "Test"
+    trs = vu.BilingualManager(english=english)
+        
+    home = vs.get_home()
+    sysname = vs.get_sys_name()
+    path = os.path.join(home, folder, series)
+    if not os.path.isdir(path) and pm.assign(0):
+        os.makedirs(path)
+    file = lambda f : os.path.join(path, f)
+        
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", "reference", "submerged_index",
                    "overlap", "surface_index",
@@ -248,47 +263,22 @@ def main(from_um_factor, resolution, courant,
     
     #%% GENERAL GEOMETRY SETUP
     
-    empty_width = empty_width - empty_width%(1/resolution)
+    ### ROUND UP ACCORDING TO GRID DISCRETIZATION
     
-    pml_width = pml_width - pml_width%(1/resolution)
-    pml_layers = [mp.PML(thickness=pml_width)]
-    
-    # symmetries = [mp.Mirror(mp.Y), 
-    #               mp.Mirror(mp.Z, phase=-1)]
-    # Two mirror planes reduce cell size to 1/4
-    # Issue related that lead me to comment this lines:
-    # https://github.com/NanoComp/meep/issues/1484
-
-    cell_width = 2 * (pml_width + empty_width + r)
-    cell_width = cell_width - cell_width%(1/resolution)
-    cell_size = mp.Vector3(cell_width, cell_width, cell_width)
-    
-    # surface_center = r/4 - overlap/2 + cell_width/4
-    # surface_center = surface_center - surface_center%(1/resolution)
-    # overlap = r/2 + cell_width/2 - 2*surface_center
-    
-    overlap = overlap - overlap%(1/resolution)
-    
-    flux_box_size = flux_box_size - flux_box_size%(1/resolution)
-
+    pml_width = vu.round_to_multiple(pml_width, 1/resolution, round_up=False)
+    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution, round_up=False)*2
+    empty_width = cell_width/2 - r - pml_width
+    overlap = vu.round_to_multiple(overlap - r, 1/resolution, round_up=False) + r
     source_center = -0.5*cell_width + pml_width
-    sources = [mp.Source(mp.GaussianSource(freq_center,
-                                            fwidth=freq_width,
-                                            is_integrated=True,
-                                            cutoff=cutoff),
-                          center=mp.Vector3(source_center),
-                          size=mp.Vector3(0, cell_width, cell_width),
-                          component=mp.Ez)]
-    # Ez-polarized planewave pulse 
-    # (its size parameter fills the entire cell in 2d)
-    # >> The planewave source extends into the PML 
-    # ==> is_integrated=True must be specified
+    flux_box_size = vu.round_to_multiple(flux_box_size/2, 1/resolution, round_up=True)*2
     
-    until_after_sources = time_factor_cell * cell_width  # Should multiply and divide by index
-    # Enough time for the pulse to pass through all the cell
-    # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
-    # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
+    until_after_sources = vu.round_to_multiple(until_after_sources, courant/resolution, round_up=True)
     
+    ### DEFINE OBJETS
+    
+    pml_layers = [mp.PML(thickness=pml_width)]
+    cell_size = mp.Vector3(cell_width, cell_width, cell_width)
+        
     nanoparticle = mp.Sphere(material=medium,
                              center=mp.Vector3(),
                              radius=r)
@@ -307,15 +297,18 @@ def main(from_um_factor, resolution, courant,
     # If required, a certain material surface underneath it
     
     final_geometry = [*initial_geometry, nanoparticle]
-        
-    home = vs.get_home()
-    sysname = vs.get_sys_name()
-    path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and pm.assign(0):
-        os.makedirs(path)
-    file = lambda f : os.path.join(path, f)
     
-    trs = vu.BilingualManager(english=english)
+    sources = [mp.Source(mp.GaussianSource(freq_center,
+                                            fwidth=freq_width,
+                                            is_integrated=True,
+                                            cutoff=cutoff),
+                          center=mp.Vector3(source_center),
+                          size=mp.Vector3(0, cell_width, cell_width),
+                          component=mp.Ez)]
+    # Ez-polarized planewave pulse 
+    # (its size parameter fills the entire cell in 2d)
+    # >> The planewave source extends into the PML 
+    # ==> is_integrated=True must be specified
     
     #%% PLOT CELL
 
@@ -423,7 +416,7 @@ def main(from_um_factor, resolution, courant,
     if stable:
         pm.log("As a whole, the simulation should be stable")
     else:
-        pm.log("As a whole, the simulation could not be stable")
+        pm.log("As a whole, the simulation might be unstable")
         pm.log(f"Recommended maximum Courant factor is {max_courant}")
     del stable, max_courant
         

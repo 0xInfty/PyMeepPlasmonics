@@ -60,7 +60,7 @@ rm.measure_ram()
             type=float, default=650,
             help="Dipole main wavelength expressed in nm")
 @cli.option("--wlen-width", "-wd", "wlen_width", 
-            type=float, default=200,
+            type=float, default=40,
             help="Dipole wavelength amplitude expressed in nm")
 @cli.option("--standing", "-stand", type=bool, default=True,
             help="Whether the polarization is perpendicular or parallel to the surface")
@@ -121,7 +121,7 @@ def main(from_um_factor, resolution, courant,
         
         # Frequency and wavelength
         wlen_center = 650 # Main wavelength range in nm
-        wlen_width = 50 # Wavelength band in nm
+        wlen_width = 40 # Wavelength band in nm
         nfreq = 100 # Number of discrete frequencies
         standing = True # Perpendicular to surface if true, parallel if false
         
@@ -136,8 +136,8 @@ def main(from_um_factor, resolution, courant,
         second_time_factor = 10
         
         # Saving directories
-        series = "TestSeveral" # "2nd"
-        folder = "Test/TestDipole/DipoleStanding" # DataAnalysis/DipoleStandingGlassTest"
+        series = "TestDipoleSerial" # "2nd"
+        folder = "Test/TestDipole" # DataAnalysis/DipoleStandingGlassTest"
         
         # Run configuration
         n_cores = 1
@@ -196,6 +196,8 @@ def main(from_um_factor, resolution, courant,
     pml_width = pml_wlen_factor * (wlen_center + wlen_width/2) # 0.5 * max(wlen_range)
     empty_width = max(empty_wlen_factor * (wlen_center + wlen_width/2),
                       displacement + padd_points / resolution)
+    cell_width = 2 * (pml_width + empty_width)
+    
     if submerged_index != surface_index:
         flux_box_size = 2 * empty_width * (1 - flux_padd_factor)
     else:
@@ -211,12 +213,24 @@ def main(from_um_factor, resolution, courant,
     if displacement >= 0.8 * empty_width:
         raise ValueError("Displacement is too big compared to empty space!")
     
+    # Time configuration
+    until_after_sources = time_factor_cell * cell_width  # Should multiply and divide by submerged_index
+    # Enough time for the pulse to pass through all the cell
+    # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
+    
     # Saving directories
     if series is None:
         series = "Test"
     if folder is None:
         folder = "Test"
     trs = vu.BilingualManager(english=english)
+    
+    home = vs.get_home()
+    sysname = vs.get_sys_name()
+    path = os.path.join(home, folder, series)
+    if not os.path.isdir(path) and pm.assign(0):
+        os.makedirs(path)
+    file = lambda f : os.path.join(path, f)
     
     params_list = ["from_um_factor", "resolution_wlen", "resolution", "courant",
                    "submerged_index", "displacement", "surface_index",
@@ -233,23 +247,18 @@ def main(from_um_factor, resolution, courant,
     
     ### ROUND UP ACCORDING TO GRID DISCRETIZATION
     
-    empty_width = vu.round_to_multiple(empty_width, 1/resolution, round_up=True)
-    pml_width = vu.round_to_multiple(pml_width, 1/resolution, round_up=True)
-    
-    # symmetries = [mp.Mirror(mp.Y), 
-    #               mp.Mirror(mp.Z, phase=-1)]
-    # Two mirror planes reduce cell size to 1/4
-    # Issue related that lead me to comment this lines:
-    # https://github.com/NanoComp/meep/issues/1484
-        
+    pml_width = vu.round_to_multiple(pml_width, 1/resolution, round_up=False)
+    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution, round_up=False)*2
+    empty_width = cell_width/2 - pml_width
     displacement = vu.round_to_multiple(displacement, 1/resolution, round_up=False)
-    flux_box_size = vu.round_to_multiple(flux_box_size, 1/resolution, round_up=False)
-    surface_box_size = vu.round_to_multiple(surface_box_size, 1/resolution, round_up=False)
+    flux_box_size = vu.round_to_multiple(flux_box_size/2, 1/resolution, round_up=False)*2
+    surface_box_size = vu.round_to_multiple(surface_box_size/2, 1/resolution, round_up=False)*2
     
-    ### DEFINE OBJETS
+    until_after_sources = vu.round_to_multiple(until_after_sources, courant/resolution, round_up=True)
+        
+    ### DEFINE OBJETS AND SIMULATION PARAMETERS
     
     pml_layers = [mp.PML(thickness=pml_width)]
-    cell_width = 2 * (pml_width + empty_width)
     cell_size = mp.Vector3(cell_width, cell_width, cell_width)
    
     if surface_index != submerged_index:
@@ -299,18 +308,6 @@ def main(from_um_factor, resolution, courant,
     #                                          width=0),
     #                       center=mp.Vector3(),
     #                       component=polarization)]
-    
-    until_after_sources = time_factor_cell * cell_width  # Should multiply and divide by submerged_index
-    # Enough time for the pulse to pass through all the cell
-    # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
-    # Now: Aprox 3 periods of highest frequency, using T=λ/c=λ in Meep units 
-        
-    home = vs.get_home()
-    sysname = vs.get_sys_name()
-    path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and pm.assign(0):
-        os.makedirs(path)
-    file = lambda f : os.path.join(path, f)
         
     #%% BASE SIMULATION: SETUP
     
@@ -470,53 +467,67 @@ def main(from_um_factor, resolution, courant,
         
     #%% BASE SIMULATION: ANGULAR PATTERN ANALYSIS
 
-    if pm.assign(0):
+    # if pm.assign(0):
         
-        freqs = np.linspace(freq_center - freq_center/2, freq_center + freq_width/2, nfreq)
-        wlens = 1/freqs
+    freqs = np.linspace(freq_center - freq_center/2, freq_center + freq_width/2, nfreq)
+    wlens = 1/freqs
+    
+    radial_distance = 2000 * wlen_center
+    azimuthal_angle = np.arange(0, 2 + 2/nazimuthal, 2/nazimuthal) # in multiples of pi
+    polar_angle = np.arange(0, 1 + 1/npolar, 1/npolar)
+    
+    poynting_x = np.zeros((nazimuthal+1, npolar+1, nfreq))
+    poynting_y = np.zeros((nazimuthal+1, npolar+1, nfreq))
+    poynting_z = np.zeros((nazimuthal+1, npolar+1, nfreq))
+    poynting_r = np.zeros((nazimuthal+1, npolar+1, nfreq))
+    
+    if surface_index != submerged_index:
+        polar_limit = np.arcsin(displacement/radial_distance) + .5
+        sim_polar_angle = polar_angle[polar_angle <= polar_limit]
+    else:
+        sim_polar_angle = polar_angle
         
-        radial_distance = cell_width
-        azimuthal_angle = np.arange(0, 2 + 2/nazimuthal, 2/nazimuthal) # in multiples of pi
-        polar_angle = np.arange(0, 1 + 1/npolar, 1/npolar)
+    pm.log("Getting to the loop...")
+    pm.log(f"azimuthal_angle has len = {len(azimuthal_angle)}")
+    pm.log(f"polar_angle has len = {len(azimuthal_angle)}")
+    
+    for i, phi in enumerate(azimuthal_angle):
         
-        poynting_x = np.zeros((nazimuthal+1, npolar+1, nfreq))
-        poynting_y = np.zeros((nazimuthal+1, npolar+1, nfreq))
-        poynting_z = np.zeros((nazimuthal+1, npolar+1, nfreq))
-        poynting_r = np.zeros((nazimuthal+1, npolar+1, nfreq))
-        
-        if surface_index != submerged_index:
-            polar_limit = np.arcsin(displacement/radial_distance) + .5
-            sim_polar_angle = polar_angle[polar_angle <= polar_limit]
-        else:
-            sim_polar_angle = polar_angle
-        
-        for i, phi in enumerate(azimuthal_angle):
+        for j, theta in enumerate(sim_polar_angle):
             
-            for j, theta in enumerate(sim_polar_angle):
-                
-                farfield_dict = sim.get_farfields(near2far_box, 1,
-                                                  where=mp.Volume(
-                                                      center=mp.Vector3(radial_distance * np.cos(np.pi * phi) * np.sin(np.pi * theta),
-                                                                        radial_distance * np.sin(np.pi * phi) * np.sin(np.pi * theta),
-                                                                        radial_distance * np.cos(np.pi * theta))))
-                
-                Px = farfield_dict["Ey"] * np.conjugate(farfield_dict["Hz"])
-                Px -= farfield_dict["Ez"] * np.conjugate(farfield_dict["Hy"])
-                Py = farfield_dict["Ez"] * np.conjugate(farfield_dict["Hx"])
-                Py -= farfield_dict["Ex"] * np.conjugate(farfield_dict["Hz"])
-                Pz = farfield_dict["Ex"] * np.conjugate(farfield_dict["Hy"])
-                Pz -= farfield_dict["Ey"] * np.conjugate(farfield_dict["Hx"])
-                
-                Px = np.real(Px)
-                Py = np.real(Py)
-                Pz = np.real(Pz)
-                
-                poynting_x[i, j, :] = Px
-                poynting_y[i, j, :] = Py
-                poynting_z[i, j, :] = Pz
-                poynting_r[i, j, :] = np.sqrt( np.square(Px) + np.square(Py) + np.square(Pz) )
+            farfield_dict = sim.get_farfields(near2far_box, 1,
+                                              where=mp.Volume(
+                                                  center=mp.Vector3(radial_distance * np.cos(np.pi * phi) * np.sin(np.pi * theta),
+                                                                    radial_distance * np.sin(np.pi * phi) * np.sin(np.pi * theta),
+                                                                    radial_distance * np.cos(np.pi * theta))))
             
-        del phi, theta, farfield_dict, Px, Py, Pz
+            if i==0 and j==0:
+                pm.log("Calculated first farfield")
+            elif i==0 and j==len(sim_polar_angle)-1:
+                pm.log("Calculated last farfield for first azimuthal angle")
+            
+            Px = farfield_dict["Ey"] * np.conjugate(farfield_dict["Hz"])
+            Px -= farfield_dict["Ez"] * np.conjugate(farfield_dict["Hy"])
+            Py = farfield_dict["Ez"] * np.conjugate(farfield_dict["Hx"])
+            Py -= farfield_dict["Ex"] * np.conjugate(farfield_dict["Hz"])
+            Pz = farfield_dict["Ex"] * np.conjugate(farfield_dict["Hy"])
+            Pz -= farfield_dict["Ey"] * np.conjugate(farfield_dict["Hx"])
+            
+            Px = np.real(Px)
+            Py = np.real(Py)
+            Pz = np.real(Pz)
+            
+            poynting_x[i, j, :] = Px
+            poynting_y[i, j, :] = Py
+            poynting_z[i, j, :] = Pz
+            poynting_r[i, j, :] = np.sqrt( np.square(Px) + np.square(Py) + np.square(Pz) )
+            
+            if i==0 and j==0:
+                pm.log("Calculated first Poynting")
+            elif i==0 and j==len(sim_polar_angle)-1:
+                pm.log("Calculated last Poynting for first azimuthal angle")
+        
+    del phi, theta, farfield_dict, Px, Py, Pz
         
     # mp.all_wait()
     pm.log("Finished calculation of far field")
@@ -575,7 +586,7 @@ def main(from_um_factor, resolution, courant,
     
     rm.save(file("Resources.h5"), params)
     
-    pm.log("Saved RAM")
+    pm.log("Saved Resources")
     
     mp.all_wait()
     sim.filename_prefix = sim_filename
