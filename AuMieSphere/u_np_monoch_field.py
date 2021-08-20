@@ -30,10 +30,8 @@ import v_save as vs
 import v_utilities as vu
 from np_monoch_field_plot import plots_monoch_field
 
-rm = vm.RAManager()
-rm.measure()
-
-tm = vm.TimeManager()
+rm = vm.ResourcesMonitor()
+rm.measure_ram()
 
 #%% COMMAND LINE FORMATTER
 
@@ -101,46 +99,48 @@ def main(from_um_factor, resolution, courant,
     
     #%% DEFAULT PARAMETERS
     
-    """
-    # Sim configuration
-    resolution = 2
-    from_um_factor = 10e-3
-    courant = 0.5
+    if any('SPYDER' in name for name in os.environ):
     
-    # Cell configuration
-    r = 51.5 # nm
-    material = "Au"
-    paper = "R"
-    overlap = 0 # Upwards displacement of the surface from the bottom of the sphere in nm
-    submerged_index = 1 # 1.33 for water
-    surface_index = None # 1.54 for glass
-    
-    # Source configuration
-    wlen = 532
-    
-    # Box spatial dimensions
-    pml_wlen_factor = 0.38
-    empty_r_factor = 0.5
-    
-    # Sim temporal dimension
-    time_period_factor = 10    
-    
-    # Files configuration
-    series = None
-    folder = None
-    
-    # Run configuration
-    parallel = False
-    n_processes = 1
-    n_cores = 1
-    n_nodes = 1
-    split_chunks_evenly = True
-    
-    # Routine configuration
-    hfield = True
-    make_plots = True
-    make_gifs = True
-    """
+        # Sim configuration
+        resolution = 2
+        from_um_factor = 10e-3
+        courant = 0.5
+        
+        # Cell configuration
+        r = 51.5 # nm
+        material = "Au"
+        paper = "R"
+        overlap = 0 # Upwards displacement of the surface from the bottom of the sphere in nm
+        submerged_index = 1 # 1.33 for water
+        surface_index = None # 1.54 for glass
+        
+        # Source configuration
+        wlen = 532
+        
+        # Box spatial dimensions
+        pml_wlen_factor = 0.38
+        empty_r_factor = 0.5
+        
+        # Sim temporal dimension
+        time_period_factor = 10    
+        
+        # Files configuration
+        series = None
+        folder = None
+        
+        # Run configuration
+        parallel = False
+        n_processes = 1
+        n_cores = 1
+        n_nodes = 1
+        split_chunks_evenly = True
+        
+        # Routine configuration
+        hfield = True
+        make_plots = True
+        make_gifs = True
+        
+        print("Loaded Spyder parameters")
     
     #%% ADDITIONAL PARAMETERS
     
@@ -158,30 +158,21 @@ def main(from_um_factor, resolution, courant,
     #%% TREATED PARAMETERS
     
     # Computation
-    n_processes = mp.count_processors()
-    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
-    max_index = np.argmax(parallel_specs)
-    for index, item in enumerate(parallel_specs): 
-        if item == 0: parallel_specs[index] = 1
-    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
-                                          max(parallel_specs))
-    n_processes, n_cores, n_nodes = parallel_specs
-    parallel = max(parallel_specs) > 1
-    del parallel_specs, max_index, index, item
-                    
-    parallel_assign, parallel_log = vm.parallel_manager(n_processes, parallel)
+    pm = vm.ParallelManager(n_cores, n_nodes)
+    n_processes, n_cores, n_nodes = pm.specs
+    parallel = pm.parallel
     
     # Simulation size
     resolution_wlen = (from_um_factor * 1e3) * resolution_wlen / wlen
-    resolution_wlen = int( np.ceil(resolution_wlen/2) ) * 2
+    resolution_wlen = int( np.ceil(resolution_wlen) )
     resolution_nanoparticle = (from_um_factor * 1e3) * resolution_nanoparticle / (2 * r)
-    resolution_nanoparticle = int( np.ceil(resolution_nanoparticle/2) ) * 2
+    resolution_nanoparticle = int( np.ceil(resolution_nanoparticle) )
     min_resolution = max(resolution_wlen, 
                          resolution_nanoparticle)
     
     if min_resolution > resolution:
-        parallel_log(f"Resolution will be raised from {resolution} to {min_resolution}")
-    resolution = min_resolution
+        pm.log(f"Resolution will be raised from {resolution} to {min_resolution}")
+        resolution = min_resolution
     del min_resolution
     
     # Au sphere
@@ -270,7 +261,7 @@ def main(from_um_factor, resolution, courant,
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and parallel_assign(0):
+    if not os.path.isdir(path) and pm.assign(0):
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
     
@@ -278,7 +269,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT CELL
 
-    if parallel_assign(0) and make_plots:
+    if pm.assign(0) and make_plots:
         
         fig, ax = plt.subplots()
         
@@ -365,18 +356,17 @@ def main(from_um_factor, resolution, courant,
     #%% INITIALIZE
     
     params = {}
-    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
     
     # stable, max_courant = vm.check_stability(params)
     # if stable:
-    #     parallel_log("As a whole, the simulation should be stable")
+    #     pm.log("As a whole, the simulation should be stable")
     # else:
-    #     parallel_log("As a whole, the simulation could not be stable")
-    #     parallel_log(f"Recommended maximum courant factor is {max_courant}")
+    #     pm.log("As a whole, the simulation could not be stable")
+    #     pm.log(f"Recommended maximum courant factor is {max_courant}")
     # del stable, max_courant
     
-    rm.measure()
+    rm.measure_ram()
     
     sim = mp.Simulation(resolution=resolution,
                         Courant=courant,
@@ -389,13 +379,13 @@ def main(from_um_factor, resolution, courant,
                         output_single_precision=True,
                         split_chunks_evenly=split_chunks_evenly)
     
-    rm.measure()
+    rm.measure_ram()
     
-    tm.start_measure()
+    rm.start_measure_time()
     sim.init_sim()
-    tm.end_measure()
+    rm.end_measure_time()
     
-    rm.measure()
+    rm.measure_ram()
     
     #%% DEFINE SAVE STEP FUNCTIONS
     
@@ -427,7 +417,7 @@ def main(from_um_factor, resolution, courant,
                                mp.at_every(period_line, save_hline),
                                mp.at_every(period_plane, save_hplane)]
     
-    step_ram_function = lambda sim : rm.measure()
+    step_ram_function = lambda sim : rm.measure_ram()
     
     to_do_while_running = [*to_do_while_running,
                            mp.at_beginning(step_ram_function), 
@@ -437,20 +427,19 @@ def main(from_um_factor, resolution, courant,
     
     #%% RUN!
     
-    rm.measure()
+    rm.measure_ram()
     
     filename_prefix = sim.filename_prefix
     sim.filename_prefix = "Field"    
     os.chdir(path)
-    tm.start_measure()
+    rm.start_measure_time()
     sim.run(*to_do_while_running, until=until_time)
-    tm.end_measure()
+    rm.end_measure_time()
     os.chdir(syshome)
     sim.filename_prefix = filename_prefix
     
     #%% SAVE METADATA
     
-    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
     
     volumes = [sampling_line, sampling_plane]
@@ -461,7 +450,7 @@ def main(from_um_factor, resolution, courant,
     del x, y, z, more
     del volumes, vol
     
-    if parallel_assign(0):
+    if pm.assign(0):
         
         files = ["Field-Lines", "Field-Planes"]
         periods = [period_line, period_plane]
@@ -513,24 +502,8 @@ def main(from_um_factor, resolution, courant,
             del hfiles, f, fh, keys, oldk, newk, k
           
         del files
-        
-    if parallel:
-        f = vs.parallel_hdf_file(file("RAM.h5"), "w")
-        current_process = mp.my_rank()
-        f.create_dataset("RAM", (len(rm.used_ram), n_processes), dtype="float")
-        f["RAM"][:, current_process] = rm.used_ram
-        for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", (len(rm.used_ram), n_processes), dtype="int")
-        f["SWAP"][:, current_process] = rm.swapped_ram
-        for a in params: f["SWAP"].attrs[a] = params[a]
-    else:
-        f = h5.File(file("RAM.h5"), "w")
-        f.create_dataset("RAM", data=rm.used_ram)
-        for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", data=rm.swapped_ram)
-        for a in params: f["SWAP"].attrs[a] = params[a]
-    f.close()
-    del f
+            
+    rm.save(file("Resources.h5"), params)
     
     mp.all_wait()
     

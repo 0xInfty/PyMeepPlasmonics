@@ -33,10 +33,8 @@ import v_meep as vm
 import v_save as vs
 import v_utilities as vu
 
-rm = vm.RAManager()
-rm.measure()
-
-tm = vm.TimeManager()
+rm = vm.ResourcesMonitor()
+rm.measure_ram()
 
 #%% COMMAND LINE FORMATTER
 
@@ -108,43 +106,46 @@ def main(from_um_factor, resolution, courant,
          series, folder, n_cores, n_nodes, split_chunks_evenly):
 
     #%% CLASSIC INPUT PARAMETERS    
-    """
-    # Simulation size
-    from_um_factor = 100e-3 # Conversion of 1 μm to my length unit (=100nm/1μm)
-    resolution = 5 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
-    courant = 0.5
     
-    # Cell specifications
-    displacement = 50 # Displacement of the surface relative to the dipole
-    submerged_index = 1 # 1.33 for water
-    surface_index = None # 1.54 for glass
+    if any('SPYDER' in name for name in os.environ):
     
-    # Frequency and wavelength
-    wlen_center = 650 # Main wavelength range in nm
-    wlen_width = 50 # Wavelength band in nm
-    nfreq = 100 # Number of discrete frequencies
-    standing = True # Perpendicular to surface if true, parallel if false
+        # Simulation size
+        from_um_factor = 100e-3 # Conversion of 1 μm to my length unit (=100nm/1μm)
+        resolution = 5 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+        courant = 0.5
+        
+        # Cell specifications
+        displacement = 50 # Displacement of the surface relative to the dipole
+        submerged_index = 1 # 1.33 for water
+        surface_index = None # 1.54 for glass
+        
+        # Frequency and wavelength
+        wlen_center = 650 # Main wavelength range in nm
+        wlen_width = 50 # Wavelength band in nm
+        nfreq = 100 # Number of discrete frequencies
+        standing = True # Perpendicular to surface if true, parallel if false
+        
+        # Box dimensions
+        pml_wlen_factor = 0.38
+        empty_wlen_factor = 0.22
+        flux_wlen_factor = 0.10
+        flux_padd_factor = .05
+        
+        # Simulation time
+        time_factor_cell = 1.2
+        second_time_factor = 10
+        
+        # Saving directories
+        series = "TestSeveral" # "2nd"
+        folder = "Test/TestDipole/DipoleStanding" # DataAnalysis/DipoleStandingGlassTest"
+        
+        # Run configuration
+        n_cores = 1
+        n_nodes = 1
+        split_chunks_evenly = True
+        
+        print("Loaded Spyder parameters")
     
-    # Box dimensions
-    pml_wlen_factor = 0.38
-    empty_wlen_factor = 0.22
-    flux_wlen_factor = 0.10
-    flux_padd_factor = .05
-    
-    # Simulation time
-    time_factor_cell = 1.2
-    second_time_factor = 10
-    
-    # Saving directories
-    series = "TestSeveral" # "2nd"
-    folder = "Test/TestDipole/DipoleStanding" # DataAnalysis/DipoleStandingGlassTest"
-    
-    # Run configuration
-    n_cores = 1
-    n_nodes = 1
-    split_chunks_evenly = True
-    """
-
     #%% MORE INPUT PARAMETERS
         
     # Simulation size
@@ -163,30 +164,21 @@ def main(from_um_factor, resolution, courant,
     ### TREATED INPUT PARAMETERS
     
     # Computation
-    n_processes = mp.count_processors()
-    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
-    max_index = np.argmax(parallel_specs)
-    for index, item in enumerate(parallel_specs): 
-        if item == 0: parallel_specs[index] = 1
-    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
-                                          max(parallel_specs))
-    n_processes, n_cores, n_nodes = parallel_specs
-    parallel = max(parallel_specs) > 1
-    del parallel_specs, max_index, index, item
-                    
-    parallel_assign, parallel_log = vm.parallel_manager(n_processes, parallel)
+    pm = vm.ParallelManager(n_cores, n_nodes)
+    n_processes, n_cores, n_nodes = pm.specs
+    parallel = pm.parallel
     
     # Simulation size
     resolution_wlen = (from_um_factor * 1e3) * resolution_wlen / (wlen_center - wlen_width/2)
-    resolution_wlen = int( np.ceil(resolution_wlen/2) ) * 2
+    resolution_wlen = int( np.ceil(resolution_wlen) )
     resolution_bandwidth = (from_um_factor * 1e3) * resolution_bandwidth / wlen_width
-    resolution_bandwidth = int( np.ceil(resolution_bandwidth/2) ) * 2
+    resolution_bandwidth = int( np.ceil(resolution_bandwidth) )
     min_resolution = max(resolution_wlen, 
                          resolution_bandwidth)
     
     if min_resolution > resolution:
-        parallel_log(f"Resolution will be raised from {resolution} to {min_resolution}")
-    resolution = min_resolution
+        pm.log(f"Resolution will be raised from {resolution} to {min_resolution}")
+        resolution = min_resolution
     del min_resolution
     
     # Cell general specifications: Surface below dipole
@@ -316,16 +308,15 @@ def main(from_um_factor, resolution, courant,
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and parallel_assign(0):
+    if not os.path.isdir(path) and pm.assign(0):
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
         
     #%% BASE SIMULATION: SETUP
     
-    rm.measure()
+    rm.measure_ram()
     
     params = {}
-    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
     del p
     
@@ -341,7 +332,7 @@ def main(from_um_factor, resolution, courant,
                         geometry=initial_geometry)#,
                         #force_complex_fields=True)
     
-    rm.measure()
+    rm.measure_ram()
     
     near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
         mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
@@ -362,12 +353,12 @@ def main(from_um_factor, resolution, courant,
         mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
                           size=mp.Vector3(flux_box_size,flux_box_size,0),
                            weight=+1))
-    rm.measure()
+    rm.measure_ram()
     # used_ram.append(used_ram[-1])
 
     #%% PLOT CELL
 
-    if parallel_assign(0):
+    if pm.assign(0):
     
         fig, ax = plt.subplots()
         
@@ -451,16 +442,16 @@ def main(from_um_factor, resolution, courant,
 
     #%% BASE SIMULATION: INITIALIZE
     
-    tm.start_measure()
+    rm.start_measure_time()
     sim.init_sim()
-    tm.end_measure()
-    rm.measure()
+    rm.end_measure_time()
+    rm.measure_ram()
 
     #%% BASE SIMULATION: SIMULATION :D
     
-    step_ram_function = lambda sim : rm.measure()
+    step_ram_function = lambda sim : rm.measure_ram()
     
-    tm.start_measure()
+    rm.start_measure_time()
     sim.run(mp.at_beginning(step_ram_function), 
             mp.at_time(int(second_time_factor * until_after_sources / 2), 
                        step_ram_function),
@@ -472,14 +463,14 @@ def main(from_um_factor, resolution, courant,
             #     mp.Ez, # Component of field to check
             #     mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
             #     1e-3)) # Factor to decay
-    tm.end_measure()
+    rm.end_measure_time()
     # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
     
-    parallel_log("Finished simulation block")
+    pm.log("Finished simulation block")
         
     #%% BASE SIMULATION: ANGULAR PATTERN ANALYSIS
 
-    if parallel_assign(0):
+    if pm.assign(0):
         
         freqs = np.linspace(freq_center - freq_center/2, freq_center + freq_width/2, nfreq)
         wlens = 1/freqs
@@ -528,9 +519,9 @@ def main(from_um_factor, resolution, courant,
         del phi, theta, farfield_dict, Px, Py, Pz
         
     # mp.all_wait()
-    parallel_log("Finished calculation of far field")
+    pm.log("Finished calculation of far field")
     
-    if submerged_index == surface_index and parallel_assign(0):
+    if submerged_index == surface_index and pm.assign(0):
     
         max_poynting_r = np.max(np.abs(poynting_r))
         
@@ -539,11 +530,10 @@ def main(from_um_factor, resolution, courant,
         poynting_z = np.array(poynting_z) / max_poynting_r
         poynting_r = np.array(poynting_r) / max_poynting_r
         
-        parallel_log("Normalized")
+        pm.log("Normalized")
     
     #%% BASE SIMULATION: SAVE DATA
     
-    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
     del p
     
@@ -553,18 +543,18 @@ def main(from_um_factor, resolution, courant,
     sim.save_near2far("Near2Far", near2far_box)
     mp.all_wait()
     
-    parallel_log("Saved near2far flux data")
+    pm.log("Saved near2far flux data")
     
-    if parallel_assign(1):
+    if pm.assign(1):
             f = h5.File(file("Base-Near2Far.h5"), "r+")
             for key, par in params.items():
                 f[ list(f.keys())[0] ].attrs[key] = par
             f.close()
             del f
     
-    parallel_log("Added params to near2far file.")
+    pm.log("Added params to near2far file.")
         
-    if parallel_assign(0):
+    if pm.assign(0):
             f = h5.File(file("Base-Results.h5"), "w")
             f["Px"] = poynting_x
             f["Py"] = poynting_y
@@ -578,27 +568,14 @@ def main(from_um_factor, resolution, courant,
             # print("Saved far fields")
     mp.all_wait()
     
-    parallel_log("Saved far fields")
+    pm.log("Saved far fields")
         
     # if not split_chunks_evenly:
     #     vm.save_chunks(sim, params, path)
     
-    f = vs.parallel_hdf_file(file("Base-RAM.h5"), "w", parallel)
-    if parallel:
-        current_process = mp.my_rank()
-        f.create_dataset("RAM", (len(rm.used_ram), n_processes), dtype="float")
-        f["RAM"][:, current_process] = rm.used_ram
-        f.create_dataset("SWAP", (len(rm.used_ram), n_processes), dtype="int")
-        f["SWAP"][:, current_process] = rm.swapped_ram
-    else:
-        f.create_dataset("RAM", data=rm.used_ram)
-        f.create_dataset("SWAP", data=rm.swapped_ram)
-    for a in params: f["RAM"].attrs[a] = params[a]
-    for a in params: f["SWAP"].attrs[a] = params[a]
-    f.close()
-    del f
+    rm.save(file("Resources.h5"), params)
     
-    parallel_log("Saved RAM")
+    pm.log("Saved RAM")
     
     mp.all_wait()
     sim.filename_prefix = sim_filename
@@ -606,7 +583,7 @@ def main(from_um_factor, resolution, courant,
     
     os.chdir(path)
     
-    parallel_log("Ready to go with further simulation, if needed")
+    pm.log("Ready to go with further simulation, if needed")
     
     #%% FURTHER SIMULATION
         
@@ -614,9 +591,8 @@ def main(from_um_factor, resolution, courant,
     
         #% FURTHER SIMULATION: SETUP
         
-        rm.measure()
+        rm.measure_ram()
         
-        params["elapsed"] = tm.elapsed_time
         for p in params_list: params[p] = eval(p)
         del p
         
@@ -631,7 +607,7 @@ def main(from_um_factor, resolution, courant,
                             split_chunks_evenly=split_chunks_evenly,
                             geometry=final_geometry)
         
-        rm.measure()
+        rm.measure_ram()
         
         near2far_box = sim.add_near2far(freq_center, freq_width, nfreq, 
             mp.Near2FarRegion(center=mp.Vector3(x=-flux_box_size/2),
@@ -652,12 +628,12 @@ def main(from_um_factor, resolution, courant,
             mp.Near2FarRegion(center=mp.Vector3(z=+flux_box_size/2),
                               size=mp.Vector3(flux_box_size,flux_box_size,0),
                                 weight=+1))
-        rm.measure()
+        rm.measure_ram()
         # used_ram.append(used_ram[-1])
     
         # #%% PLOT CELL
     
-        if parallel_assign(0):
+        if pm.assign(0):
     
             fig, ax = plt.subplots()
             
@@ -759,29 +735,29 @@ def main(from_um_factor, resolution, courant,
     
         #% FURTHER SIMULATION: INITIALIZE
         
-        tm.start_measure()
+        rm.start_measure_time()
         sim.init_sim()
-        tm.end_measure()
-        rm.measure()
+        rm.end_measure_time()
+        rm.measure_ram()
     
         #% FURTHER SIMULATION: SIMULATION :D
         
-        step_ram_function = lambda sim : rm.measure()
+        step_ram_function = lambda sim : rm.measure_ram()
         
-        tm.start_measure()
+        rm.start_measure_time()
         sim.run(mp.at_beginning(step_ram_function), 
                 mp.at_time(int(second_time_factor * until_after_sources / 2), 
                             step_ram_function),
                 mp.at_end(step_ram_function),
                 until_after_sources=second_time_factor * until_after_sources )
-        tm.end_measure()
+        rm.end_measure_time()
         # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
         
-        parallel_log("Finished simulation")
+        pm.log("Finished simulation")
         
         #% FURTHER SIMULATION: ANGULAR PATTERN ANALYSIS
     
-        if parallel_assign(0):
+        if pm.assign(0):
     
             sim_polar_angle = polar_angle[polar_angle > polar_limit]
             index_limit = list(polar_angle > polar_limit).index(True)
@@ -814,23 +790,22 @@ def main(from_um_factor, resolution, courant,
                 
             del phi, theta, farfield_dict, Px, Py, Pz
         
-        parallel_log("Finished calculation of far field")
+        pm.log("Finished calculation of far field")
                 
-        if parallel_assign(0):
+        if pm.assign(0):
             poynting_x = np.array(poynting_x) / np.max(poynting_r)
             poynting_y = np.array(poynting_y) / np.max(poynting_r)
             poynting_z = np.array(poynting_z) / np.max(poynting_r)
             poynting_r = np.array(poynting_r) / np.max(poynting_r)
         
-        parallel_log("Normalized")
+        pm.log("Normalized")
 
         mp.all_wait()
         
-        parallel_log("Finished mp.all_wait()")
+        pm.log("Finished mp.all_wait()")
     
         #% FURTHER SIMULATION: SAVE DATA
         
-        params["elapsed"] = tm.elapsed_time
         for p in params_list: params[p] = eval(p)
         del p
         
@@ -840,18 +815,18 @@ def main(from_um_factor, resolution, courant,
         sim.save_near2far("Near2Far", near2far_box)
         # mp.all_wait()
         
-        parallel_log("Saved near2far flux data")
+        pm.log("Saved near2far flux data")
         
-        if parallel_assign(1):
+        if pm.assign(1):
                 f = h5.File(file("Further-Near2Far.h5"), "r+")
                 for key, par in params.items():
                     f[ list(f.keys())[0] ].attrs[key] = par
                 f.close()
                 del f
-                parallel_log("Added params to near2far data")
+                pm.log("Added params to near2far data")
         os.chdir(syshome)
     
-        if parallel_assign(0):
+        if pm.assign(0):
                 f = h5.File(file("Further-Results.h5"), "w")
                 f["Px"] = poynting_x
                 f["Py"] = poynting_y
@@ -862,48 +837,31 @@ def main(from_um_factor, resolution, courant,
                         dset.attrs[key] = par
                 f.close()
                 del f
-                parallel_log("Saved poynting calculation")
+                pm.log("Saved poynting calculation")
         mp.all_wait()
         
         # if not split_chunks_evenly:
         #     vm.save_chunks(sim, params, path)
         
-        f = vs.parallel_hdf_file(file("Further-RAM.h5"), "w", parallel)
-        if parallel:
-            current_process = mp.my_rank()
-            f.create_dataset("RAM", (len(rm.used_ram), n_processes), dtype="float")
-            f["RAM"][:, current_process] = rm.used_ram
-            f.create_dataset("SWAP", (len(rm.used_ram), n_processes), dtype="int")
-            f["SWAP"][:, current_process] = rm.swapped_ram
-        else:
-            f.create_dataset("RAM", data=rm.used_ram)
-            f.create_dataset("SWAP", data=rm.swapped_ram)
-        for a in params: f["RAM"].attrs[a] = params[a]
-        for a in params: f["SWAP"].attrs[a] = params[a]
-        f.close()
-        del f
+        rm.save(file("Resources.h5"), params)
         
-        parallel_log("Saved RAM")
+        pm.log("Saved RAM")
         
         sim.filename_prefix = sim_filename
         os.chdir(syshome)
     
     #%% CHOOSE FINAL DATA TO SAVE AND DUMP ALL REST
 
-    if parallel_assign(1):
+    if pm.assign(1):
         if submerged_index != surface_index:
-            os.rename(file("Further-RAM.h5"), file("RAM.h5"))
-            os.remove(file("Base-RAM.h5"))
-            
             os.rename(file("Further-Results.h5"), file("Results.h5"))
             os.remove(file("Base-Results.h5"))
         else:
-            os.rename(file("Base-RAM.h5"), file("RAM.h5"))
             os.rename(file("Base-Results.h5"), file("Results.h5"))
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
-    if parallel_assign(0):
+    if pm.assign(0):
     
         wlen_chosen = wlen_center
         freq_index = np.argmin(np.abs(freqs - 1/wlen_chosen))
@@ -927,7 +885,7 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
-    if parallel_assign(1):
+    if pm.assign(1):
         
         wlen_chosen = wlen_center
         freq_index = np.argmin(np.abs(freqs - 1/wlen_chosen))
@@ -952,7 +910,7 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
-    if parallel_assign(0):
+    if pm.assign(0):
         
         wlen_chosen = wlen_center
         freq_index = np.argmin(np.abs(freqs - 1/wlen_chosen))
@@ -974,7 +932,7 @@ def main(from_um_factor, resolution, courant,
         
         plt.savefig(file("AngularAzimuthal.png"))
         
-    if parallel_assign(0):
+    if pm.assign(0):
         
         wlen_chosen = wlen_center
         freq_index = np.argmin(np.abs(freqs - 1/wlen_chosen))
