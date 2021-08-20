@@ -22,7 +22,6 @@ import sys
 sys.path.append(syshome)
 
 import click as cli
-import h5py as h5
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,10 +32,8 @@ import v_meep as vm
 import v_save as vs
 import v_utilities as vu
 
-rm = vm.RAManager()
-rm.measure()
-
-tm = vm.TimeManager()
+rm = vm.ResourcesMonitor()
+rm.measure_ram()
 
 #%% COMMAND LINE FORMATTER
 
@@ -61,18 +58,18 @@ tm = vm.TimeManager()
 @cli.option("--index", "-i", "submerged_index", 
             type=float, default=1,
             help="Reflective index of sourrounding medium")
-@cli.option("--overlap", "-over", "overlap", default=0, type=float,
-            help="Overlap of sphere and surface in nm")
 @cli.option("--surface-index", "-si", "surface_index", 
             type=float, default=None,
             help="Reflective index of surface medium")
+@cli.option("--overlap", "-over", "overlap", default=0, type=float,
+            help="Overlap of sphere and surface in nm")
 @cli.option("--wlen-range", "-wr", "wlen_range", 
             type=cli.Tuple([float, float]), default=(450,600),
             help="Wavelength range expressed in nm")
 @cli.option("--nfreq", "-nfreq", "nfreq", 
             type=int, default=100,
             help="Quantity of frequencies to sample in wavelength range")
-@cli.option("--air-r-factor", "-air", "air_r_factor", 
+@cli.option("--empty-r-factor", "-empty", "empty_r_factor", 
             type=float, default=0.5,
             help="Empty layer width expressed in multiples of radius")
 @cli.option("--pml-wlen-factor", "-pml", "pml_wlen_factor", 
@@ -105,6 +102,9 @@ tm = vm.TimeManager()
 @cli.option("--load-chunks", "-loadc", "load_chunks", 
             type=bool, default=True,
             help="Whether to search the chunks layout database and load, if possible, or not.")
+@cli.option("--load-resources", "-loadr", "load_resources", 
+            type=bool, default=False,
+            help="Whether to necessarily load monitored resources, if possible, or not")
 @cli.option("--near2far", "-n2f", "near2far", 
             type=bool, default=False,
             help="Whether to calculate angular pattern or not.")
@@ -114,56 +114,58 @@ tm = vm.TimeManager()
 def main(from_um_factor, resolution, courant, 
          r, material, paper, reference, submerged_index, 
          overlap, surface_index, wlen_range, nfreq,
-         air_r_factor, pml_wlen_factor, flux_r_factor,
+         empty_r_factor, pml_wlen_factor, flux_r_factor,
          time_factor_cell, second_time_factor,
          series, folder, 
          n_cores, n_nodes, split_chunks_evenly,
-         load_flux, load_chunks, near2far, make_plots):
+         load_flux, load_chunks, load_resources, near2far, make_plots):
 
     #%% CLASSIC INPUT PARAMETERS    
-    """
-    # Simulation size
-    from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
-    resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
-    courant = 0.5
     
-    # Nanoparticle specifications: Sphere in Vacuum :)
-    material = "Au"
-    r = 51.5  # Radius of sphere in nm
-    paper = "R"
-    reference = "Meep"
-    overlap = 0 # Upwards displacement of the surface from the bottom of the sphere in nm
-    submerged_index = 1 # 1.33 for water
-    surface_index = None # 1.54 for glass
-    
-    # Frequency and wavelength
-    wlen_range = np.array([450,600]) # Wavelength range in nm
-    nfreq = 100
-    
-    # Box dimensions
-    pml_wlen_factor = 0.38
-    air_r_factor = 0.5
-    flux_r_factor = 0 #0.1
-    
-    # Simulation time
-    time_factor_cell = 1.2
-    second_time_factor = 10
-    
-    # Saving directories
-    series = None
-    folder = None
-    
-    # Configuration
-    parallel = False
-    n_processes = 1
-    n_cores = 1
-    n_nodes = 1
-    split_chunks_evenly = True
-    load_flux = True
-    load_chunks = True    
-    near2far = False
-    make_plots = True
-    """
+    if any('SPYDER' in name for name in os.environ):
+        
+        # Simulation size
+        from_um_factor = 10e-3 # Conversion of 1 μm to my length unit (=10nm/1μm)
+        resolution = 2 # >=8 pixels per smallest wavelength, i.e. np.floor(8/wvl_min)
+        courant = 0.5
+        
+        # Nanoparticle specifications: Sphere in Vacuum :)
+        material = "Au"
+        r = 51.5  # Radius of sphere in nm
+        paper = "R"
+        reference = "Meep"
+        overlap = 0 # Upwards displacement of the surface from the bottom of the sphere in nm
+        submerged_index = 1 # 1.33 for water
+        surface_index = None # 1.54 for glass
+        
+        # Frequency and wavelength
+        wlen_range = np.array([450,600]) # Wavelength range in nm
+        nfreq = 100
+        
+        # Box dimensions
+        pml_wlen_factor = 0.38
+        empty_r_factor = 0.5
+        flux_r_factor = 0 #0.1
+        
+        # Simulation time
+        time_factor_cell = 1.2
+        second_time_factor = 10
+        
+        # Saving directories
+        series = "TestMonitor"
+        folder = "Test"
+        
+        # Configuration
+        n_cores = 1
+        n_nodes = 1
+        split_chunks_evenly = True
+        load_flux = False
+        load_chunks = True
+        load_resources = False
+        near2far = False
+        make_plots = True
+        
+        print("Loaded Spyder parameters")
 
     #%% MORE INPUT PARAMETERS
        
@@ -183,33 +185,24 @@ def main(from_um_factor, resolution, courant,
     ### TREATED INPUT PARAMETERS
     
     # Computation
-    n_processes = mp.count_processors()
-    parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
-    max_index = np.argmax(parallel_specs)
-    for index, item in enumerate(parallel_specs): 
-        if item == 0: parallel_specs[index] = 1
-    parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
-                                          max(parallel_specs))
-    n_processes, n_cores, n_nodes = parallel_specs
-    parallel = max(parallel_specs) > 1
-    del parallel_specs, max_index, index, item
-                    
-    parallel_assign, parallel_log = vm.parallel_manager(n_processes, parallel)
+    pm = vm.ParallelManager(n_cores, n_nodes)
+    n_processes, n_cores, n_nodes = pm.specs
+    parallel = pm.parallel
     
     # Simulation size
     resolution_wlen = (from_um_factor * 1e3) * resolution_wlen / max(wlen_range)
-    resolution_wlen = int( np.ceil(resolution_wlen/2) ) * 2
+    resolution_wlen = int( np.ceil(resolution_wlen) )
     resolution_nanoparticle = (from_um_factor * 1e3) * resolution_nanoparticle / (2 * r)
-    resolution_nanoparticle = int( np.ceil(resolution_nanoparticle/2) ) * 2
+    resolution_nanoparticle = int( np.ceil(resolution_nanoparticle) )
     resolution_bandwidth = (from_um_factor * 1e3) * resolution_bandwidth / (max(wlen_range) - min(wlen_range))
-    resolution_bandwidth = int( np.ceil(resolution_bandwidth/2) ) * 2
+    resolution_bandwidth = int( np.ceil(resolution_bandwidth) )
     min_resolution = max(resolution_wlen, 
                          resolution_bandwidth,
                          resolution_nanoparticle)
     
     if min_resolution > resolution:
-        parallel_log(f"Resolution will be raised from {resolution} to {min_resolution}")
-    resolution = min_resolution
+        pm.log(f"Resolution will be raised from {resolution} to {min_resolution}")
+        resolution = min_resolution
     del min_resolution
     
     # Nanoparticle specifications: Sphere in Vacuum :)
@@ -235,7 +228,7 @@ def main(from_um_factor, resolution, courant,
     
     # Space configuration
     pml_width = pml_wlen_factor * max(wlen_range) # 0.5 * max(wlen_range)
-    air_width = air_r_factor * r # 0.5 * max(wlen_range)
+    empty_width = empty_r_factor * r # 0.5 * max(wlen_range)
     flux_box_size = 2 * ( 1 + flux_r_factor ) * r
        
     # Saving directories
@@ -247,7 +240,7 @@ def main(from_um_factor, resolution, courant,
                    "material", "r", "paper", "reference", "submerged_index",
                    "overlap", "surface_index",
                    "wlen_range", "nfreq", "nazimuthal", "npolar", "cutoff", "flux_box_size",
-                   "cell_width", "pml_width", "air_width", "source_center",
+                   "cell_width", "pml_width", "empty_width", "source_center",
                    "until_after_sources", "time_factor_cell", "second_time_factor",
                    "parallel", "n_processes", "n_cores", "n_nodes",
                    "split_chunks_evenly", "near2far",
@@ -255,7 +248,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% GENERAL GEOMETRY SETUP
     
-    air_width = air_width - air_width%(1/resolution)
+    empty_width = empty_width - empty_width%(1/resolution)
     
     pml_width = pml_width - pml_width%(1/resolution)
     pml_layers = [mp.PML(thickness=pml_width)]
@@ -266,7 +259,7 @@ def main(from_um_factor, resolution, courant,
     # Issue related that lead me to comment this lines:
     # https://github.com/NanoComp/meep/issues/1484
 
-    cell_width = 2 * (pml_width + air_width + r)
+    cell_width = 2 * (pml_width + empty_width + r)
     cell_width = cell_width - cell_width%(1/resolution)
     cell_size = mp.Vector3(cell_width, cell_width, cell_width)
     
@@ -318,7 +311,7 @@ def main(from_um_factor, resolution, courant,
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and parallel_assign(0):
+    if not os.path.isdir(path) and pm.assign(0):
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
     
@@ -326,7 +319,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT CELL
 
-    if make_plots and parallel_assign(0):
+    if make_plots and pm.assign(0):
         fig, ax = plt.subplots()
         
         # PML borders
@@ -424,21 +417,26 @@ def main(from_um_factor, resolution, courant,
     rm.measure_ram()
     
     params = {}
-    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
     
     stable, max_courant = vm.check_stability(params)
     if stable:
-        parallel_log("As a whole, the simulation should be stable")
+        pm.log("As a whole, the simulation should be stable")
     else:
-        parallel_log("As a whole, the simulation could not be stable")
-        parallel_log(f"Recommended maximum courant factor is {max_courant}")
+        pm.log("As a whole, the simulation could not be stable")
+        pm.log(f"Recommended maximum Courant factor is {max_courant}")
     del stable, max_courant
         
     if load_flux:
         try:
             flux_path = vm.check_midflux(params)[-1]
-            flux_needed = False
+            if load_resources:
+                if os.path.isfile( os.path.join(flux_path, "Resources.h5") ):
+                    pm.log("Found resources")
+                    flux_needed = False
+                else:
+                    pm.log("Didn't find resources")
+                    flux_needed = True
         except:
             flux_needed = True
     else:
@@ -480,8 +478,10 @@ def main(from_um_factor, resolution, courant,
         chunk_layout = os.path.join(chunks_path, "Layout.h5")
         
         del sim
-    
-    if flux_needed:
+        
+    if not flux_needed:
+        rm.load( os.path.join(flux_path, "Resources.h5") )
+    else:
         
         #% FIRST RUN: SET UP
         
@@ -555,16 +555,16 @@ def main(from_um_factor, resolution, courant,
         
         #% FIRST RUN: INITIALIZE
         
-        tm.start_measure()
+        rm.start_measure_time()
         sim.init_sim()
-        tm.end_measure()
+        rm.end_measure_time()
         rm.measure_ram()
         
         step_ram_function = lambda sim : rm.measure_ram()
         
         #% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
         
-        tm.start_measure()
+        rm.start_measure_time()
         sim.run(mp.at_beginning(step_ram_function), 
                 mp.at_time(int(until_after_sources / 2), 
                            step_ram_function),
@@ -575,11 +575,10 @@ def main(from_um_factor, resolution, courant,
             # mp.Ez, # Component of field to check
             # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
             # 1e-3)) # Factor to decay
-        tm.end_measure()
+        rm.end_measure_time()
         
         #% SAVE MID DATA
 
-        params["elapsed"] = tm.elapsed_time
         for p in params_list: params[p] = eval(p)
 
         flux_path =  vm.save_midflux(sim, box_x1, box_x2, box_y1, 
@@ -605,34 +604,19 @@ def main(from_um_factor, resolution, courant,
                       "Flujo Z10 [u.a]",
                       "Flujo Z20 [u.a]"]
         
-        if parallel_assign(0):
+        if pm.assign(0):
             vs.savetxt(file("MidFlux.txt"), data_mid, 
                        header=header_mid, footer=params)
 
         if not split_chunks_evenly:
             vm.save_chunks(sim, params, path)
             
-        if parallel:
-            f = vs.parallel_hdf_file(file("MidRAM.h5"), "w")
-            current_process = mp.my_rank()
-            f.create_dataset("RAM", (len(rm.used_ram), n_processes), dtype="float")
-            f["RAM"][:, current_process] = rm.used_ram
-            for a in params: f["RAM"].attrs[a] = params[a]
-            f.create_dataset("SWAP", (len(rm.used_ram), n_processes), dtype="int")
-            f["SWAP"][:, current_process] = rm.swapped_ram
-            for a in params: f["SWAP"].attrs[a] = params[a]
-        else:
-            f = h5.File(file("MidRAM.h5"), "w")
-            f.create_dataset("RAM", data=rm.used_ram)
-            for a in params: f["RAM"].attrs[a] = params[a]
-            f.create_dataset("SWAP", data=rm.swapped_ram)
-            for a in params: f["SWAP"].attrs[a] = params[a]
-        f.close()
-        del f
+        rm.save(os.path.join(flux_path, "Resources.h5"), params)
+        rm.save(file("Resources.h5"), params)
 
         #% PLOT FLUX FOURIER MID DATA
         
-        if parallel_assign(1) and make_plots:
+        if pm.assign(1) and make_plots:
             ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
             ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
                       ylims[1]+.1*(ylims[1]-ylims[0]))
@@ -646,7 +630,7 @@ def main(from_um_factor, resolution, courant,
                 a.set_ylabel(h)
             
             for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
-                a.plot(1e3*from_um_factor/freqs, d)
+                a.plot(data_mid[:,0], d)
                 a.set_ylim(*ylims)
             ax[-1,0].set_xlabel("Wavelength [nm]")
             ax[-1,1].set_xlabel("Wavelength [nm]")
@@ -728,16 +712,16 @@ def main(from_um_factor, resolution, courant,
 
     #%% SECOND RUN: INITIALIZE
     
-    tm.start_measure()
+    rm.start_measure_time()
     sim.init_sim()
-    tm.end_measure()
+    rm.end_measure_time()
     rm.measure_ram()
     
     #%% LOAD FLUX FROM FILE
     
     vm.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
                     near2far_box, flux_path)
-    
+        
     rm.measure_ram()
 
     freqs = np.asarray(mp.get_flux_freqs(box_x1))
@@ -751,7 +735,7 @@ def main(from_um_factor, resolution, courant,
     if near2far and not separate_simulations_needed: 
         near2far_data = sim.get_near2far_data(near2far_box)
      
-    tm.start_measure()
+    rm.start_measure_time()
     sim.load_minus_flux_data(box_x1, box_x1_data)
     sim.load_minus_flux_data(box_x2, box_x2_data)
     sim.load_minus_flux_data(box_y1, box_y1_data)
@@ -760,7 +744,7 @@ def main(from_um_factor, resolution, courant,
     sim.load_minus_flux_data(box_z2, box_z2_data)
     if near2far and not separate_simulations_needed: 
         sim.load_minus_near2far_data(near2far_box, near2far_data)
-    tm.end_measure()
+    rm.end_measure_time()
     del box_x1_data, box_x2_data, box_y1_data, box_y2_data
     del box_z1_data, box_z2_data
     if near2far and not separate_simulations_needed:  
@@ -772,7 +756,7 @@ def main(from_um_factor, resolution, courant,
     
     step_ram_function = lambda sim : rm.measure_ram()
     
-    tm.start_measure()
+    rm.start_measure_time()
     sim.run(mp.at_beginning(step_ram_function), 
             mp.at_time(int(second_time_factor * until_after_sources / 2), 
                        step_ram_function),
@@ -783,7 +767,7 @@ def main(from_um_factor, resolution, courant,
         # mp.Ez, # Component of field to check
         # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
         # 1e-3)) # Factor to decay
-    tm.end_measure()
+    rm.end_measure_time()
     # Aprox 30 periods of lowest frequency, using T=λ/c=λ in Meep units 
     
     box_x1_flux = np.asarray(mp.get_fluxes(box_x1))
@@ -877,12 +861,11 @@ def main(from_um_factor, resolution, courant,
         poynting_z = np.array(poynting_z)
         poynting_r = np.array(poynting_r)
     
-    elif separate_simulations_needed: 
-        parallel_log("Beware! Near2far is not supported yet for nanoparticle placed on a surface.")
+    elif separate_simulations_needed and near2far: 
+        pm.log("Beware! Near2far is not supported yet for nanoparticle placed on a surface.")
 
     #%% SAVE FINAL DATA
     
-    params["elapsed"] = tm.elapsed_time
     for p in params_list: params[p] = eval(p)
 
     data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
@@ -908,7 +891,7 @@ def main(from_um_factor, resolution, courant,
                     "Flujo scattereado [u.a.]",
                     "Sección eficaz de scattering [u.a.]"]
     
-    if parallel_assign(0):
+    if pm.assign(0):
         vs.savetxt(file("Results.txt"), data, 
                    header=header, footer=params)
         vs.savetxt(file("BaseResults.txt"), data_base, 
@@ -927,38 +910,19 @@ def main(from_um_factor, resolution, courant,
                          poynting_z.reshape(poynting_z.size),
                          poynting_r.reshape(poynting_r.size)]
         
-        if parallel_assign(1):
+        if pm.assign(1):
             vs.savetxt(file("Near2FarResults.txt"), data_near2far, 
                        header=header_near2far, footer=params)
         del header_near2far, data_near2far
         
     if not split_chunks_evenly:
-        vm.save_chunks(sim, params, path)        
-    
-    if parallel:
-        f = vs.parallel_hdf_file(file("RAM.h5"), "w")
-        current_process = mp.my_rank()
-        f.create_dataset("RAM", (len(rm.used_ram), n_processes), dtype="float")
-        f["RAM"][:, current_process] = rm.used_ram
-        for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", (len(rm.used_ram), n_processes), dtype="int")
-        f["SWAP"][:, current_process] = rm.swapped_ram
-        for a in params: f["SWAP"].attrs[a] = params[a]
-    else:
-        f = h5.File(file("RAM.h5"), "w")
-        f.create_dataset("RAM", data=rm.used_ram)
-        for a in params: f["RAM"].attrs[a] = params[a]
-        f.create_dataset("SWAP", data=rm.swapped_ram)
-        for a in params: f["SWAP"].attrs[a] = params[a]
-    f.close()
-    del f
-    
-    if flux_needed and parallel_assign(0):
-        os.remove(file("MidRAM.h5"))
+        vm.save_chunks(sim, params, path)
+        
+    rm.save(file("Resources.h5"), params)
     
     #%% PLOT ALL TOGETHER
     
-    if parallel_assign(0) and surface_index==submerged_index and make_plots:
+    if pm.assign(0) and surface_index==submerged_index and make_plots:
         plt.figure()
         plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
                              'Scattering de esfera de {} con diámetro {:.1f} nm'
@@ -975,7 +939,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT SEPARATE
     
-    if parallel_assign(1) and make_plots:
+    if pm.assign(1) and make_plots:
         plt.figure()
         plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
                              'Scattering de esfera de {} con diámetro {:.1f} nm'
@@ -988,7 +952,7 @@ def main(from_um_factor, resolution, courant,
         plt.tight_layout()
         plt.savefig(file("Meep.png"))
         
-    if parallel_assign(0) and surface_index==submerged_index and make_plots:
+    if pm.assign(0) and surface_index==submerged_index and make_plots:
         plt.figure()
         plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
                              'Scattering de esfera de {} con diámetro {:.1f} nm'
@@ -1004,7 +968,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT ONE ABOVE THE OTHER
     
-    if parallel_assign(1) and surface_index==submerged_index and make_plots:
+    if pm.assign(1) and surface_index==submerged_index and make_plots:
         fig, axes = plt.subplots(nrows=2, sharex=True)
         fig.subplots_adjust(hspace=0)
         plt.suptitle(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
@@ -1027,7 +991,7 @@ def main(from_um_factor, resolution, courant,
             
     #%% PLOT FLUX FOURIER FINAL DATA
     
-    if parallel_assign(0) and make_plots:
+    if pm.assign(0) and make_plots:
         
         ylims = (np.min(data_base[:,2:8]), np.max(data_base[:,2:8]))
         ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
@@ -1054,7 +1018,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
-    if near2far and parallel_assign(1) and separate_simulations_needed and make_plots:
+    if near2far and pm.assign(1) and separate_simulations_needed and make_plots:
     
         freq_index = np.argmin(np.abs(freqs - freq_center))
     
@@ -1079,7 +1043,7 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
-    if near2far and parallel_assign(0) and separate_simulations_needed and make_plots:
+    if near2far and pm.assign(0) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(polar_angle).index(alpha) for alpha in [0, .25, .5, .75, 1]]
@@ -1105,7 +1069,7 @@ def main(from_um_factor, resolution, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
-    if near2far and parallel_assign(1) and separate_simulations_needed and make_plots:
+    if near2far and pm.assign(1) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
@@ -1129,7 +1093,7 @@ def main(from_um_factor, resolution, courant,
         
         plt.savefig(file("AngularAzimuthal.png"))
         
-    if near2far and parallel_assign(0) and separate_simulations_needed and make_plots:
+    if near2far and pm.assign(0) and separate_simulations_needed and make_plots:
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]

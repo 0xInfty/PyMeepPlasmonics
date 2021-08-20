@@ -28,13 +28,6 @@ saveanimation : function
 from datetime import datetime
 import h5py as h5
 import matplotlib.pyplot as plt
-# import meep as mp
-try:
-    from mpi4py import MPI
-    parallel_default = True
-except ModuleNotFoundError:
-    print("Importing without module 'mpi4py'")
-    parallel_default = False
 import numpy as np
 import os
 import re
@@ -568,17 +561,6 @@ def save_slice_generator(sim, filename, datanames, get_slices):
         return
             
     return file, save_slice_stepfun
-
-#%%
-
-def parallel_hdf_file(filename, mode="r", parallel=parallel_default):
-    
-    if parallel: 
-        f = h5.File(filename, mode,  driver='mpio', comm=MPI.COMM_WORLD)
-    else:
-        f = h5.File(filename, mode)
-        
-    return f
 
 #%%
 

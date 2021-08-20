@@ -17,6 +17,11 @@ It's widely based on Meep Materials Library.
 @author: vall
 """
 
+import h5py as h5
+try:
+    from mpi4py import MPI
+except ModuleNotFoundError:
+    print("Importing without module 'mpi4py'")
 import meep as mp
 import numpy as np
 import os
@@ -195,6 +200,85 @@ def check_stability(params):
 
 #%%
 
+class ParallelManager:
+    
+    def __init__(self, n_cores=0, n_nodes=0):
+        
+        n_processes = mp.count_processors()
+        
+        parallel_specs = np.array([n_processes, n_cores, n_nodes], dtype=int)
+        
+        max_index = np.argmax(parallel_specs)
+        for index, item in enumerate(parallel_specs): 
+            if item == 0: parallel_specs[index] = 1
+        
+        parallel_specs[0:max_index] = np.full(parallel_specs[0:max_index].shape, 
+                                              max(parallel_specs))
+        
+        n_processes, n_cores, n_nodes = parallel_specs
+        parallel = n_processes > 1
+        
+        if n_processes > 1 and n_cores == 1:
+            n_cores = n_processes
+        
+        self._n_processes = n_processes
+        self._n_cores = n_cores
+        self._n_nodes = n_nodes
+        self._parallel = parallel
+        
+    @property
+    def n_processes(self):
+        return self._n_processes
+
+    @property
+    def n_cores(self):
+        return self._n_cores
+    
+    @property
+    def n_nodes(self):
+        return self._n_nodes
+    
+    @property
+    def parallel(self):
+        return self._parallel
+    
+    @property
+    def specs(self):
+        return self.n_processes, self.n_cores, self.n_nodes
+    
+    @n_processes.setter
+    @n_cores.setter
+    @n_nodes.setter
+    @parallel.setter
+    @specs.setter
+    def negator(self):
+        raise AttributeError("This attribute cannot be changed this way!")
+    
+    def assign(self, process_number):
+        
+        if self.parallel and self.n_processes > 1:
+            if process_number == 0:
+                return mp.am_master()
+            else:
+                return mp.my_rank() == process_number
+        else:
+            return True
+    
+    def log(self, string):
+        
+        if self.assign(0): print(string)
+    
+    def hdf_file(self, filename, mode="r"):
+        
+        if self.parallel: 
+            f = h5.File(filename, mode, driver='mpio', comm=MPI.COMM_WORLD)
+        else:
+            f = h5.File(filename, mode)
+        
+        return f
+
+#%%        
+
 def parallel_manager(process_total_number, parallel):
     
     def parallel_assign(process_number):
@@ -212,7 +296,18 @@ def parallel_manager(process_total_number, parallel):
         if parallel_assign(0): print(string)
         return
     
-    return parallel_assign, parallel_log
+    return parallel_assign, parallel_log 
+
+#%%
+
+def parallel_hdf_file(filename, mode, parallel):
+        
+    if parallel: 
+        f = h5.File(filename, mode, driver='mpio', comm=MPI.COMM_WORLD)
+    else:
+        f = h5.File(filename, mode)
+        
+    return f
 
 #%%
 
@@ -294,6 +389,136 @@ class TimeManager:
     
     def reset(self):
         self._elapsed_time = []
+
+#%%
+
+class ResourcesMonitor:
+    
+    def __init__(self):
+        
+        self._elapsed_time = []
+        self._used_ram = []
+        self._swapped_ram = []
+    
+    @property
+    def elapsed_time(self):
+        return self._elapsed_time
+    
+    @property
+    def used_ram(self):
+        return self._used_ram
+    
+    @property
+    def swapped_ram(self):
+        return self._swapped_ram
+    
+    @elapsed_time.setter
+    @used_ram.setter
+    @swapped_ram.setter
+    def negator(self):
+        raise AttributeError("This attribute cannot be changed this way!")
+    
+    def start_measure_time(self):
+        
+        self._instant = time()
+    
+    def end_measure_time(self):
+        
+        new_instant = time()
+        try:
+            self._elapsed_time.append( new_instant - self._instant )
+        except TypeError:
+            print("Must start measurement first!")
+        self._instant = None
+    
+    def measure_ram(self):
+        
+        ram = res.getrusage(res.RUSAGE_THREAD).ru_maxrss# / (1024**2)
+        swap = res.getrusage(res.RUSAGE_THREAD).ru_nswap
+        self._used_ram.append(ram)
+        self._swapped_ram.append(swap)
+        
+    def save(self, filename, parameters={}):
+        
+        n_processes = mp.count_processors()
+        parallel = ( n_processes > 1 )
+        
+        if mp.am_master():
+            print(f"np={n_processes}")
+            print(f"parallel={parallel}")
+            print(f"filename={filename}")
+            print(f"parameters={parameters}")
+        
+        if os.path.isfile(filename) and mp.am_master(): 
+            os.remove(filename)
+            print("Removed file")
+    
+        f = parallel_hdf_file(filename, "w", parallel)
+        print("Opened file with parallel={parallel}")
+        
+        if parallel:
+            current_process = mp.my_rank()
+            print(f"Current rank: {current_process}")
+            f.create_dataset("RAM", (len(self.used_ram), n_processes), dtype="int")
+            f["RAM"][:, current_process] = self.used_ram
+            print("Saved RAM")
+            f.create_dataset("SWAP", (len(self.used_ram), n_processes), dtype="int")
+            f["SWAP"][:, current_process] = self.swapped_ram
+            print("Saved SWAP")
+        else:
+            f.create_dataset("RAM", data=self.used_ram, dtype="int")
+            print("Saved RAM")
+            f.create_dataset("SWAP", data=self.swapped_ram, dtype="int")
+            print("Saved SWAP")
+            
+        for key in parameters.keys(): f["RAM"].attrs[key] = parameters[key]
+        for key in parameters.keys(): f["SWAP"].attrs[key] = parameters[key]
+        print("Saved parameters in RAM and SWAP")
+        
+        f.close()
+        print("Closed file")
+        
+        if mp.am_master():
+            
+            f = parallel_hdf_file(filename, "r+", False)
+            print("Opened file just with master")
+            
+            f.create_dataset("ElapsedTime", data=self.elapsed_time)
+            print("Saved elapsed time")
+            
+            for key in parameters.keys(): f["ElapsedTime"].attrs[key] = parameters[key]
+            print("Saved parameters in elapsed time")
+            
+            f.close()
+            print("Closed file")
+        
+        return
+        
+    def load(self, filename):
+        
+        n_processes = mp.count_processors()
+        parallel = n_processes > 1
+            
+        f = parallel_hdf_file(filename, "r", parallel)
+        
+        if parallel:
+            current_process = mp.my_rank()
+            self._used_ram = list(f["RAM"][:, current_process])
+            self._swapped_ram = list(f["SWAP"][:, current_process])
+        else:
+            self._used_ram = list(f["RAM"])
+            self._swapped_ram = list(f["SWAP"])
+            
+        self._elapsed_time = list(f["ElapsedTime"])
+        
+        f.close()
+        del f
+    
+    def reset(self):
+        
+        self._elapsed_time = []
+        self._used_ram = []
+        self._swapped_ram = []
 
 #%%
 
@@ -399,10 +624,10 @@ def check_midflux(params):
         if len(index) == 0:
             print("No coincidences where found at the midflux database!")
         elif len(index) == 1:
-            print(f"You could use midflux data from '{database['path'][index[0]]}'")
+            print(f"You could use midflux data from '{database['path'][index[-1]]}'")
         else:
             print("More than one coincidence was found at the midflux database!")
-            print(f"You could use midflux data from '{database['path'][index[0]]}'")
+            print(f"You could use midflux data from '{database['path'][index[-1]]}'")
             
         try:
             flux_path_list = [os.path.join(home, "FluxData", database['flux_path'][i]) for i in index]
