@@ -455,16 +455,21 @@ def camel(string):
 
 #%%
 
-def round_to_multiple(numerator, denominator, round_up=False):
+def round_to_multiple(numerator, denominator, round_up=False, round_down=False):
     
     if round_up:
         result = np.ceil(numerator / denominator) * denominator
-    else:
+    elif round_down:
         result = np.floor(numerator / denominator) * denominator
+    else:
+        result = np.round(numerator / denominator) * denominator
 
     sign = np.sign(numerator)
     if sign == -1: result = min(result, -denominator)
     else: result = max(result, denominator)
+    
+    decimals = int(abs(np.floor(np.log10( abs(denominator - int(denominator)) ))))
+    result = np.round(result, decimals)
     
     return result
 

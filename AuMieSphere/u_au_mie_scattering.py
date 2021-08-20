@@ -265,10 +265,10 @@ def main(from_um_factor, resolution, courant,
     
     ### ROUND UP ACCORDING TO GRID DISCRETIZATION
     
-    pml_width = vu.round_to_multiple(pml_width, 1/resolution, round_up=False)
-    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution, round_up=False)*2
+    pml_width = vu.round_to_multiple(pml_width, 1/resolution)
+    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution)*2
     empty_width = cell_width/2 - r - pml_width
-    overlap = vu.round_to_multiple(overlap - r, 1/resolution, round_up=False) + r
+    overlap = vu.round_to_multiple(overlap - r, 1/resolution) + r
     source_center = -0.5*cell_width + pml_width
     flux_box_size = vu.round_to_multiple(flux_box_size/2, 1/resolution, round_up=True)*2
     

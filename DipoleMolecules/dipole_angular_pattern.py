@@ -247,12 +247,12 @@ def main(from_um_factor, resolution, courant,
     
     ### ROUND UP ACCORDING TO GRID DISCRETIZATION
     
-    pml_width = vu.round_to_multiple(pml_width, 1/resolution, round_up=False)
-    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution, round_up=False)*2
-    empty_width = cell_width/2 - pml_width
-    displacement = vu.round_to_multiple(displacement, 1/resolution, round_up=False)
-    flux_box_size = vu.round_to_multiple(flux_box_size/2, 1/resolution, round_up=False)*2
-    surface_box_size = vu.round_to_multiple(surface_box_size/2, 1/resolution, round_up=False)*2
+    pml_width = vu.round_to_multiple(pml_width, 1/resolution)
+    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution)*2
+    empty_width = vu.round_to_multiple(cell_width/2 - pml_width, 1/resolution)
+    displacement = vu.round_to_multiple(displacement, 1/resolution)
+    flux_box_size = vu.round_to_multiple(flux_box_size/2, 1/resolution)*2
+    surface_box_size = vu.round_to_multiple(surface_box_size/2, 1/resolution, round_down=True)*2
     
     until_after_sources = vu.round_to_multiple(until_after_sources, courant/resolution, round_up=True)
         
