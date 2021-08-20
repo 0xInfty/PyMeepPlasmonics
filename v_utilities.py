@@ -37,6 +37,7 @@ except:
           "Don't worry! You can still use all other features of this module.")
 import numpy as np
 from re import findall
+import warnings
 
 #%%
 
@@ -468,8 +469,14 @@ def round_to_multiple(numerator, denominator, round_up=False, round_down=False):
     if sign == -1: result = min(result, -denominator)
     else: result = max(result, denominator)
     
-    decimals = int(abs(np.floor(np.log10( abs(denominator - int(denominator)) ))))
-    result = np.round(result, decimals)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            decimals = int(abs(np.floor(np.log10( abs(denominator - int(denominator)) ))))
+            result = np.round(result, decimals)
+        except:
+            decimals = 0
+            result = int(result)
     
     return result
 

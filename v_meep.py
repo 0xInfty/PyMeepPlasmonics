@@ -525,6 +525,9 @@ class ResourcesMonitor:
 def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
                  near2far_box, params, path):
     
+    comm = MPI.COMM_WORLD
+    mpi_rank = comm.Get_rank()
+       
     n_processes = mp.count_processors()
     parallel = n_processes > 1
     parallel_assign = parallel_manager(n_processes, parallel)[0]
@@ -533,12 +536,16 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2,
     
     dir_file = os.path.join(home, "FluxData/FluxDataDirectory.txt")
     dir_backup = os.path.join(home, f"FluxData/FluxDataDir{sysname}Backup.txt")
-    new_flux_path = vs.datetime_dir(os.path.join(home, "FluxData/MidFlux"), 
-                                    strftime="%Y%m%d%H%M%S")
-    if parallel_assign(0):
+                
+    if mpi_rank == 0:
+        new_flux_path = vs.datetime_dir(os.path.join(home, "FluxData/MidFlux"), 
+                                                strftime="%Y%m%d%H%M%S")
+        broadcasted_data = {'path' : new_flux_path}
         os.makedirs(new_flux_path)
     else:
-        sleep(.2)
+        broadcasted_data = None
+    broadcasted_data = comm.bcast(broadcasted_data, root=0)
+    new_flux_path = broadcasted_data["path"]
 
     filename_prefix = sim.filename_prefix
     sim.filename_prefix = "MidFlux"
