@@ -425,11 +425,13 @@ def main(from_um_factor, resolution, courant,
             flux_path = vm.check_midflux(params)[-1]
             if load_resources:
                 if os.path.isfile( os.path.join(flux_path, "Resources.h5") ):
-                    pm.log("Found resources")
                     flux_needed = False
+                    pm.log("Found resources")
                 else:
-                    pm.log("Didn't find resources")
                     flux_needed = True
+                    pm.log("Didn't find resources")
+            else:
+                flux_needed  = False
         except:
             flux_needed = True
     else:
