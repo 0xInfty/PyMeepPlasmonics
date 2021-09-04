@@ -346,11 +346,11 @@ class SimpleNanoparticle:
             self._structure =  mp.Cylinder(radius=self.r, height=self.h,
                                axis=orientation)
     
-    def get_size(self, from_um_factor):
+    def get_size(self, from_um_factor, **kwargs):
         
         return self.size / (1e3 * from_um_factor) # Meep units
     
-    def get_geometry(self, cell, from_um_factor):
+    def get_geometry(self, from_um_factor, **kwargs):
                 
         geometry = deepcopy(self._structure)
         if self.r is not None and self.h is None:
@@ -385,7 +385,7 @@ class SimpleNanoparticle:
         print(orientation)
         print("with x normal to possible sustrate and zx incidence plane")
     
-    def get_params(self, from_um_factor=None):
+    def get_params(self):
                 
         params = {}
         for key in nanoparticle_params:
@@ -416,11 +416,11 @@ class NoNanoparticle:
         
         return
             
-    def get_size(self, from_um_factor):
+    def get_size(self, **kwargs):
         
         return
     
-    def get_geometry(self, from_um_factor):
+    def get_geometry(self, **kwargs):
                 
         return # Meep units
     
@@ -428,7 +428,7 @@ class NoNanoparticle:
         
         print("No nanoparticle")
     
-    def get_params(self, from_um_factor=None):
+    def get_params(self):
                 
         params = {}
         for key in nanoparticle_params:
@@ -577,14 +577,16 @@ class Surroundings:
         else:
             raise ValueError("Hey! Must be either 1 or -1.")
         
-    def get_medium(self):
+    def get_medium(self, **kwargs):
         
         return mp.Medium(index=self.submerged_index)
         
-    def get_center(self, cell, from_um_factor):
+    def get_center(self, from_um_factor, cell, **kwargs):
         
-        cell_size = cell.get_size(from_um_factor) # Meep Units
-        nanoparticle_size = self._nanoparticle.get_size(from_um_factor) # Meep Units
+        cell_size = cell.get_size(from_um_factor=from_um_factor, 
+                                  cell=cell, **kwargs) # Meep Units
+        nanoparticle_size = self._nanoparticle.get_size(
+            from_um_factor=from_um_factor, cell=cell, **kwargs) # Meep Units
         overlap = self.overlap / (1e3 * from_um_factor) # Meep Units
         
         if self.normal == mp.X:
@@ -599,10 +601,12 @@ class Surroundings:
             
         return surface_center # Meep Units
         
-    def get_size(self, cell, from_um_factor):
+    def get_size(self, from_um_factor, cell, **kwargs):
         
-        cell_size = cell.get_cell_size() # Meep Units
-        nanoparticle_size = self._nanoparticle.get_size(from_um_factor) # Meep Units
+        cell_size = cell.get_cell_size(from_um_factor=from_um_factor, 
+                                       cell=cell, **kwargs) # Meep Units
+        nanoparticle_size = self._nanoparticle.get_size(
+            from_um_factor=from_um_factor, cell=cell, **kwargs) # Meep Units
         overlap = self.overlap / (1e3 * from_um_factor) # Meep Units
         
         if self.normal == mp.X:
@@ -617,12 +621,14 @@ class Surroundings:
             
         return surface_size # Meep Units
     
-    def get_geometry(self, cell, from_um_factor):
+    def get_geometry(self, from_um_factor, cell, **kwargs):
         
         if self.surface_index != self.submerged_index:
         
-            surface_center = self.get_center(cell, from_um_factor) # Meep Units
-            surface_size = self.get_size(cell, from_um_factor) # Meep Units
+            surface_center = self.get_center(from_um_factor=from_um_factor, 
+                                             cell=cell, **kwargs) # Meep Units
+            surface_size = self.get_size(from_um_factor=from_um_factor, 
+                                       cell=cell, **kwargs) # Meep Units
             
             return mp.Block(material=mp.Medium(index=self.surface_index),
                             center=surface_center,
@@ -644,7 +650,7 @@ class Surroundings:
             print(f"Overlap {self.overlap} nm <=> "+
                   f"Displacement {self.displacement} nm")
         
-    def get_params(self, from_um_factor=None):
+    def get_params(self):
                 
         params = {}
         for key in surroundings_params:
@@ -666,8 +672,8 @@ class PlanePulseSource:
     """
     
     def __init__(self,
-                 wlen_min=None,
-                 wlen_max=None,
+                 wlen_min=450,
+                 wlen_max=600,
                  wlen_center=None,
                  wlen_width=None,
                  polarization=mp.Ez,
@@ -840,18 +846,21 @@ class PlanePulseSource:
     def cutoff(self, value):
         self._cutoff = value    
     
-    def get_wavelength(self, from_um_factor):
+    def get_wlen_range(self, from_um_factor, **kwargs):
         
         return self.wlen_range / (1e3 * from_um_factor) # Meep Units, from lowest to highest
     
-    def get_frequency(self, from_um_factor):
+    def get_freq_range(self, from_um_factor, **kwargs):
         
-        return  1 / self.get_wavelength(from_um_factor) # Meep Units, from highest to lowest
+        return  1 / self.get_wlen_range(from_um_factor=from_um_factor,
+                                        **kwargs) # Meep Units, from highest to lowest
         
-    def get_center(self, cell, from_um_factor):
+    def get_center(self, from_um_factor, cell, **kwargs):
         
-        cell_size = cell.get_cell_size() # Meep Units
-        pml_width = cell.get_pml_width() # Meep Units
+        cell_size = cell.get_cell_size(from_um_factor=from_um_factor, 
+                                       cell=cell, **kwargs) # Meep Units
+        pml_width = cell.get_pml_width(from_um_factor=from_um_factor, 
+                                       cell=cell, **kwargs) # Meep Units
         
         if self.normal == mp.X:
             center = self.side * (0.5 * cell_size.x - pml_width) * mp.Vector3(x=1)
@@ -862,9 +871,10 @@ class PlanePulseSource:
             
         return center # Meep Units
         
-    def get_size(self, cell, from_um_factor):
+    def get_size(self, from_um_factor, cell, **kwargs):
         
-        cell_size = cell.get_cell_size(from_um_factor) # Meep Units
+        cell_size = cell.get_cell_size(from_um_factor=from_um_factor, 
+                                       cell=cell, **kwargs) # Meep Units
         
         if self.normal == mp.X:
             size = cell_size * mp.Vector3(0,1,1)
@@ -875,9 +885,10 @@ class PlanePulseSource:
             
         return size # Meep Units
     
-    def get_geometry(self, cell, from_um_factor):
+    def get_geometry(self, from_um_factor, cell, **kwargs):
             
-        freq_range = self.get_frequency(from_um_factor) # Meep Units
+        freq_range = self.get_freq_range(from_um_factor=from_um_factor, 
+                                         cell=cell, **kwargs) # Meep Units
         freq_center = np.mean(freq_range) # Meep Units
         freq_width = max(freq_range) - min(freq_range) # Meep Units
         
@@ -887,8 +898,10 @@ class PlanePulseSource:
                                             cutoff=self.cutoff)
         
         return mp.Source(gaussian_source,
-                         center=self.get_center(cell, from_um_factor),
-                         size=self.get_size(cell, from_um_factor),
+                         center=self.get_center(from_um_factor=from_um_factor, 
+                                                cell=cell, **kwargs),
+                         size=self.get_size(from_um_factor=from_um_factor, 
+                                            cell=cell, **kwargs),
                          component=self.polarization)
     
     def get_info(self):
@@ -903,7 +916,7 @@ class PlanePulseSource:
               f"situated on {position} side of the axis")
         print(f"Polarization: {vm.recognize_component(self.polarization)}")
     
-    def get_params(self, from_um_factor=None):
+    def get_params(self):
                 
         params = {}
         for key in source_params:
@@ -925,23 +938,23 @@ class NoSource:
     PlanePulseSource
     """
     
-    def get_wavelength(self, from_um_factor):
+    def get_wlen_range(self, **kwargs):
         
         return
     
-    def get_frequency(self, from_um_factor):
+    def get_freq_range(self, **kwargs):
         
         return
         
-    def get_center(self, cell, from_um_factor):
+    def get_center(self, **kwargs):
         
         return
         
-    def get_size(self, cell, from_um_factor):
+    def get_size(self, **kwargs):
         
         return
     
-    def get_source(self, cell, from_um_factor):
+    def get_geometry(self, **kwargs):
         
         return
     
@@ -949,7 +962,7 @@ class NoSource:
         
         print("No source")
     
-    def get_params(self, from_um_factor=None):
+    def get_params(self):
                 
         params = {}
         for key in source_params:
@@ -1005,54 +1018,51 @@ class SingleParticleCell:
     def flux_padd_points(self, value):
         self._flux_padd_points = value
         
-    def get_pml_width(self, from_um_factor):
+    def get_pml_width(self, **kwargs):
         
-        wavelength = self._source.get_wavelength(from_um_factor)
-        try:
-            max_wavelength = max(wavelength) / (1e3 * from_um_factor) # Meep units
-        except:
-            max_wavelength = wavelength / (1e3 * from_um_factor) # Meep units
-        return self.pml_wlen_factor * max_wavelength # Meep units
+        wlen_range = self._source.get_wlen_range(cell=self, **kwargs) # Meep units
+        return self.pml_wlen_factor * max(wlen_range) # Meep units
     
-    def get_empty_width(self, from_um_factor):
+    def get_empty_width(self, **kwargs):
         
-        nanoparticle_size = self._nanoparticle.get_size(from_um_factor) # Meep units
+        nanoparticle_size = self._nanoparticle.get_size(cell=self, **kwargs) # Meep units
         return self.empty_r_factor * max(nanoparticle_size) # Meep units
 
-    def get_size(self, from_um_factor):
+    def get_size(self, **kwargs):
         
-        pml = self.get_pml_width(from_um_factor) * mp.Vector3(1,1,1) # Meep units
-        empty = self.get_empty_width(from_um_factor) * mp.Vector3(1,1,1) # Meep units
-        nanoparticle_size = self._nanoparticle.get_size(from_um_factor) # Meep units
+        pml = self.get_pml_width(cell=self, **kwargs) * mp.Vector3(1,1,1) # Meep units
+        empty = self.get_empty_width(cell=self, **kwargs) * mp.Vector3(1,1,1) # Meep units
+        nanoparticle_size = self._nanoparticle.get_size(cell=self, **kwargs) # Meep units
         return 2 * (pml + empty + nanoparticle_size) # Meep units
     
-    def get_boundary_layers(self, from_um_factor):
+    def get_boundary_layers(self, **kwargs):
         
-        return [mp.PML(thickness=self.get_pml_width(from_um_factor))]
+        return [mp.PML(thickness=self.get_pml_width(cell=self, **kwargs))]
         
-    def get_geometry(self, from_um_factor, with_nanoparticle=True):
+    def get_geometry(self, with_nanoparticle=True, **kwargs):
         
-        nanoparticle_geometry = self._nanoparticle.get_geometry(from_um_factor)
-        surface_geometry = self._surroundings.get_geometry(self, from_um_factor)
+        nanoparticle_geometry = self._nanoparticle.get_geometry(cell=self, **kwargs)
+        surface_geometry = self._surroundings.get_geometry(cell=self, **kwargs)
                 
         if with_nanoparticle:
             return [surface_geometry, nanoparticle_geometry]
         else:
             return [nanoparticle_geometry]
     
-    def get_sources(self, from_um_factor):
+    def get_sources(self, **kwargs):
         
-        source = self._source.get_geometry(self, from_um_factor)
+        source = self._source.get_geometry(cell=self, **kwargs)
         return [source]
     
-    def set_sim(self, from_um_factor, with_nanoparticle=True):
+    def set_sim(self, with_nanoparticle=True, **kwargs):
         
         sim_configuration = dict(
-            geometry = self.get_geometry(from_um_factor, with_nanoparticle),
-            sources = self.get_sources(from_um_factor),
-            cell_size = self.get_size(from_um_factor),
-            default_material = self._source.get_medium(),
-            boundary_layers = self.get_boundary_layers(from_um_factor))
+            geometry = self.get_geometry(with_nanoparticle=with_nanoparticle, 
+                                         **kwargs),
+            sources = self.get_sources(**kwargs),
+            cell_size = self.get_size(**kwargs),
+            default_material = self._source.get_medium(**kwargs),
+            boundary_layers = self.get_boundary_layers(**kwargs))
         
         return sim_configuration
         
@@ -1071,7 +1081,7 @@ class SingleParticleCell:
         
         self._source.get_info()
     
-    def get_params(self, from_um_factor=None):
+    def get_params(self):
                 
         params = {}
         for key in source_params:
@@ -1079,11 +1089,5 @@ class SingleParticleCell:
                 params[key] = eval(f"self.{key}")
             except:
                 params[key] = None
-        
-        if from_um_factor is not None:
-            params["pml_width"] = self.get_pml_width(from_um_factor)
-            params["empty_width"] = self.get_empty_width(from_um_factor)
-            params["cell_size"] = np.array(self.get_size(from_um_factor))
-            params["source_position"] = self._source.get_center(self, from_um_factor)
-        
+                
         return params
