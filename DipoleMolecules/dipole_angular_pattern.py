@@ -219,18 +219,12 @@ def main(from_um_factor, resolution, courant,
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     
     # Saving directories
-    if series is None:
-        series = "Test"
-    if folder is None:
-        folder = "Test"
-    trs = vu.BilingualManager(english=english)
+    sa = vm.SavingAssistant(series, folder)
+    home = sa.home
+    sysname = sa.sysname
+    path = sa.path
     
-    home = vs.get_home()
-    sysname = vs.get_sys_name()
-    path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and pm.assign(0):
-        os.makedirs(path)
-    file = lambda f : os.path.join(path, f)
+    trs = vu.BilingualManager(english=english)
     
     params_list = ["from_um_factor", "resolution_wlen", "resolution", "courant",
                    "submerged_index", "displacement", "surface_index",
@@ -430,7 +424,7 @@ def main(from_um_factor, resolution, courant,
                                 f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
                      (5, 5), xycoords='figure points')
         
-        plt.savefig(file("SimBox.png"))
+        plt.savefig(sa.file("SimBox.png"))
         
         del pml_inn_square, pml_out_square, flux_square
         if submerged_index!=1: del surrounding_square
@@ -557,7 +551,7 @@ def main(from_um_factor, resolution, courant,
     pm.log("Saved near2far flux data")
     
     if pm.assign(1):
-            f = h5.File(file("Base-Near2Far.h5"), "r+")
+            f = h5.File(sa.file("Base-Near2Far.h5"), "r+")
             for key, par in params.items():
                 f[ list(f.keys())[0] ].attrs[key] = par
             f.close()
@@ -566,7 +560,7 @@ def main(from_um_factor, resolution, courant,
     pm.log("Added params to near2far file.")
         
     if pm.assign(0):
-            f = h5.File(file("Base-Results.h5"), "w")
+            f = h5.File(sa.file("Base-Results.h5"), "w")
             f["Px"] = poynting_x
             f["Py"] = poynting_y
             f["Pz"] = poynting_z
@@ -584,7 +578,7 @@ def main(from_um_factor, resolution, courant,
     # if not split_chunks_evenly:
     #     vm.save_chunks(sim, params, path)
     
-    rm.save(file("Resources.h5"), params)
+    rm.save(sa.file("Resources.h5"), params)
     
     pm.log("Saved Resources")
     
@@ -737,7 +731,7 @@ def main(from_um_factor, resolution, courant,
                                     f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
                           (5, 5), xycoords='figure points')
             
-            plt.savefig(file("FurtherSimBox.png"))
+            plt.savefig(sa.file("FurtherSimBox.png"))
             
             del pml_inn_square, pml_out_square, flux_square
             del surrounding_square, surrounding_square_0, surrounding_square_2
@@ -829,7 +823,7 @@ def main(from_um_factor, resolution, courant,
         pm.log("Saved near2far flux data")
         
         if pm.assign(1):
-                f = h5.File(file("Further-Near2Far.h5"), "r+")
+                f = h5.File(sa.file("Further-Near2Far.h5"), "r+")
                 for key, par in params.items():
                     f[ list(f.keys())[0] ].attrs[key] = par
                 f.close()
@@ -838,7 +832,7 @@ def main(from_um_factor, resolution, courant,
         os.chdir(syshome)
     
         if pm.assign(0):
-                f = h5.File(file("Further-Results.h5"), "w")
+                f = h5.File(sa.file("Further-Results.h5"), "w")
                 f["Px"] = poynting_x
                 f["Py"] = poynting_y
                 f["Pz"] = poynting_z
@@ -854,7 +848,7 @@ def main(from_um_factor, resolution, courant,
         # if not split_chunks_evenly:
         #     vm.save_chunks(sim, params, path)
         
-        rm.save(file("Resources.h5"), params)
+        rm.save(sa.file("Resources.h5"), params)
         
         pm.log("Saved RAM")
         
@@ -865,10 +859,10 @@ def main(from_um_factor, resolution, courant,
 
     if pm.assign(1):
         if submerged_index != surface_index:
-            os.rename(file("Further-Results.h5"), file("Results.h5"))
-            os.remove(file("Base-Results.h5"))
+            os.rename(sa.file("Further-Results.h5"), sa.file("Results.h5"))
+            os.remove(sa.file("Base-Results.h5"))
         else:
-            os.rename(file("Base-Results.h5"), file("Results.h5"))
+            os.rename(sa.file("Base-Results.h5"), sa.file("Results.h5"))
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
@@ -892,7 +886,7 @@ def main(from_um_factor, resolution, courant,
         ax.set_ylabel(r"$P_y$")
         ax.set_zlabel(r"$P_z$")
         
-        plt.savefig(file("AngularPattern.png"))
+        plt.savefig(sa.file("AngularPattern.png"))
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
@@ -917,7 +911,7 @@ def main(from_um_factor, resolution, courant,
         ax_plain.set_ylabel(r"$P_y$")
         ax_plain.set_aspect("equal")
         
-        plt.savefig(file("AngularPolar.png"))
+        plt.savefig(sa.file("AngularPolar.png"))
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
@@ -941,7 +935,7 @@ def main(from_um_factor, resolution, courant,
         ax_plain.set_xlabel(r"$P_x$")
         ax_plain.set_ylabel(r"$P_z$")
         
-        plt.savefig(file("AngularAzimuthal.png"))
+        plt.savefig(sa.file("AngularAzimuthal.png"))
         
     if pm.assign(0):
         
@@ -962,7 +956,7 @@ def main(from_um_factor, resolution, courant,
         ax_plain.set_xlabel(r"$P_\rho$")
         ax_plain.set_ylabel(r"$P_z$")
         
-        plt.savefig(file("AngularAzimuthalAbs.png"))
+        plt.savefig(sa.file("AngularAzimuthalAbs.png"))
         
 #%%
 

@@ -238,19 +238,13 @@ def main(from_um_factor, resolution, courant,
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     
     # Saving directories
-    if series is None:
-        series = "Test"
-    if folder is None:
-        folder = "Test"
+    sa = vm.SavingAssistant(series, folder)
+    home = sa.home
+    sysname = sa.sysname
+    path = sa.path
+    
     trs = vu.BilingualManager(english=english)
-        
-    home = vs.get_home()
-    sysname = vs.get_sys_name()
-    path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and pm.assign(0):
-        os.makedirs(path)
-    file = lambda f : os.path.join(path, f)
-        
+    
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", "reference", "submerged_index",
                    "overlap", "surface_index",
@@ -398,7 +392,7 @@ def main(from_um_factor, resolution, courant,
                      (5, 5),
                      xycoords='figure points')
         
-        plt.savefig(file("SimBox.png"))
+        plt.savefig(sa.file("SimBox.png"))
         
         del pml_inn_square, pml_out_square, flux_square, circle, circle_color
         if submerged_index!=1: del surrounding_square
@@ -600,14 +594,14 @@ def main(from_um_factor, resolution, courant,
                       "Flujo Z20 [u.a]"]
         
         if pm.assign(0):
-            vs.savetxt(file("MidFlux.txt"), data_mid, 
+            vs.savetxt(sa.file("MidFlux.txt"), data_mid, 
                        header=header_mid, footer=params)
 
         if not split_chunks_evenly:
             vm.save_chunks(sim, params, path)
             
         rm.save(os.path.join(flux_path, "Resources.h5"), params)
-        rm.save(file("Resources.h5"), params)
+        rm.save(sa.file("Resources.h5"), params)
 
         #% PLOT FLUX FOURIER MID DATA
         
@@ -630,7 +624,7 @@ def main(from_um_factor, resolution, courant,
             ax[-1,0].set_xlabel("Wavelength [nm]")
             ax[-1,1].set_xlabel("Wavelength [nm]")
             
-            plt.savefig(file("MidFlux.png"))
+            plt.savefig(sa.file("MidFlux.png"))
             del fig, ax, ylims, a, h
             
         sim.reset_meep()
@@ -887,9 +881,9 @@ def main(from_um_factor, resolution, courant,
                     "Sección eficaz de scattering [u.a.]"]
     
     if pm.assign(0):
-        vs.savetxt(file("Results.txt"), data, 
+        vs.savetxt(sa.file("Results.txt"), data, 
                    header=header, footer=params)
-        vs.savetxt(file("BaseResults.txt"), data_base, 
+        vs.savetxt(sa.file("BaseResults.txt"), data_base, 
                    header=header_base, footer=params)
     del data
         
@@ -906,14 +900,14 @@ def main(from_um_factor, resolution, courant,
                          poynting_r.reshape(poynting_r.size)]
         
         if pm.assign(1):
-            vs.savetxt(file("Near2FarResults.txt"), data_near2far, 
+            vs.savetxt(sa.file("Near2FarResults.txt"), data_near2far, 
                        header=header_near2far, footer=params)
         del header_near2far, data_near2far
         
     if not split_chunks_evenly:
         vm.save_chunks(sim, params, path)
         
-    rm.save(file("Resources.h5"), params)
+    rm.save(sa.file("Resources.h5"), params)
     
     #%% PLOT ALL TOGETHER
     
@@ -930,7 +924,7 @@ def main(from_um_factor, resolution, courant,
                               'Eficiencia de scattering [σ/πr$^{2}$]'))
         plt.legend()
         plt.tight_layout()
-        plt.savefig(file("Comparison.png"))
+        plt.savefig(sa.file("Comparison.png"))
     
     #%% PLOT SEPARATE
     
@@ -945,7 +939,7 @@ def main(from_um_factor, resolution, courant,
                               'Eficiencia de scattering [σ/πr$^{2}$]'))
         plt.legend()
         plt.tight_layout()
-        plt.savefig(file("Meep.png"))
+        plt.savefig(sa.file("Meep.png"))
         
     if pm.assign(0) and surface_index==submerged_index and make_plots:
         plt.figure()
@@ -959,7 +953,7 @@ def main(from_um_factor, resolution, courant,
                               'Eficiencia de scattering [σ/πr$^{2}$]'))
         plt.legend()
         plt.tight_layout()
-        plt.savefig(file("Theory.png"))
+        plt.savefig(sa.file("Theory.png"))
     
     #%% PLOT ONE ABOVE THE OTHER
     
@@ -982,7 +976,7 @@ def main(from_um_factor, resolution, courant,
                                       'Eficiencia de scattering [σ/πr$^{2}$]'))
         axes[1].legend()
         
-        plt.savefig(file("SeparatedComparison.png"))
+        plt.savefig(sa.file("SeparatedComparison.png"))
             
     #%% PLOT FLUX FOURIER FINAL DATA
     
@@ -1009,7 +1003,7 @@ def main(from_um_factor, resolution, courant,
         ax[-1,0].set_xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
         ax[-1,1].set_xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
         
-        plt.savefig(file("FinalFlux.png"))
+        plt.savefig(sa.file("FinalFlux.png"))
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
@@ -1034,7 +1028,7 @@ def main(from_um_factor, resolution, courant,
         ax.set_ylabel(r"$P_y$")
         ax.set_zlabel(r"$P_z$")
         
-        plt.savefig(file("AngularPattern.png"))
+        plt.savefig(sa.file("AngularPattern.png"))
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
@@ -1060,7 +1054,7 @@ def main(from_um_factor, resolution, courant,
         ax_plain.set_ylabel(r"$P_y$")
         ax_plain.set_aspect("equal")
         
-        plt.savefig(file("AngularPolar.png"))
+        plt.savefig(sa.file("AngularPolar.png"))
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
@@ -1086,7 +1080,7 @@ def main(from_um_factor, resolution, courant,
         ax_plain.set_xlabel(r"$P_x$")
         ax_plain.set_ylabel(r"$P_z$")
         
-        plt.savefig(file("AngularAzimuthal.png"))
+        plt.savefig(sa.file("AngularAzimuthal.png"))
         
     if near2far and pm.assign(0) and separate_simulations_needed and make_plots:
         
@@ -1108,7 +1102,7 @@ def main(from_um_factor, resolution, courant,
         ax_plain.set_xlabel(r"$P_\rho$")
         ax_plain.set_ylabel(r"$P_z$")
         
-        plt.savefig(file("AngularAzimuthalAbs.png"))
+        plt.savefig(sa.file("AngularAzimuthalAbs.png"))
         
 #%%
 

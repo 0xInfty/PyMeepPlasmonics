@@ -125,8 +125,8 @@ def main(from_um_factor, resolution, courant,
         time_period_factor = 10    
         
         # Files configuration
-        series = None
-        folder = None
+        series = "TestFieldSerial"
+        folder = "Test/TestNewInstall"
         
         # Run configuration
         parallel = False
@@ -196,10 +196,12 @@ def main(from_um_factor, resolution, courant,
     period_plane = period / n_period_plane
     
     # Saving directories
-    if series is None:
-        series = f"TestAuSphereField{2*r*from_um_factor*1e3:.0f}WLen{wlen*from_um_factor*1e3:.0f}"
-    if folder is None:
-        folder = "Test/Field"
+    sa = vm.SavingAssistant(series, folder)
+    home = sa.home
+    sysname = sa.sysname
+    path = sa.path
+    
+    trs = vu.BilingualManager(english=english)
     
     params_list = ["from_um_factor", "resolution", "courant",
                    "material", "r", "paper", 
@@ -257,15 +259,6 @@ def main(from_um_factor, resolution, courant,
     # (its size parameter fills the entire cell in 2d)
     # The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
-    
-    home = vs.get_home()
-    sysname = vs.get_sys_name()
-    path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and pm.assign(0):
-        os.makedirs(path)
-    file = lambda f : os.path.join(path, f)
-    
-    trs = vu.BilingualManager(english=english)
     
     #%% PLOT CELL
 
@@ -347,7 +340,7 @@ def main(from_um_factor, resolution, courant,
                                 f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
                      (5, 5), xycoords='figure points')
         
-        plt.savefig(file("SimBox.png"))
+        plt.savefig(sa.file("SimBox.png"))
         
         del pml_inn_square, pml_out_square, circle, circle_color
         if submerged_index!=1: del surrounding_square
@@ -454,9 +447,9 @@ def main(from_um_factor, resolution, courant,
         
         files = ["Field-Lines", "Field-Planes"]
         periods = [period_line, period_plane]
-        for fil, dims, per in zip(files, periods, dimensions):
+        for fil, per, dims in zip(files, periods, dimensions):
             
-            f = h5.File(file(fil + ".h5"), "r+")
+            f = h5.File(sa.file(fil + ".h5"), "r+")
             keys = [vu.camel(k) for k in f.keys()]
             for oldk, newk in zip(list(f.keys()), keys):
                 try:
@@ -483,13 +476,13 @@ def main(from_um_factor, resolution, courant,
             hfiles = ["Field-HLines", "Field-HPlanes"]
             for hfil, fil in zip(hfiles, files):
             
-                fh = h5.File(file(hfil + ".h5"), "r+")
+                fh = h5.File(sa.file(hfil + ".h5"), "r+")
                 keys = [vu.camel(k) for k in fh.keys()]
                 for oldk, newk in zip(list(fh.keys()), keys):
                     fh[newk] = fh[oldk]
                     del fh[oldk]
                     
-                f = h5.File(file(fil + ".h5"), "r+")
+                f = h5.File(sa.file(fil + ".h5"), "r+")
                 for k in fh.keys():
                     array = np.array(fh[k])
                     f[k] = array
@@ -497,13 +490,13 @@ def main(from_um_factor, resolution, courant,
                 
                 f.close()
                 fh.close()
-                os.remove(file(hfil + ".h5"))
+                os.remove(sa.file(hfil + ".h5"))
             
             del hfiles, f, fh, keys, oldk, newk, k
           
         del files
             
-    rm.save(file("Resources.h5"), params)
+    rm.save(sa.file("Resources.h5"), params)
     
     mp.all_wait()
     
