@@ -40,16 +40,16 @@ def plots_monoch_field(series, folder, hfield=False,
         
     #%% SETUP
     
-    n_processes = mp.count_processors()
-    parallel = n_processes > 1
-    parallel_assign = vm.parallel_manager(n_processes, parallel)
+    # Computation
+    pm = vm.ParallelManager()
+    n_processes, n_cores, n_nodes = pm.specs
+    parallel = pm.parallel
     
-    home = vs.get_home()
-    # sysname = vs.get_sys_name()
-    path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and parallel_assign(0):
-        os.makedirs(path)
-    file = lambda f : os.path.join(path, f)
+    # Saving directories
+    sa = vm.SavingAssistant(series, folder)
+    home = sa.home
+    sysname = sa.sysname
+    path = sa.path
     
     trs = vu.BilingualManager(english=english)
     
@@ -60,12 +60,12 @@ def plots_monoch_field(series, folder, hfield=False,
     
     #%% GET READY TO LOAD DATA
         
-    f = vs.parallel_hdf_file(file("Field-Lines.h5"), "r+")
+    f = pm.hdf_file(sa.file("Field-Lines.h5"), "r+")
     results_line = f["Ez"]
     t_line = np.array(f["T"])
     x_line = np.array(f["X"])
     
-    g = vs.parallel_hdf_file(file("Field-Planes.h5"), "r+")
+    g = pm.hdf_file(sa.file("Field-Planes.h5"), "r+")
     results_plane = g["Ez"]
     t_plane = np.array(g["T"])
     y_plane = np.array(g["Y"])
@@ -163,7 +163,7 @@ def plots_monoch_field(series, folder, hfield=False,
     
     #%% SHOW SOURCE AND FOURIER
     
-    if make_plots and parallel_assign(0): 
+    if make_plots and pm.assign(0): 
 
         plt.figure()        
         plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
@@ -174,7 +174,7 @@ def plots_monoch_field(series, folder, hfield=False,
         plt.ylabel(trs.choose(r"Electric Field $E_z$ [a.u.]",
                               r"Campo eléctrico $E_z$ [u.a.]"))
         
-        plt.savefig(file("Source.png"))
+        plt.savefig(sa.file("Source.png"))
         
         fourier = np.abs(np.fft.rfft(source_results))
         fourier_freq = np.fft.rfftfreq(len(source_results), d=period_line)
@@ -194,15 +194,15 @@ def plots_monoch_field(series, folder, hfield=False,
                                 f"Máximo en {fourier_max_wlen:.2f} nm"),
                      (5, 5), xycoords='figure points')
         
-        plt.savefig(file("SourceFFT.png"))
+        plt.savefig(sa.file("SourceFFT.png"))
         
         plt.xlim([350, 850])
                 
-        plt.savefig(file("SourceFFTZoom.png"))
+        plt.savefig(sa.file("SourceFFTZoom.png"))
         
     #%% SHOW PROFILE AND RESONANCE
     
-    if make_plots and parallel_assign(0): 
+    if make_plots and pm.assign(0): 
 
         plt.figure()        
         plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
@@ -213,7 +213,7 @@ def plots_monoch_field(series, folder, hfield=False,
         plt.ylabel(trs.choose(r"Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
                               r"Integral del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
         
-        plt.savefig(file("Integral.png"))
+        plt.savefig(sa.file("Integral.png"))
         
         plt.figure()
         plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
@@ -224,7 +224,7 @@ def plots_monoch_field(series, folder, hfield=False,
         plt.ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$ [a.u.]",
                               r"Máximo del campo eléctrico $max[ E_z(z) ]$ [u.a.]"))
         
-        plt.savefig(file("Maximum.png"))
+        plt.savefig(sa.file("Maximum.png"))
         
         plt.figure()        
         plt.suptitle(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
@@ -243,7 +243,7 @@ def plots_monoch_field(series, folder, hfield=False,
                                   r"Integral normalizada del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
         plt.legend([l, l2], ["Source", "Resonance"])
         
-        plt.savefig(file("IntegralSource.png"))
+        plt.savefig(sa.file("IntegralSource.png"))
         
         plt.figure()        
         plt.suptitle(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
@@ -261,7 +261,7 @@ def plots_monoch_field(series, folder, hfield=False,
                                   r"Máximo del campo eléctrico $max[ E_z(z) ]$ [u.a.]"))
         plt.legend([l, l2], ["Source", "Resonance"])
         
-        plt.savefig(file("MaximumSource.png"))
+        plt.savefig(sa.file("MaximumSource.png"))
         
         def draw_pml_box():
             plt.hlines(-cell_width/2 + pml_width, 
@@ -297,11 +297,11 @@ def plots_monoch_field(series, folder, hfield=False,
         plt.xlabel(trs.choose("Distance Y [Mp.u.]", "Distancia Y [u.Mp.]"))
         plt.ylabel(trs.choose("Distance Z [Mp.u.]", "Distancia Z [u.Mp.]"))
         
-        plt.savefig(file("Resonance.png"))
+        plt.savefig(sa.file("Resonance.png"))
     
     #%% MAKE PLANE GIF
     
-    if make_gifs and parallel_assign(1):
+    if make_gifs and pm.assign(1):
         
         # What should be parameters
         nframes = min(maxnframes, results_plane.shape[-1])
@@ -360,7 +360,7 @@ def plots_monoch_field(series, folder, hfield=False,
             os.remove('temp_pic.png')
             print('Saved gif')
         
-        make_gif_plane(file("PlaneX=0"))
+        make_gif_plane(sa.file("PlaneX=0"))
         plt.close(fig)
         # del fig, ax, lims, nframes_step, nframes, call_series, label_function
     
@@ -368,7 +368,7 @@ def plots_monoch_field(series, folder, hfield=False,
         
     #%% MAKE PROFILE GIF
     
-    if make_gifs and parallel_assign(0):
+    if make_gifs and pm.assign(0):
         
         # What should be parameters
         nframes = min(maxnframes, zprofile_results.shape[-1])
@@ -416,13 +416,13 @@ def plots_monoch_field(series, folder, hfield=False,
             os.remove('temp_pic.png')
             print('Saved gif')
         
-        make_gif_line(file("AxisZ"))
+        make_gif_line(sa.file("AxisZ"))
         plt.close(fig)
         # del fig, ax, lims, nframes_step, nframes, call_series, label_function
         
     #%% MAKE LINES GIF
     
-    if make_gifs and parallel_assign(1):
+    if make_gifs and pm.assign(1):
         
         # What should be parameters
         nframes = min(maxnframes, results_line.shape[-1])
@@ -473,7 +473,7 @@ def plots_monoch_field(series, folder, hfield=False,
             os.remove('temp_pic.png')
             print('Saved gif')
         
-        make_gif_line(file("AxisX"))
+        make_gif_line(sa.file("AxisX"))
         plt.close(fig)
         # del fig, ax, lims, nframes_step, nframes, call_series, label_function
     
