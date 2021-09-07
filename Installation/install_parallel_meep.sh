@@ -14,27 +14,26 @@ sudo apt-get update
 
 # If building on Ubuntu 18.04LTS, replace libpng16-dev with libpng-dev,
 # and libpython3.5-dev with libpython3-dev.
-sudo apt-get -y install     \
-    build-essential         \
-    gfortran                \
-    libblas-dev             \
-    liblapack-dev           \
-    libgmp-dev              \
-    swig                    \
-    libgsl-dev              \
-    autoconf                \
-    pkg-config              \
-    libpng-dev              \  # libpng16-dev            \
-    git                     \
-    guile-3.0-dev           \  # guile-2.0-dev           \
-    libfftw3-dev            \
-    libhdf5-openmpi-dev     \
-    hdf5-tools              \
-    libpython3-dev          \  # libpython3.5-dev        \
-    python3-pip             \
-    cmake                   \
+sudo apt-get -y install build-essential
+sudo apt-get -y install gfortran
+sudo apt-get -y install libblas-dev
+sudo apt-get -y install liblapack-dev
+sudo apt-get -y install libgmp-dev
+sudo apt-get -y install swig
+sudo apt-get -y install libgsl-dev
+sudo apt-get -y install autoconf
+sudo apt-get -y install pkg-config
+sudo apt-get -y install libpng-dev  # libpng16-dev            \
+# sudo apt-get -y install git
+sudo apt-get -y install guile-3.0-dev # guile-2.0-dev           \
+sudo apt-get -y install libfftw3-dev
+sudo apt-get -y install libhdf5-openmpi-dev
+sudo apt-get -y install hdf5-tools
+sudo apt-get -y install libpython3-dev # libpython3.5-dev        \
+sudo apt-get -y install python3-pip
+sudo apt-get -y install cmake
 
-mkdir -p ~/install
+#mkdir -p ~/Documents/Thesis/ThesisInstall
 
 # cd ~/install
 # git clone https://github.com/NanoComp/harminv.git
@@ -42,25 +41,25 @@ mkdir -p ~/install
 # sh autogen.sh --enable-shared
 # make && sudo make install
 
-cd ~/install
+cd ~/Documents/Thesis/ThesisInstall
 git clone https://github.com/NanoComp/libctl.git
 cd libctl/
 sh autogen.sh --enable-shared
 make && sudo make install
 
-cd ~/install
+cd ~/Documents/Thesis/ThesisInstall
 git clone https://github.com/NanoComp/h5utils.git
 cd h5utils/
 sh autogen.sh CC=mpicc LDFLAGS="${MY_LDFLAGS}" CPPFLAGS="${MY_CPPFLAGS}"
 make && sudo make install
 
-# cd ~/install
+# cd ~/Documents/Thesis/ThesisInstall
 # git clone https://github.com/NanoComp/mpb.git
 # cd mpb/
 # sh autogen.sh --enable-shared CC=mpicc LDFLAGS="${MY_LDFLAGS}" CPPFLAGS="${MY_CPPFLAGS}" --with-hermitian-eps
 # make && sudo make install
 
-cd ~/install
+cd ~/Documents/Thesis/ThesisInstall
 git clone https://github.com/HomerReid/libGDSII.git
 cd libGDSII/
 sh autogen.sh
@@ -78,13 +77,14 @@ pip3 install --user scipy
 pip3 install --user matplotlib>3.0.0
 pip3 install --user ffmpeg
 
-cd ~/install
+cd ~/Documents/Thesis/ThesisInstall
 git clone git://github.com/stevengj/nlopt.git
 cd nlopt/
 cmake -DPYTHON_EXECUTABLE=/usr/bin/python3 && make && sudo make install
 
-cd ~/install
-git clone https://github.com/NanoComp/meep.git --branch "v1.20.0"
+cd ~/Documents/Thesis/ThesisInstall
+# git clone https://github.com/NanoComp/meep.git --branch "v1.20.0" # had already run this line
 cd meep/
+# Open autogen and change line to ./configure --enable-maintainer-mode "$@" --prefix=/usr/bin/pyvenv/pmp
 sh autogen.sh --enable-shared --with-mpi --with-openmp PYTHON=python3 LDFLAGS="${MY_LDFLAGS}" CPPFLAGS="${MY_CPPFLAGS}"
 make && sudo make install
