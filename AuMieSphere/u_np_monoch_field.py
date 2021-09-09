@@ -192,8 +192,8 @@ def main(from_um_factor, resolution, courant,
     
     # Time configuration
     until_time = time_period_factor * wlen # Should multiply and divide by submerged_index
-    period_line = period / n_period_line
-    period_plane = period / n_period_plane
+    period_line = wlen / n_period_line # If I use period instead of wlen, the discretization will be different
+    period_plane = wlen / n_period_plane
     
     # Saving directories
     sa = vm.SavingAssistant(series, folder)
