@@ -190,7 +190,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         T, X = np.meshgrid(
             t_line,
             x_line[x_line_index(-cell_width/2 + pml_width):x_line_index(cell_width/2 - pml_width)])
-        plt.contourf(T, X, xaxis_results, 100, interpolation='spline36', cmap='RdBu')
+        plt.contourf(T, X, xaxis_results, 100, cmap='RdBu')
         plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
         plt.ylabel(trs.choose("X Distance [Mp.u.]", "Distancia en X [u.Mp.]"))
         
@@ -198,7 +198,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         
         plt.figure()
         T, X = np.meshgrid(t_line, x_line)
-        plt.contourf(T, X, results_line, 100, interpolation='spline36', cmap='RdBu')
+        plt.contourf(T, X, results_line, 100, cmap='RdBu')
         xlims = plt.xlim()
         plt.hlines(-cell_width/2 + pml_width, *xlims, color="k", linestyle="dashed")
         plt.hlines(cell_width/2 - pml_width, *xlims, color="k", linestyle="dashed")

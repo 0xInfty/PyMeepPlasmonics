@@ -85,13 +85,13 @@ rm.measure_ram()
 @cli.option("--make-gifs", "-gifs", "make_gifs", 
             type=bool, default=False,
             help="Whether to make gifs while running or not.")
-def main(from_um_factor, resolution, courant,
+def main(from_um_factor, resolution, resolution_wlen, courant,
          submerged_index, surface_index,
          empty_wlen_factor, pml_wlen_factor, 
-         time_period_factor,
+         wlen, time_period_factor,
          series, folder,
          n_cores, n_nodes, split_chunks_evenly,
-         hfield, make_plots, make_gifs):
+         hfield, units, make_plots, make_gifs):
     
     #%% DEFAULT PARAMETERS
     
