@@ -34,9 +34,9 @@ english = False
 
 #%% 
 
-def plots_np_monoch_field(series, folder, hfield=False, 
-                          make_plots=True, make_gifs=False, 
-                          english=False, maxnframes=300):
+def plots_monoch_field(series, folder, units=False, hfield=False, 
+                       make_plots=True, make_gifs=False, 
+                       english=False, maxnframes=300):
         
     #%% SETUP
     

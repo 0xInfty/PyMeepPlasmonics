@@ -28,7 +28,7 @@ from v_materials import import_medium
 import v_meep as vm
 import v_save as vs
 import v_utilities as vu
-from np_monoch_field_plot import plots_monoch_field
+from monoch_field_plot import plots_monoch_field
 
 rm = vm.ResourcesMonitor()
 rm.measure_ram()
@@ -192,7 +192,7 @@ def main(from_um_factor, resolution, courant,
                    "until_time", "time_period_factor", 
                    "n_period_line", "n_period_plane", "period_line", "period_plane",
                    "parallel", "n_processes", "n_cores", "n_nodes",
-                   "split_chunks_evenly", "hfield",
+                   "split_chunks_evenly", "hfield", "units",
                    "script", "sysname", "path"]
     
     #%% GENERAL GEOMETRY SETUP
@@ -482,7 +482,7 @@ def main(from_um_factor, resolution, courant,
     
     if make_plots or make_gifs:
         
-        plots_monoch_field(series, folder, hfield, 
+        plots_monoch_field(series, folder, units, hfield, 
                            make_plots, make_gifs, trs.english)
     
     sim.reset_meep()
