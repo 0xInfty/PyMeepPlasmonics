@@ -11,7 +11,7 @@ import numpy as np
 import meep as mp
 import v_materials as vmt
 import v_meep as vm
-
+import v_utilities as vu
 
 #%%
 
@@ -984,56 +984,59 @@ class SingleParticleCell:
                  surroundings=Surroundings(),
                  source=NoSource(),
                  pml_wlen_factor=0.38,
-                 empty_r_factor=0.5,
-                 flux_padd_points=5):
+                 empty_r_factor=0.5):
         
         self._nanoparticle = nanoparticle
         self._surroundings = surroundings
         self._source = source
-        self._pml_wlen_factor = pml_wlen_factor
-        self._empty_r_factor = empty_r_factor
-        self._flux_padd_points = flux_padd_points
         
+        self.pml_wlen_factor = pml_wlen_factor
+        self.empty_r_factor = empty_r_factor
+            
     @property
-    def pml_wlen_factor(self):
-        return self._pml_wlen_factor
-    
-    @pml_wlen_factor.setter
-    def pml_wlen_factor(self, value):
-        self._pml_wlen_factor = value
+    def pml(self):
+        wlen_range = self._source.wlen_range
+        return self.pml_wlen_factor * max(wlen_range) * mp.Vector3(1,1,1)
     
     @property
-    def empty_r_factor(self):
-        return self._empty_r_factor
+    def empty(self):
+        nanoparticle_size = self._nanoparticle.size
+        return self.empty_r_factor * max(nanoparticle_size) * mp.Vector3(1,1,1)
     
-    @empty_r_factor.setter
-    def empty_r_factor(self, value):
-        self._empty_r_factor = value
-        
     @property
-    def flux_padd_points(self):
-        return self._flux_padd_points
+    def size(self):
+        pml = self.pml
+        empty = self.empty
+        nanoparticle_size = self._nanoparticle.size
+        return 2 * (pml + empty + nanoparticle_size)
     
-    @flux_padd_points.setter
-    def flux_padd_points(self, value):
-        self._flux_padd_points = value
-        
-    def get_pml_width(self, **kwargs):
-        
-        wlen_range = self._source.get_wlen_range(cell=self, **kwargs) # Meep units
-        return self.pml_wlen_factor * max(wlen_range) # Meep units
+    @pml.setter
+    @empty.setter
+    @size.setter
+    def negator(self, value):
+        raise AttributeError("This attribute cannot be set manually! Set other properties.")
     
-    def get_empty_width(self, **kwargs):
+    def get_pml_size(self, resolution, from_um_factor, **kwargs):
         
-        nanoparticle_size = self._nanoparticle.get_size(cell=self, **kwargs) # Meep units
-        return self.empty_r_factor * max(nanoparticle_size) # Meep units
-
-    def get_size(self, **kwargs):
-        
-        pml = self.get_pml_width(cell=self, **kwargs) * mp.Vector3(1,1,1) # Meep units
-        empty = self.get_empty_width(cell=self, **kwargs) * mp.Vector3(1,1,1) # Meep units
-        nanoparticle_size = self._nanoparticle.get_size(cell=self, **kwargs) # Meep units
-        return 2 * (pml + empty + nanoparticle_size) # Meep units
+        pml = self.pml / (1e3 * from_um_factor) # Meep Units
+        return mp.Vector3([vu.round_to_multiple(p, 1/resolution) for p in pml])
+    
+    def get_size(self, resolution, from_um_factor, **kwargs):
+        size = self.size / (1e3 * from_um_factor) # Meep Units
+        return mp.Vector3([vu.round_to_multiple(s/2, 1/resolution)*2 for s in size])
+    
+    def get_empty_size(self, resolution, from_um_factor, **kwargs):
+        pml_size = self.pml_size(resolution=resolution, **kwargs) # Meep Units
+        size = self.get_size(resolution=resolution, **kwargs) # Meep Units
+        nanoparticle_size = self._nanoparticle.get_size(resolution=resolution, 
+                                                        **kwargs) # Meep Units
+        return size/2 - pml_size - nanoparticle_size
+    # pml_width = vu.round_to_multiple(pml_width, 1/resolution)
+    # cell_width = vu.round_to_multiple(cell_width/2, 1/resolution)*2
+    # empty_width = cell_width/2 - r - pml_width
+    # overlap = vu.round_to_multiple(overlap - r, 1/resolution) + r
+    # source_center = -0.5*cell_width + pml_width
+    # flux_box_size = vu.round_to_multiple(flux_box_size/2, 1/resolution, round_up=True)*2
     
     def get_boundary_layers(self, **kwargs):
         
@@ -1091,3 +1094,46 @@ class SingleParticleCell:
                 params[key] = None
                 
         return params
+    
+
+#%%
+
+class SingleParticleGrid:
+    
+    def __init__(self,
+                 nanoparticle=NoNanoparticle(),
+                 surroundings=Surroundings(),
+                 source=NoSource(),
+                 from_um_factor=10e-3,
+                 resolution=2,
+                 courant=0.5,
+                 resolution_wlen=8,
+                 resolution_bandwidth=10,
+                 resolution_nanoparticle=5):
+        
+        self._nanoparticle = nanoparticle
+        self._surroundings = surroundings
+        self._source = source
+        
+        self.from_um_factor = from_um_factor
+        self.resolution = resolution
+        self.courant = courant
+        
+        self.resolution_wlen = resolution_wlen
+        self.resolution_bandwidth = resolution_bandwidth
+        self.resolution_nanoparticle = resolution_nanoparticle
+        
+    def check_resolution(self):
+    
+        resolution_wlen = (self.from_um_factor * 1e3) * resolution_wlen / min(wlen_range)
+        resolution_wlen = int( np.ceil(resolution_wlen) )
+        resolution_nanoparticle = (from_um_factor * 1e3) * resolution_nanoparticle / (2 * r)
+        resolution_nanoparticle = int( np.ceil(resolution_nanoparticle) )
+        resolution_bandwidth = (from_um_factor * 1e3) * resolution_bandwidth / (max(wlen_range) - min(wlen_range))
+        resolution_bandwidth = int( np.ceil(resolution_bandwidth) )
+        min_resolution = max(resolution_wlen, 
+                              resolution_bandwidth,
+                              resolution_nanoparticle)
+        
+        if min_resolution > resolution:
+            pm.log(f"Careful! Resolution should be raised from {resolution} to {min_resolution}")
