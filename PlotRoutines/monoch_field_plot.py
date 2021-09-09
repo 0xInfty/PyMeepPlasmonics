@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Analysis of single run of Au sphere field for a visible monochromatic incident wave.
+Analysis of single run of monochromatic incident wave propagating in free space.
 
 See also
 --------
-Routines/np_monoch_field
+Routines/monoch_field
 """
 
 import imageio as mim
@@ -73,7 +73,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
     
     from_um_factor = f["Ez"].attrs["from_um_factor"]
     wlen = f["Ez"].attrs["wlen"]
-    submerged_index = f["Ez"].attrs["submerged_index"]
+    # submerged_index = f["Ez"].attrs["submerged_index"]
     
     cell_width = f["Ez"].attrs["cell_width"]
     pml_width = f["Ez"].attrs["pml_width"]
@@ -82,7 +82,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
     until_time = f["Ez"].attrs["until_time"]
     period_line = f["Ez"].attrs["period_line"]
     period_plane = f["Ez"].attrs["period_plane"]
-    period = submerged_index * wlen
+    # period = submerged_index * wlen
 
     units = f["Ez"].attrs["units"]
     
@@ -104,7 +104,52 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
     
     #%%
     
+    last_stable_periods = 5
+    
     source_results = np.asarray(results_line[x_line_index(source_center), :])
+        
+    def get_peaks_from_source(source):
+        peaks = find_peaks(source, height=0)[0]
+        
+        mean_diff = np.mean(np.diff(peaks)[-last_stable_periods:])
+        selected_peaks = []
+        selection_criteria = lambda k : np.abs( mean_diff - (peaks[k+1] - peaks[k]) ) <= 0.1 * mean_diff
+        for k in range(len(peaks)):
+            if k == 0 and selection_criteria(k):
+                selected_peaks.append(peaks[k])
+            elif k == len(peaks)-1 and selection_criteria(k-1):
+                selected_peaks.append(peaks[k])
+            elif selection_criteria(k):
+                selected_peaks.append(peaks[k])
+        return selected_peaks
+    
+    def get_period_from_source(source):
+        peaks = get_peaks_from_source(source)
+        
+        keep_periods_from = 0
+        periods = np.array(t_line[peaks[1:]] - t_line[peaks[:-1]])
+        mean_periods = np.mean(periods[-last_stable_periods:])
+        for k, per in enumerate(periods):
+            if np.abs(per - mean_periods) > .1 * mean_periods:
+                keep_periods_from = max(keep_periods_from, k+1)
+        stable_periods = periods[keep_periods_from:]
+        return np.mean(stable_periods)
+    
+    def get_amplitude_from_source(source):
+        peaks = get_peaks_from_source(source)
+        
+        keep_periods_from = 0
+        heights = source_results[peaks]
+        mean_height = np.mean(source_results[peaks[-last_stable_periods:]])
+        for k, h in enumerate(heights):
+            if np.abs(h - mean_height) > .05 * mean_height:
+                keep_periods_from = max(keep_periods_from, k+1)
+        stable_heights = source_results[peaks[keep_periods_from:]]
+        return np.mean(stable_heights)
+    
+    period = get_period_from_source(source_results)
+    
+    amplitude = get_amplitude_from_source(source_results)
     
     def crop_field_xline(field):
         cropped = field[: x_line_index(cell_width/2 - pml_width)]

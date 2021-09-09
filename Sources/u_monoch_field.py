@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Field of Au sphere given a visible monochromatic incident wave.
+Field of visible monochromatic wave propagating in free space.
 """
 
 script = "monoch_field"
