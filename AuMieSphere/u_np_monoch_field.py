@@ -28,7 +28,7 @@ from v_materials import import_medium
 import v_meep as vm
 import v_save as vs
 import v_utilities as vu
-from np_monoch_field_plot import plots_monoch_field
+from np_monoch_field_plot import plots_np_monoch_field
 
 rm = vm.ResourcesMonitor()
 rm.measure_ram()
@@ -286,6 +286,16 @@ def main(from_um_factor, resolution, courant,
                                                color="blue", alpha=.1, zorder=-6,
                                                label=trs.choose(fr"Medium $n$={submerged_index}",
                                                                 fr"Medio $n$={submerged_index}"))
+            
+        # Surface medium
+        if surface_index != submerged_index:
+            surface_square = plt.Rectangle((r - overlap, -cell_width/2),
+                                           cell_width/2 - r + overlap, 
+                                           cell_width,
+                                           edgecolor="navy", hatch=r"\\", 
+                                           fill=False, zorder=-3,
+                                           label=trs.choose(fr"Surface $n$={surface_index}",
+                                                            fr"Superficie $n$={surface_index}"))
     
         # Nanoparticle
         if material=="Au":
@@ -308,8 +318,6 @@ def main(from_um_factor, resolution, courant,
                   color="limegreen", linestyle=":", zorder=7, 
                   label=trs.choose("Sampling Line", "Línea de muestreo"))
         
-        
-        
         # Sampling plane
         ax.vlines(0, -cell_width/2, cell_width/2,
                   color="limegreen", linestyle="dashed", zorder=7, 
@@ -317,6 +325,7 @@ def main(from_um_factor, resolution, courant,
         
         ax.add_patch(circle)
         if submerged_index!=1: ax.add_patch(surrounding_square)
+        if surface_index!=submerged_index: ax.add_patch(surface_square)
         ax.add_patch(pml_out_square)
         ax.add_patch(pml_inn_square)
         
@@ -344,6 +353,7 @@ def main(from_um_factor, resolution, courant,
         
         del pml_inn_square, pml_out_square, circle, circle_color
         if submerged_index!=1: del surrounding_square
+        if surface_index!=submerged_index: del surface_square
         del fig, box, ax
     
     #%% INITIALIZE
@@ -504,8 +514,8 @@ def main(from_um_factor, resolution, courant,
     
     if make_plots or make_gifs:
         
-        plots_monoch_field(series, folder, hfield, 
-                           make_plots, make_gifs, trs.english)
+        plots_np_monoch_field(series, folder, hfield, 
+                              make_plots, make_gifs, trs.english)
     
     sim.reset_meep()
 

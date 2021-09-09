@@ -34,9 +34,9 @@ english = False
 
 #%% 
 
-def plots_monoch_field(series, folder, hfield=False, 
-                       make_plots=True, make_gifs=False, 
-                       english=False, maxnframes=300):
+def plots_np_monoch_field(series, folder, hfield=False, 
+                          make_plots=True, make_gifs=False, 
+                          english=False, maxnframes=300):
         
     #%% SETUP
     
@@ -363,9 +363,7 @@ def plots_monoch_field(series, folder, hfield=False,
         make_gif_plane(sa.file("PlaneX=0"))
         plt.close(fig)
         # del fig, ax, lims, nframes_step, nframes, call_series, label_function
-    
-    ### HASTA ACÁ LLEGUÉ
-        
+            
     #%% MAKE PROFILE GIF
     
     if make_gifs and pm.assign(0):
@@ -438,13 +436,9 @@ def plots_monoch_field(series, folder, hfield=False,
         shape = call_series(0).shape[0]
         
         def draw_pml_box():
-            plt.vlines(-cell_width/2 + pml_width, 
-                        -cell_width/2 + pml_width, 
-                        cell_width/2 - pml_width,
+            plt.vlines(-cell_width/2 + pml_width, *lims,
                         linestyle=":", color='k')
-            plt.vlines(cell_width/2 - pml_width, 
-                        -cell_width/2 + pml_width, 
-                        cell_width/2 - pml_width,
+            plt.vlines(cell_width/2 - pml_width, *lims,
                         linestyle=":", color='k')
             plt.hlines(0, min(x_line), max(x_line),
                        color='k', linewidth=1)
