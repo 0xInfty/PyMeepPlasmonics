@@ -42,6 +42,14 @@ try:
     import PyMieScatt as ps
 except:
     raise OSError("Must install PyMieScatt module using, for example, `pip install PyMieScatt`")
+    
+#%% REFRACTIVE INDEX AND MATERIAL CONSTANTS
+
+def N_from_epsilon(epsilon, mu=1):
+    return np.sqrt(epsilon * mu)
+
+def epsilon_from_N(N):
+    return np.power(N, 2)
 
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
 

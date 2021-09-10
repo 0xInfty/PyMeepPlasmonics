@@ -1004,20 +1004,6 @@ def recognize_direction(direction):
 # %%
 
 
-class SimpleUnitsConverter:
-
-    def __init__(self, from_um_factor):
-        self.from_um_factor = from_um_factor
-
-    def to_nm(self, mp_length):
-        return mp_length * (1e3 * self.from_um_factor)
-
-    def from_nm(self, nm_length):
-        return nm_length / (1e3 * self.from_um_factor)
-
-# %%
-
-
 class Line(mp.Volume):
 
     """A Meep Volume subclass that holds a line instead of a whole volume"""
@@ -1048,6 +1034,20 @@ class Plane(mp.Volume):
         nvertices = len(self.get_vertices())
         if nvertices < 3 or nvertices > 4:
             raise TypeError(f"Must have 3 or 4 vertices and not {nvertices}")
+
+# %%
+
+
+class SimpleUnitsConverter:
+
+    def __init__(self, from_um_factor):
+        self.from_um_factor = from_um_factor
+
+    def to_nm(self, mp_length):
+        return mp_length * (1e3 * self.from_um_factor)
+
+    def from_nm(self, nm_length):
+        return nm_length / (1e3 * self.from_um_factor)
 
 # %%
 

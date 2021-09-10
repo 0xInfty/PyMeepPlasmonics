@@ -29,6 +29,7 @@ try:
 except:
     print("Meep functions not available. Don't worry! You can still use everything else")
 import v_save as vs
+import v_theory as vt
 import v_utilities as vu
 
 syshome = vs.get_sys_home()
@@ -36,7 +37,7 @@ home = vs.get_home()
 
 #%% MEEP MEDIUM IMPORT
 
-def import_medium(name, from_um_factor=1, paper="R"):
+def import_medium(material, paper="R", from_um_factor=1):
     
     """Returns Medium instance from string with specified length scale
     
@@ -45,13 +46,13 @@ def import_medium(name, from_um_factor=1, paper="R"):
     
     Parameters
     ----------
-    name: str
+    material: str
         Name of the desired material.
+    paper="R": str
+        Name of desired source for experimental input data of medium.
     from_um_factor=1 : int, float, optional
         Factor to transform from SI μm to the chosen length unit. For example, 
         to work with 100 nm as 1 Meep unit, from_um_factor=.1 must be specified.
-    paper="R": str
-        Name of desired source for experimental input data of medium.
     
     Returns
     -------
@@ -64,8 +65,8 @@ def import_medium(name, from_um_factor=1, paper="R"):
         If no material is found whose name matches the string given.
     """
     
-    if "Ag" not in name and "Au" not in name:
-        raise SyntaxError("No media called {} is available".format(name))
+    if "Ag" not in material and "Au" not in material:
+        raise SyntaxError("No media called {} is available".format(material))
         return
            
     # Default unit length is 1 um
@@ -74,7 +75,7 @@ def import_medium(name, from_um_factor=1, paper="R"):
     
     ############ GOLD #################################################
     
-    if name=="Au" and paper=="R":
+    if material=="Au" and paper=="R":
         
     #------------------------------------------------------------------
     # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
@@ -123,7 +124,7 @@ def import_medium(name, from_um_factor=1, paper="R"):
         
         return Au
 
-    elif name=="Au" and paper=="JC":
+    elif material=="Au" and paper=="JC":
         
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -199,7 +200,7 @@ def import_medium(name, from_um_factor=1, paper="R"):
         
         return Au_JC
 
-    elif name=="Au" and paper=="P":
+    elif material=="Au" and paper=="P":
         
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -227,12 +228,12 @@ def import_medium(name, from_um_factor=1, paper="R"):
         
         return Au_visible
     
-    elif name=="Au":
+    elif material=="Au":
         raise ValueError("No source found for Au with that name")
 
     ############ SILVER ###############################################
 
-    if name=="Ag" and paper=="R":
+    if material=="Ag" and paper=="R":
         
     #------------------------------------------------------------------
     # Elemental metals from A.D. Rakic et al., Applied Optics, Vol. 37, No. 22, pp. 5271-83, 1998
@@ -281,7 +282,7 @@ def import_medium(name, from_um_factor=1, paper="R"):
         
         return Ag
     
-    elif name=="Ag" and paper=="JC":
+    elif material=="Ag" and paper=="JC":
         
     #------------------------------------------------------------------
     # Metal from my own fit
@@ -331,7 +332,7 @@ def import_medium(name, from_um_factor=1, paper="R"):
         
         return Ag_JC
     
-    elif name=="Ag" and paper=="P":
+    elif material=="Ag" and paper=="P":
 
     #------------------------------------------------------------------
     # Metals from D. Barchiesi and T. Grosges, J. Nanophotonics, Vol. 8, 08996, 2015
@@ -361,7 +362,7 @@ def import_medium(name, from_um_factor=1, paper="R"):
         
         return Ag_visible
 
-    elif name=="Ag":    
+    elif material=="Ag":    
         raise ValueError("No source found for Ag with that name")
     
     else:
@@ -1083,6 +1084,125 @@ def n_function(material="Au", paper="JC", reference="RIinfo",
         
     
     return N_function
+
+#%% SCATTERING CALCULATED USING MEEP
+
+def sigma_scatt_meep(r, material, paper, wlen, 
+                     surrounding_index=1, asEffiency=False):
+    
+    """
+    Calculates scattering cross section using Mie theory for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    material: str
+        Name of the desired material.
+    paper="R": str
+        Name of desired source for experimental input data of medium.
+    wlen : float, list, np.array
+        Incident light wavelength. Measured in nm.
+    inner_N=1.458 : float, list, np.array
+        Spherical NP inner medium's complex refractive index. The default is 
+        1.458 for fused-silica.
+    surrounding_index=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEffiency : bool, optional
+        If false, scattering cross section sigma is returned, measured in nm^2. 
+        If true, scattering effienciency Q is returned, dimensionless and 
+        related to scattering cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    scattering : float, np.array
+        The scattering cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, scattering effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    try:
+        wlen = np.array([*wlen])
+    except:
+        wlen = np.array([wlen])
+    
+    try:
+        len(surrounding_index)
+    except TypeError:
+        surrounding_index = [*[surrounding_index]*len(wlen)]
+    
+    medium = import_medium(material, paper=paper, from_um_factor=1e-3)
+    # Meep unit chosen to be 1 nm
+    
+    epsilon = np.array([ medium.epsilon(1 / wl)[0,0] for wl in wlen ])
+    N = vt.N_from_epsilon( epsilon )
+    
+    scattering = vt.sigma_scatt(r,  wlen,  N, 
+                                surrounding_N=surrounding_index,
+                                asEffiency=asEffiency)
+    
+    return scattering
+
+def max_scatt_meep(r, material, paper, wlen_range, wlen_delta=0.5,
+                   surrounding_index=1, asEffiency=False):
+            
+    """
+    Calculates scattering cross section using Mie theory for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    material: str
+        Name of the desired material.
+    paper="R": str
+        Name of desired source for experimental input data of medium.
+    wlen_range : tuple
+        Wavelength range to check. Measured in nm.
+    wlen_delta : float
+        Wavelength desired precision. Measured in nm.
+    surrounding_index=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEffiency : bool, optional
+        If false, scattering cross section sigma is returned, measured in nm^2. 
+        If true, scattering effienciency Q is returned, dimensionless and 
+        related to scattering cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    scattering : float, np.array
+        The scattering cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, scattering effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    wavelength = np.arange(*wlen_range, wlen_delta)
+    
+    scattering = sigma_scatt_meep(r, material, paper, wavelength, 
+                                  surrounding_index=surrounding_index, 
+                                  asEffiency=asEffiency)
+    
+    max_index = np.argmax(scattering)
+    max_wlen = wavelength[max_index]
+    max_scatt = scattering[max_index]
+    
+    return max_wlen, max_scatt
 
 #%% MEEP MEDIUM THAT TAKES FUNCTION
 
