@@ -28,7 +28,8 @@ import os
 import PyMieScatt as ps
 from scipy.signal import find_peaks
 import v_analysis as va
-from v_materials import import_medium
+import v_materials as vmt
+import v_theory as vt
 import v_save as vs
 import v_utilities as vu
 
@@ -50,15 +51,15 @@ test_param_label = trs.choose("Wavelength", "Longitud de onda")
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = [lambda s : trs.choose("Vacuum", "Vacío") + 
-                f" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm",
+series_label = [lambda s : trs.choose(r"Vacuum", r"Vacío") + 
+                rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm",
                 lambda s : trs.choose("Water", "Agua") + 
-                f" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm"]
+                rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm"]
 series_must = [""]*2 # leave "" per default
-series_mustnt = [""]*2 # leave "" per default
+series_mustnt = ["Old"]*2 # leave "" per default
 
 # Scattering plot options
-plot_title_ending = trs.choose("Au 103 nm sphere", "esfera de Au de 103 nm")
+plot_title_ending = trs.choose("Au 60 nm sphere", "esfera de Au de 60 nm")
 series_legend = ["Vacuum", "Water"]
 series_colors = [plab.cm.Reds, plab.cm.Blues]
 series_linestyles = ["solid"]*2
@@ -96,6 +97,7 @@ for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
     for s in series[-1]:
         files_line[-1].append( h5.File(file[-1](s, "Field-Lines.h5"), "r") )
         files_plane[-1].append( h5.File(file[-1](s, "Field-Planes.h5"), "r") )
+    del s
     
     results_line.append( [fi["Ez"] for fi in files_line[-1]] )
     results_plane.append( [fi["Ez"] for fi in files_plane[-1]] )
@@ -120,12 +122,17 @@ for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
             p["SWAP"] = np.array(f["SWAP"])
             p["elapsed_time"] = p["elapsed"]
             del p["elapsed"]
+    del s, p
+
+del f, sf, sm, smn
             
 from_um_factor = []
 resolution = []
 r = []
+material = []
 paper = []
 index = []
+wlen = []
 cell_width = []
 pml_width = []
 source_center = []
@@ -137,8 +144,9 @@ for p in params:
     from_um_factor.append( [pi["from_um_factor"] for pi in p] )
     resolution.append( [pi["resolution"] for pi in p] )
     r.append( [pi["r"] for pi in p] )
-    paper.append( [pi["paper"] for pi in p])
+    material.append( [pi["material"] for pi in p])
     index.append( [pi["submerged_index"] for pi in p] )
+    wlen.append( [pi["wlen"] for pi in p] )
     cell_width.append( [pi["cell_width"] for pi in p] )
     pml_width.append( [pi["pml_width"] for pi in p] )
     source_center.append( [pi["source_center"] for pi in p] )
@@ -150,6 +158,7 @@ for p in params:
         paper.append( [pi["paper"] for pi in p])
     except:
         paper.append( ["R" for pi in p] )
+del p
 
 if test_param_in_params:
     test_param = [[p[test_param_string] for p in par] for par in params]
@@ -161,7 +170,7 @@ width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in
 grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
 memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
 
-#%% GENERAL USEFUL FUNCTIONS
+#%% POSITION RECONSTRUCTION FUNCTIONS
 
 t_line_index = lambda t0, i, j : np.argmin(np.abs(np.asarray(t_line[i][j]) - t0))
 x_line_index = lambda x0, i, j : np.argmin(np.abs(np.asarray(x_line[i][j]) - x0))
@@ -170,12 +179,20 @@ t_plane_index = lambda t0, i, j : np.argmin(np.abs(np.asarray(t_plane[i][j]) - t
 y_plane_index = lambda y0, i, j : np.argmin(np.abs(np.asarray(y_plane[i][j]) - y0))
 z_plane_index = lambda z0, i, j : np.argmin(np.abs(np.asarray(z_plane[i][j]) - z0))
 
-# t_line_index = [[lambda t0 : np.argmin(np.abs(np.asarray(tl) - t0)) for tl in tlin] for tlin in t_line]
+#%% ACTUAL POSITION RECONSTRUCTION
 
-#%%
+x_line_cropped = [[x_line[i][j][:x_line_index(cell_width[i][j]/2 - pml_width[i][j], i, j)] for j in range(len(series[i]))] for i in range(len(series))]
+x_line_cropped = [[x_line_cropped[i][j][x_line_index(-cell_width[i][j]/2 + pml_width[i][j], i, j):] for j in range(len(series[i]))] for i in range(len(series))]
+
+y_plane_cropped = [[y_plane[i][j][:y_plane_index(cell_width[i][j]/2 - pml_width[i][j], i, j)] for j in range(len(series[i]))] for i in range(len(series))]
+y_plane_cropped = [[y_plane_cropped[i][j][y_plane_index(-cell_width[i][j]/2 + pml_width[i][j], i, j):] for j in range(len(series[i]))] for i in range(len(series))]
+
+z_plane_cropped = [[z_plane[i][j][:z_plane_index(cell_width[i][j]/2 - pml_width[i][j], i, j)] for j in range(len(series[i]))] for i in range(len(series))]
+z_plane_cropped = [[z_plane_cropped[i][j][z_plane_index(-cell_width[i][j]/2 + pml_width[i][j], i, j):] for j in range(len(series[i]))] for i in range(len(series))]
+
+#%% DATA EXTRACTION FUNCTIONS
 
 last_stable_periods = 5
-source_results = [[np.asarray(results_line[i][j][x_line_index(source_center[i][j], i, j), :]) for j in range(len(series[i]))] for i in range(len(series))]
 
 def get_peaks_from_source(source, i, j):   
     peaks = find_peaks(source_results[i][j], height=0)[0]
@@ -186,13 +203,10 @@ def get_peaks_from_source(source, i, j):
     for k in range(len(peaks)):
         if k == 0 and selection_criteria(k):
             selected_peaks.append(peaks[k])
-            print(k)
         elif k == len(peaks)-1 and selection_criteria(k-1):
             selected_peaks.append(peaks[k])
-            print(k)
         elif selection_criteria(k):
             selected_peaks.append(peaks[k])
-            print(k)
     return selected_peaks
 
 def get_period_from_source(source, i, j):
@@ -218,10 +232,6 @@ def get_amplitude_from_source(source, i, j):
             keep_periods_from = max(keep_periods_from, k+1)
     stable_heights = source_results[i][j][peaks[keep_periods_from:]]
     return np.mean(stable_heights)
-
-period_results = [[get_period_from_source(source_results[i][j], i, j) for j in range(len(series[i]))] for i in range(len(series))] # Meep units
-
-amplitude_results = [[get_amplitude_from_source(source_results[i][j], i, j) for j in range(len(series[i]))] for i in range(len(series))] # Meep units
 
 def crop_field_zyplane(field, i, j):
     cropped = field[: y_plane_index(cell_width[i][j]/2 - pml_width[i][j], i, j), :]
@@ -267,17 +277,55 @@ def get_max_field_zprofile(field_profile, i, j):
     except RuntimeWarning:
         return None
 
-def get_max_resonance_index(zprofile_results, i, j):
-    z_resonance_max = np.array([ get_max_field_zprofile(zprof, i, j) for zprof in zprofile_results.T])
+def get_max_resonance_index(field_profile, i, j):
+    z_resonance_max = np.array([ get_max_field_zprofile(zprof, i, j) for zprof in field_profile.T])
     first_index = int(np.argwhere( np.isnan(z_resonance_max) == False )[0])
     t_resonance_max_index = find_peaks(z_resonance_max[first_index:], 
                                        height=(np.max(z_resonance_max[first_index:])/2, None))[0]
     t_resonance_max_index = np.array(t_resonance_max_index) + first_index
-    # t_resonance_max = t_plane[t_resonance_max_index]
-    # z_resonance_max = z_resonance_max[t_resonance_max_index]
     return t_resonance_max_index #, t_resonance_max, z_resonance_max
 
+def get_single_resonance_index(field_profile, i, j):
+    t_resonance_max_index = get_max_resonance_index(field_profile, i, j)
+    
+    zprofile_resonance = [crop_field_zprofile(field_profile[:,k], i, j) for k in t_resonance_max_index]
+    max_list = [np.max(zp) for zp in zprofile_resonance]
+    
+    max_index = np.argmax(max_list)
+    min_index = np.argmin(max_list)
+    return min_index, max_index    
+
+def get_resonance_profiles(field_profile, i, j):
+    t_resonance_max_index = get_max_resonance_index(field_profile, i, j)
+    min_index, max_index = get_single_resonance_index(field_profile, i, j)
+    
+    zprofile_resonance = [crop_field_zprofile(field_profile[:,k], i, j) for k in t_resonance_max_index]
+    
+    zprofile_resonance_mean = np.mean( np.array(zprofile_resonance), axis=0)
+    zprofile_resonance_min = zprofile_resonance[min_index]
+    zprofile_resonance_max = zprofile_resonance[max_index]
+    
+    return zprofile_resonance_min, zprofile_resonance_mean, zprofile_resonance_max
+
+def get_resonance_planes(field, field_profile, i, j):
+    t_resonance_max_index = get_max_resonance_index(field_profile, i, j)
+    min_index, max_index = get_single_resonance_index(field_profile, i, j)
+    
+    plane_resonance = [crop_field_zyplane(field[:,:,k], i, j) for k in t_resonance_max_index]
+    
+    plane_resonance_mean = np.mean( np.array(plane_resonance), axis=0)
+    plane_resonance_min = plane_resonance[min_index]
+    plane_resonance_max = plane_resonance[max_index]
+    
+    return plane_resonance_min, plane_resonance_mean, plane_resonance_max
+
+#%% ACTUAL DATA EXTRACTION
+
 source_results = [[np.asarray(results_line[i][j])[x_line_index(source_center[i][j], i, j), :] for j in range(len(series[i]))] for i in range(len(series))]
+
+period_results = [[get_period_from_source(source_results[i][j], i, j) for j in range(len(series[i]))] for i in range(len(series))]
+
+amplitude_results = [[get_amplitude_from_source(source_results[i][j], i, j) for j in range(len(series[i]))] for i in range(len(series))]
 
 zprofile_results = [[np.asarray(results_plane[i][j])[y_plane_index(0, i, j), :, :] for j in range(len(series[i]))] for i in range(len(series))]
 
@@ -287,10 +335,27 @@ zprofile_max = [[np.array([ get_max_field_zprofile(zprof, i, j) for zprof in zpr
 
 resonance_max_index = [[get_max_resonance_index(zprofile_results[i][j], i, j) for j in range(len(series[i]))] for i in range(len(series))]
 
+resonance_zprofile = [[get_resonance_profiles(zprofile_results[i][j], i, j)[-1] for j in range(len(series[i]))] for i in range(len(series))]
+
+resonance_plane = [[get_resonance_planes(results_plane[i][j], zprofile_results[i][j], i, j)[-1] for j in range(len(series[i]))] for i in range(len(series))]
+
+# resonance_mean_zprofile = []
+# resonance_min_zprofile = []
+# resonance_max_zprofile = []
+# for i in range(len(series)):
+#     resonance_mean_zprofile.append([])
+#     resonance_min_zprofile.append([])
+#     resonance_max_zprofile.append([])
+#     for j in range(len(series[i])):
+#         res_min, res_mean, res_max = get_resonance_profiles(zprofile_results[i][j], i, j)
+#         resonance_mean_zprofile[-1].append(res_mean)
+#         resonance_min_zprofile[-1].append(res_min)
+#         resonance_max_zprofile[-1].append(res_max)
+
 #%% SHOW SOURCE AND FOURIER
 
 # colors = [["C0"], ["C4"], ["C3"]]
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
 
 plt.figure()
@@ -313,14 +378,10 @@ plt.legend(ncol=2)
 
 plt.savefig(plot_file("Source.png"))
         
-#%%
-
 fourier = [[np.abs(np.fft.rfft(source_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
 fourier_freq = [[np.fft.rfftfreq(len(source_results[i][j]), d=period_line[i][j])  for j in range(len(series[i]))] for i in range(len(series))]
 fourier_wlen = [[from_um_factor[i][j] * 1e3 / fourier_freq[i][j]  for j in range(len(series[i]))] for i in range(len(series))]
 # fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
-
-#%%
 
 plt.figure()
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
@@ -346,179 +407,202 @@ plt.xlim([350, 850])
         
 plt.savefig(plot_file("SourceFFTZoom.png"))
 
-# #%% CROP SIGNALS TO JUST INSIDE THE BOX
+#%% GET THEORY (SCATTERING)
 
-# z_profile = [results_plane[j][:, space_to_index(0,j), :] for j in range(n)]
+def wlen_range(material, surrounding_index):
+    if material=="Au":
+        if surrounding_index == 1: return (450, 750)
+        elif surrounding_index == 1.33: return (550, 850)
+    else:
+        raise ValueError("Please, expand this function.")
 
-# in_results_line = []
-# in_results_plane = []
-# in_z_profile = []
-# for j in range(n):
-#     in_results_plane.append(results_plane[j][:,
-#         space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j),
-#         space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
-#     in_results_line.append(results_line[j][:,
-#         space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
-#     in_z_profile.append(z_profile[j][:, 
-#         space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
+scatt_max_wlen_theory = [[vmt.max_scatt_meep(r[i][j], 
+                                             material[i][j], 
+                                             paper[i][j], 
+                                             wlen_range(material[i][j],
+                                                        index[i][j]))[0] for j in range(len(series[i]))] for i in range(len(series))]
 
-# in_index_to_space = lambda i, j : i/resolution[j] - (cell_width[j]-2*pml_width[j])/2
-# in_space_to_index = lambda x, j : round(resolution[j] * (x + (cell_width[j]-2*pml_width[j])/2))
+scatt_max_wlen_predict = [wlen[i][np.argmin(np.abs([wlen[i][j] * from_um_factor[i][j] * 1e3 - scatt_max_wlen_theory[i][j] for j in range(len(series[i]))]))] for i in range(len(series))]
 
-# #%% FIND MAXIMUM
+#%% GET THEORY (FIELD)
 
-# max_in_z_profile = []
-# is_max_in_z_profile = []
-# for j in range(n):
-#     this_max = np.argmax( in_z_profile[j][:, in_space_to_index(r[j], j)])
-#     this_min = np.argmin( in_z_profile[j][:, in_space_to_index(r[j], j)])
-#     this_abs_max = np.argmax( np.abs( in_z_profile[j][:, in_space_to_index(r[j], j)]) )
-#     if this_abs_max == this_max:
-#         is_max_in_z_profile.append( +1 )
-#     else:
-#         is_max_in_z_profile.append( -1 )
-#     max_in_z_profile.append( this_abs_max )
-# del this_max, this_min
+rvec = []
+for i in range(len(series)):
+    rvec.append([])
+    for j in range(len(series[i])):
+        naux = zprofile_results[i][j].shape[-1]
+        aux = np.zeros((naux, 3))
+        aux[:,2] = np.linspace(-cell_width[i][j]/2 + pml_width[i][j], 
+                                cell_width[i][j]/2 - pml_width[i][j], 
+                                naux)
+        rvec[-1].append(aux)
+del aux, naux
 
-# #%% GET THEORY (CLAUSSIUS-MOSOTTI)
+E0 = np.array([0,0,1])
 
-# rvec = []
-# for j in range(len(wlen)):
-#     naux = len(in_z_profile[j][0, :])
-#     aux = np.zeros((naux, 3))
-#     aux[:,2] = np.linspace(-cell_width[j]/2 + pml_width[j], 
-#                            cell_width[j]/2 - pml_width[j], 
-#                            naux)
-#     rvec.append(aux)
-# del aux, naux
+zprofile_cm_theory = []
+zprofile_ku_theory = []
+for i in range(len(series)):
+    zprofile_cm_theory.append([])
+    zprofile_ku_theory.append([])
+    for j in range(len(series[i])):
+        medium = vmt.import_medium("Au", from_um_factor[i][j])
+        epsilon = medium.epsilon(1/wlen[i][j])[0,0]
+        # E0 = np.array([0, 0, is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], 0])])
+        alpha_cm = vt.alpha_Clausius_Mosotti(epsilon, r[i][j], epsilon_ext=index[i][j]**2)
+        alpha_ku = vt.alpha_Kuwata(epsilon, wlen[i][j], r[i][j], epsilon_ext=index[i][j]**2)
+        theory_cm = np.array([vt.E(epsilon, alpha_cm, E0, 
+                                   rv, r[i][j], epsilon_ext=index[i][j]**2) 
+                              for rv in rvec[i][j]])[:,-1]
+        theory_ku = np.array([vt.E(epsilon, alpha_ku, E0, 
+                                   rv, r[i][j], epsilon_ext=index[i][j]**2) 
+                              for rv in rvec[i][j]])[:,-1]
+        zprofile_cm_theory[-1].append(theory_cm)
+        zprofile_ku_theory[-1].append(theory_ku)
+        
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (THEORY)
 
-# E0 = np.array([0,0,1])
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
 
-# in_theory_cm_line = []
-# in_theory_k_line = []
-# for j in range(len(wlen)):
-#     medium = vm.import_medium("Au", from_um_factor[j])
-#     epsilon = medium.epsilon(1/wlen[j])[0,0]
-#     # E0 = np.array([0, 0, is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], 0])])
-#     alpha_cm = vt.alpha_Clausius_Mosotti(epsilon, r[j], epsilon_ext=index[j]**2)
-#     alpha_k = vt.alpha_Kuwata(epsilon, wlen[j], r[j], epsilon_ext=index[j]**2)
-#     in_theory_cm_line.append(
-#         np.array([vt.E(epsilon, alpha_cm, E0, rv, r[j], 
-#                        epsilon_ext=index[j]**2) for rv in rvec[j]])[:,-1])
-#     in_theory_k_line.append(
-#         np.array([vt.E(epsilon, alpha_k, E0, rv, r[j],
-#                        epsilon_ext=index[j]**2) for rv in rvec[j]])[:,-1])
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+l_series = []
+l_origin = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
+                         np.abs(zprofile_cm_theory[i][j]),
+                         label=series_label[i](series[i][j]) + " CM",
+                         color=colors[i][j], linestyle="dashed")
+        l_ku, = plt.plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
+                         np.abs(zprofile_ku_theory[i][j]),
+                         label=series_label[i](series[i][j]) + " Ku",
+                         color=colors[i][j], linestyle="dotted")
+        l_series.append(l_cm)
+        if i == 0 and j == len(series[0]) - 1:
+            l_origin = [l_cm, l_ku]
+plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
+plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$ [a.u.]",
+                      r"Campo eléctrico normalizado $E_z(y=z=0)$ [u.a.]"))
+plt.legend(ncol=2)
 
-# #%% PLOT MAXIMUM INTESIFICATION PROFILE (LINES)
+first_legend = plt.legend(l_origin, trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
+                                           ["Data MEEP", "Teoría CM", "Teoría Ku"]),
+                          loc="center")
+second_legend = plt.legend(
+    l_series, 
+    [l.get_label() for l in l_series],
+    loc="upper center")
+plt.gca().add_artist(first_legend)
 
-# # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
-# #           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-# colors = ['#1f77b4', '#2ca02c', '#d62728']
+plt.savefig(plot_file("FieldProfileTheory.png"))
 
-# l_meep = []
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (DATA)
+
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
 # l_cm = []
-# l_k = []
-# fig = plt.figure()
-# plt.title("Máxima intensificación del campo eléctrico en agua en dirección de la polarización")
-# for j in range(n):
-#     l_meep.append(
-#         plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
-#                          10*(cell_width[j]/2 - pml_width[j]),
-#                          in_z_profile[j].shape[1]), 
-#              is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], :]),
-#              colors[j],
-#              label=f"Meep $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")[0])
-#     l_cm.append(
-#         plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
-#                          10*(cell_width[j]/2 - pml_width[j]),
-#                          in_z_profile[j].shape[1]), 
-#              np.real(in_theory_cm_line[j]), colors[j], linestyle='dashed',
-#              label=f"Clausius-Mosotti Theory $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")[0])
-#     l_k.append(
-#         plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
-#                          10*(cell_width[j]/2 - pml_width[j]),
-#                          in_z_profile[j].shape[1]), 
-#              np.real(in_theory_k_line[j]), colors[j], linestyle='dotted',
-#              label=f"Kuwata Theory $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")[0])
+# l_ku = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        plt.plot(z_plane_cropped[i][j], resonance_zprofile[i][j],
+                 label=series_label[i](series[i][j]),
+                 color=colors[i][j])
+plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
+plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$ [a.u.]",
+                      r"Campo eléctrico normalizado $E_z(y=z=0)$ [u.a.]"))
+plt.legend(ncol=2)
 
-# legend1 = plt.legend(
-#     [l_meep[0], l_cm[0], l_k[0]],
-#     ["Resultados de MEEP", "Teoría con Clausius-Mossotti", "Teoría con Kuwata"],
-#     loc='upper left')
-# plt.legend(l_meep, 
-#            [f"$\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm" for j in range(n)],
-#            loc='upper right')
-# plt.gca().add_artist(legend1)
-# plt.xlabel("Distancia en z [nm])")
-# plt.ylabel("Campo eléctrico Ez [u.a.]")
-# fig.set_size_inches([10.03,  4.8 ])
+plt.savefig(plot_file("FieldProfileData.png"))
 
-# plt.savefig(file("MaxFieldProfile.png"))
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (ALL)
 
-# #%% PLOT MAXIMUM INTESIFICATION PROFILE (LINES, JUST THE RESULTS)
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
 
-# # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
-# #           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-# colors = ['#1f77b4', '#2ca02c', '#d62728']
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+l_origin = []
+l_series = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l_mp, = plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
+                         resonance_zprofile[i][j] / amplitude_results[i][j],
+                         label=series_label[i](series[i][j]),
+                         color=colors[i][j])
+        l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
+                         np.abs(zprofile_cm_theory[i][j]),
+                         color=colors[i][j], linestyle="dashed")
+        l_ku, = plt.plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
+                         np.abs(zprofile_ku_theory[i][j]),
+                         color=colors[i][j], linestyle="dotted")
+        l_series.append(l_mp)
+        if i == 0 and j == len(series[i])-1:
+            l_origin = [l_mp, l_cm, l_ku]
+plt.xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$ [a.u.]",
+                      r"Campo eléctrico normalizado $E_z(y=z=0)$ [u.a.]"))
 
-# l_meep = []
-# fig = plt.figure()
-# plt.title("Máxima intensificación del campo en agua en dirección de la polarización")
-# for j in range(n):
-#     plt.plot(np.linspace(10*(-cell_width[j]/2 + pml_width[j]), 
-#                          10*(cell_width[j]/2 - pml_width[j]),
-#                          in_z_profile[j].shape[1]), 
-#              is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], :]),
-#              colors[j],
-#              label=f"Meep $\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm")[0]
-# plt.legend([f"$\lambda$ = {wlen[j]*from_um_factor[j]*1e3:1.0f} nm" for j in range(n)],
-#            loc='upper right')
-# plt.xlabel("Distancia en z [nm])")
-# plt.ylabel("Campo eléctrico Ez [u.a.]")
-# # fig.set_size_inches([10.03,  4.8 ])
+plt.legend(ncol=2)
 
-# plt.savefig(file("MaxFieldProfileResults.png"))
+first_legend = plt.legend(l_origin, trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
+                                           ["Data MEEP", "Teoría CM", "Teoría Ku"]),
+                          loc="lower right")
+second_legend = plt.legend(
+    l_series, 
+    [l.get_label() for l in l_series],
+    loc="upper center")
+plt.gca().add_artist(first_legend)
 
+plt.savefig(plot_file("FieldProfileAll.png"))
 
-# #%% PLOT MAXIMUM INTENSIFCATION FIELD (PLANE)
+#%% PLOT MAXIMUM INSTENSIFICATION FIELD
 
-# fig = plt.figure(figsize=(n*6.4, 6.4))
-# axes = fig.subplots(ncols=n)
-# lims = [np.min([in_results_plane[j][max_in_z_profile[j],:,:] for j in range(n)]),
-#        np.max([in_results_plane[j][max_in_z_profile[j],:,:] for j in range(n)])]      
-# lims = max([abs(l) for l in lims])
-# lims = [-lims, lims]
-# call_series = lambda j : in_results_plane[j][max_in_z_profile[j],:,:].T
+n = len(series)
+m = max([len(s) for s in series])
 
+if n*m <= 3:
+    subfig_size = 6.5
+if n*m <= 6:
+    subfig_size = 4.5
+else:
+    subfig_size = 3.5
 
-# for j in range(n):
-#     axes[j].imshow(call_series(j), 
-#                    interpolation='spline36', cmap='RdBu', 
-#                    vmin=lims[0], vmax=lims[1])
-#     axes[j].set_xlabel("Distancia en y (u.a.)", fontsize=18)
-#     axes[j].set_ylabel("Distancia en z (u.a.)", fontsize=18)
-#     axes[j].set_title("$\lambda$={} nm".format(wlen[j]*10), fontsize=22)
-#     plt.setp(axes[j].get_xticklabels(), fontsize=16)
-#     plt.setp(axes[j].get_yticklabels(), fontsize=16)
-# plt.savefig(file("MaxFieldPlane.png"))
+fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
+axes = fig.subplots(ncols=m, nrows=n)
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+lims = [np.min([np.min([np.min(resonance_plane[i][j] / amplitude_results[i][j]) for j in range(len(series[i]))]) for i in range(len(series))]),
+        np.max([np.max([np.max(resonance_plane[i][j] / amplitude_results[i][j]) for j in range(len(series[i]))]) for i in range(len(series))])]
+lims = max([abs(l) for l in lims])
+lims = [-lims, lims]
 
-# #%% THEORY SCATTERING
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        axes[i][j].imshow(resonance_plane[i][j].T / amplitude_results[i][j], 
+                          cmap='RdBu', #interpolation='spline36', 
+                          vmin=lims[0], vmax=lims[1],
+                          extent=[min(y_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
+                                  max(y_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
+                                  min(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
+                                  max(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3])
+        if i == len(series)-1 and j == 0:
+            axes[i][j].set_xlabel(trs.choose("Position Y [nm]", "Posición Y [nm]"))
+            axes[i][j].set_ylabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+        axes[i][j].set_title(series_label[i](series[i][j]))
+plt.savefig(plot_file("FieldPlaneAll.png"))
 
-# medium = vm.import_medium("Au", from_um_factor[0])
-
-# wlens = 10*np.linspace(min(wlen), max(wlen), 500)
-# freqs = 1e3*from_um_factor[0]/wlens
-# scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
-#                             1e3*from_um_factor[0]/f,
-#                             2*r[0]*1e3*from_um_factor[0],
-#                             nMedium=index[0], # Refraction Index of Medium
-#                             asDict=True)['Qsca'] 
-#                     for f in freqs]
-
-# wlen_max = wlens[np.argmax(scatt_eff_theory)]
-# e_wlen_max = np.mean([wlens[i+1]-wlens[i] for i in range(499)])
-
-# #%% PUT FULL SIGNALS IN FASE
+#%% PUT FULL SIGNALS IN FASE
 
 # source_field = [results_line[j][:, space_to_index(-cell_width[j]/2 + pml_width[j], j)] 
 #                 for j in range(n)]
