@@ -25,9 +25,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
-import PyMieScatt as ps
 from scipy.signal import find_peaks
-import v_analysis as va
 import v_materials as vmt
 import v_theory as vt
 import v_save as vs
@@ -446,7 +444,8 @@ for i in range(len(series)):
     zprofile_cm_theory.append([])
     zprofile_ku_theory.append([])
     for j in range(len(series[i])):
-        medium = vmt.import_medium("Au", from_um_factor[i][j])
+        medium = vmt.import_medium(material=material[i][j], paper=paper[i][j],
+                                   from_um_factor=from_um_factor[i][j])
         epsilon = medium.epsilon(1/wlen[i][j])[0,0]
         # E0 = np.array([0, 0, is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], 0])])
         alpha_cm = vt.alpha_Clausius_Mosotti(epsilon, r[i][j], epsilon_ext=index[i][j]**2)
@@ -556,7 +555,7 @@ plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$ [a.u.]",
 plt.legend(ncol=2)
 
 first_legend = plt.legend(l_origin, trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
-                                           ["Data MEEP", "Teoría CM", "Teoría Ku"]),
+                                               ["Data MEEP", "Teoría CM", "Teoría Ku"]),
                           loc="lower right")
 second_legend = plt.legend(
     l_series, 
@@ -565,6 +564,51 @@ second_legend = plt.legend(
 plt.gca().add_artist(first_legend)
 
 plt.savefig(plot_file("FieldProfileAll.png"))
+
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (SUBPLOTS)
+
+n = len(series)
+m = max([len(s) for s in series])
+
+if n*m <= 3:
+    subfig_size = 6.5
+if n*m <= 6:
+    subfig_size = 4.5
+else:
+    subfig_size = 3.5
+
+fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
+axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, gridspec_kw={"wspace":0})
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+        
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l_mp, = axes[i][j].plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
+                                resonance_zprofile[i][j] / amplitude_results[i][j],
+                                label=series_label[i](series[i][j]),
+                                color=colors[i][j])
+        l_cm, = axes[i][j].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
+                                np.abs(zprofile_cm_theory[i][j]),
+                                color=colors[i][j], linestyle="dashed")
+        l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
+                                np.abs(zprofile_ku_theory[i][j]),
+                                color=colors[i][j], linestyle="dotted")
+        axes[i][j].set_title(series_label[i](series[i][j]))
+        # axes[i][j].set_ylim(*lims)
+        if i==len(series)-1:
+            axes[i][j].set_xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+        if j==0:
+            axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$ [a.u.]",
+                                              r"Campo eléctrico normalizado $E_z(y=z=0)$ [u.a.]"))
+        if i==len(series)-1 and j==len(series[i])-1:
+            axes[i][j].legend([l_mp, l_cm, l_ku], 
+                              trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
+                                         ["Data MEEP", "Teoría CM", "Teoría Ku"]),
+                              loc="upper center")
+        axes[i][j].grid(True, axis="y")
+
+plt.savefig(plot_file("FieldProfileAllSubplots.png"))
 
 #%% PLOT MAXIMUM INSTENSIFICATION FIELD
 
@@ -602,120 +646,80 @@ for i in range(len(series)):
         axes[i][j].set_title(series_label[i](series[i][j]))
 plt.savefig(plot_file("FieldPlaneAll.png"))
 
-#%% PUT FULL SIGNALS IN FASE
+#%% MAKE PROFILE GIF
 
-# source_field = [results_line[j][:, space_to_index(-cell_width[j]/2 + pml_width[j], j)] 
-#                 for j in range(n)]
+maxnframes = 300
 
-# source_field_in_fase = []
-# init_index = []
-# end_index = []
-# for sf, rl in zip(source_field, results_line):
-#     peaks = find_peaks(sf)[0]
-#     period = round(np.mean(np.diff(peaks)))
-#     init = peaks[1]
-#     sfslice = sf[init:init+10*period]
-#     source_field_in_fase.append(sfslice)
-#     init_index.append(init)
-#     end_index.append(init+10*period)
-# del sfslice, period, init
+# What should be parameters
+nframes = min(maxnframes, np.max([[zprofile_results[i][j].shape[-1] for j in range(len(series[i]))] for i in range(len(series))]))
+nframes_step = [[int(round(zprofile_results[i][j].shape[-1] / nframes)) for j in range(len(series[i]))] for i in range(len(series))]
+label_function = lambda k : trs.choose('Time: {:.1f} of period',
+                                       'Tiempo: {:.1f} del período').format(t_line[-1][0][k]/period_results[-1][0])
 
-# results_plane_in_fase = [rp[i:f,:,:] for rp, i, f in zip(results_plane, 
-#                                                          init_index, 
-#                                                          end_index)]
-# z_profile_in_fase = [results_plane[j][init_index[j]:end_index[j], space_to_index(0,j), :] for j in range(n)]
+# Animation base
+n = len(series)
+m = max([len(s) for s in series])
 
-# #%% CROP FULL SIGNALS IN FASE
+if n*m <= 3:
+    subfig_size = 6.5
+if n*m <= 6:
+    subfig_size = 4.5
+else:
+    subfig_size = 3.5
 
-# in_results_plane_in_fase = []
-# in_z_profile_in_fase = []
-# for j in range(len(f)):
-#     in_results_plane_in_fase.append(results_plane_in_fase[j][:,
-#         space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j),
-#         space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
-#     in_z_profile_in_fase.append(z_profile_in_fase[j][:,
-#         space_to_index(-cell_width[j]/2 + pml_width[j], j) : space_to_index(cell_width[j]/2 - pml_width[j], j)])
+fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
+axes = fig.subplots(ncols=m, nrows=n)
+lims = [np.min([np.min([np.min(zprofile_results[i][j] / amplitude_results[i][j]) for j in range(len(series[i]))]) for i in range(len(series))]),
+        np.max([np.max([np.max(zprofile_results[i][j] / amplitude_results[i][j]) for j in range(len(series[i]))]) for i in range(len(series))])]
 
-# #%% SHOW SOURCE
+def draw_pml_box(i, j):
+    axes[i][j].vlines((-cell_width[i][j]/2 + pml_width[i][j]) * from_um_factor[i][j] * 1e3, 
+                      *lims, linestyle=":", color='k')
+    axes[i][j].vlines((cell_width[i][j]/2 - pml_width[i][j]) * from_um_factor[i][j] * 1e3, 
+                      *lims, linestyle=":", color='k')
+    axes[i][j].hlines(0, min(z_plane[i][j]) * from_um_factor[i][j] * 1e3, 
+                         max(z_plane[i][j]) * from_um_factor[i][j] * 1e3,
+                      color='k', linewidth=1)
 
-# # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
-# #           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-# colors = ['#1f77b4', '#2ca02c', '#d62728']
+def make_pic_line(k):
+    # fraction = #ACÁ ME QUEDÉEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+    for i in range(len(series)):
+        for j in range(len(series[i])):
+            kij = k * nframes_step[i][j]
+            axes[i][j].clear()
+            axes[i][j].plot(z_plane[i][j] * from_um_factor[i][j] * 1e3, 
+                            zprofile_results[i][j][:, kij]  / amplitude_results[i][j],
+                            color=colors[i][j])
+            axes[i][j].set_ylim(*lims)
+            if i==len(series)-1 and j==0:
+                axes[i][j].text(-.2, -.2, label_function(kij), 
+                                transform=axes[i][j].transAxes)
+            draw_pml_box(i, j)
+            if i==len(series)-1:
+                axes[i][j].set_xlabel(trs.choose("Distance Z [nm]", "Distancia Z [nm]"))
+            if j==0:
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field Profile $E_z|_{z=0}$ [a.u.]",
+                                                 r"Perfil del campo eléctrico $E_z|_{z=0}$ [u.a.]"))
+            axes[i][j].set_xlim(min(z_plane[i][j]) * from_um_factor[i][j] * 1e3, 
+                                max(z_plane[i][j]) * from_um_factor[i][j] * 1e3)
+            plt.show()
+    return axes
 
-# plt.figure()
-# for sfs, c in zip(source_field_in_fase, colors):
-#     plt.plot(np.linspace(0,10,len(sfs)), sfs, c)
-#     plt.xlabel("Tiempo ($T=\lambda/c$)")
-#     plt.ylabel("Campo eléctrico Ez (u.Meep)")
-# plt.legend(["$\lambda$ = {:.0f} nm".format(wl*10) for wl in wlen])
+def make_gif_line(gif_filename):
+    pics = []
+    for k in range(nframes):
+        axes = make_pic_line(k)
+        plt.savefig('temp_pic.png') 
+        pics.append(mim.imread('temp_pic.png')) 
+        print(str(k+1)+'/'+str(nframes))
+    mim.mimsave(gif_filename+'.gif', pics, fps=5)
+    os.remove('temp_pic.png')
+    print('Saved gif')
 
-# plt.savefig(file("Source.png"))
+make_gif_line(plot_file("AxisZ"))
+plt.close(fig)
+# del fig, ax, lims, nframes_step, nframes, call_series, label_function
 
-# #%% PLANE IN FASE GIF
-
-# # What should be parameters
-# nframes_step = 1
-# all_nframes = [int(rp.shape[0]/nframes_step) for rp in results_plane_in_fase]
-# nframes = max(all_nframes)
-# jmax = np.where(np.asarray(all_nframes)==nframes)[0][0]
-# call_index = lambda i, j : int(i * all_nframes[j] / nframes)
-# call_series = lambda i, j : results_plane_in_fase[j][i,:,:].T
-# label_function = lambda i : 'Tiempo: {:.1f}'.format(i * period_plane[jmax] / wlen[jmax]) + ' T'
-
-# # Animation base
-# fig = plt.figure(figsize=(n*6.4, 6.4))
-# axes = fig.subplots(ncols=n)
-# lims = lambda j : (np.min(results_plane_in_fase[j]),
-#                    np.max(results_plane_in_fase[j]))
-    
-# def draw_pml_box(j):
-#     axes[j].hlines(space_to_index(-cell_width[j]/2 + pml_width[j], j), 
-#                    space_to_index(-cell_width[j]/2 + pml_width[j], j), 
-#                    space_to_index(cell_width[j]/2 - pml_width[j], j),
-#                    linestyle=":", color='k')
-#     axes[j].hlines(space_to_index(cell_width[j]/2 - pml_width[j], j), 
-#                    space_to_index(-cell_width[j]/2 + pml_width[j], j), 
-#                    space_to_index(cell_width[j]/2 - pml_width[j], j),
-#                    linestyle=":", color='k')
-#     axes[j].vlines(space_to_index(-cell_width[j]/2 + pml_width[j], j), 
-#                    space_to_index(-cell_width[j]/2 + pml_width[j], j), 
-#                    space_to_index(cell_width[j]/2 - pml_width[j], j),
-#                    linestyle=":", color='k')
-#     axes[j].vlines(space_to_index(cell_width[j]/2 - pml_width[j], j), 
-#                    space_to_index(-cell_width[j]/2 + pml_width[j], j), 
-#                    space_to_index(cell_width[j]/2 - pml_width[j], j),
-#                    linestyle=":", color='k')
-
-# def make_pic_plane(i):
-#     for j in range(n):
-#         axes[j].clear()
-#         axes[j].imshow(call_series(call_index(i, j), j), 
-#                        interpolation='spline36', cmap='RdBu', 
-#                        vmin=lims(j)[0], vmax=lims(j)[1])
-#         axes[j].set_xlabel("Distancia en y (u.a.)")
-#         axes[j].set_ylabel("Distancia en z (u.a.)")
-#         axes[j].set_title("$\lambda$={} nm".format(wlen[j]*10))
-#         draw_pml_box(j)
-#     axes[0].text(-.1, -.105, label_function(i), transform=axes[0].transAxes)
-#     plt.show()
-#     return axes
-
-# def make_gif_plane(gif_filename):
-#     pics = []
-#     for i in range(nframes):
-#         axes = make_pic_plane(i*nframes_step)
-#         plt.savefig('temp_pic.png') 
-#         pics.append(mim.imread('temp_pic.png')) 
-#         print(str(i+1)+'/'+str(nframes))
-#     mim.mimsave(gif_filename+'.gif', pics, fps=5)
-#     os.remove('temp_pic.png')
-#     print('Saved gif')
-
-# make_gif_plane(file("PlaneX=0"))
-# plt.close(fig)
-# # del fig, ax, lims, nframes_step, nframes, call_series, label_function
-
-# #%% MAKE Z LINES GIF
 
 # # What should be parameters
 # nframes_step = 1
