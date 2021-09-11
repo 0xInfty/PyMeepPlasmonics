@@ -474,11 +474,11 @@ for i in range(len(series)):
     for j in range(len(series[i])):
         l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
                          np.abs(zprofile_cm_theory[i][j]),
-                         label=series_label[i](series[i][j]) + " CM",
+                         label=series_label[i](series[i][j]),
                          color=colors[i][j], linestyle="dashed")
         l_ku, = plt.plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
                          np.abs(zprofile_ku_theory[i][j]),
-                         label=series_label[i](series[i][j]) + " Ku",
+                         label=series_label[i](series[i][j]),
                          color=colors[i][j], linestyle="dotted")
         l_series.append(l_cm)
         if i == 0 and j == len(series[0]) - 1:
@@ -488,8 +488,8 @@ plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$ [a.u.]",
                       r"Campo eléctrico normalizado $E_z(y=z=0)$ [u.a.]"))
 plt.legend(ncol=2)
 
-first_legend = plt.legend(l_origin, trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
-                                           ["Data MEEP", "Teoría CM", "Teoría Ku"]),
+first_legend = plt.legend(l_origin, trs.choose(["CM Theory", "Ku Theory"],
+                                               ["Teoría CM", "Teoría Ku"]),
                           loc="center")
 second_legend = plt.legend(
     l_series, 
@@ -518,7 +518,7 @@ for i in range(len(series)):
 plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
 plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$ [a.u.]",
                       r"Campo eléctrico normalizado $E_z(y=z=0)$ [u.a.]"))
-plt.legend(ncol=2)
+plt.legend()
 
 plt.savefig(plot_file("FieldProfileData.png"))
 
@@ -594,6 +594,9 @@ for i in range(len(series)):
         l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
                                 np.abs(zprofile_ku_theory[i][j]),
                                 color=colors[i][j], linestyle="dotted")
+        xlims = axes[i][j].get_xlim()
+        axes[i][j].hlines(0, *xlims, color="k", linewidth=1)
+        axes[i][j].set_xlim(xlims)
         axes[i][j].set_title(series_label[i](series[i][j]))
         # axes[i][j].set_ylim(*lims)
         if i==len(series)-1:
@@ -606,7 +609,7 @@ for i in range(len(series)):
                               trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
                                          ["Data MEEP", "Teoría CM", "Teoría Ku"]),
                               loc="upper center")
-        axes[i][j].grid(True, axis="y")
+        # axes[i][j].grid(True, axis="y")
 
 plt.savefig(plot_file("FieldProfileAllSubplots.png"))
 
@@ -651,8 +654,10 @@ plt.savefig(plot_file("FieldPlaneAll.png"))
 maxnframes = 300
 
 # What should be parameters
+iref = -1
+jref = 0
 nframes = min(maxnframes, np.max([[zprofile_results[i][j].shape[-1] for j in range(len(series[i]))] for i in range(len(series))]))
-nframes_step = [[int(round(zprofile_results[i][j].shape[-1] / nframes)) for j in range(len(series[i]))] for i in range(len(series))]
+nframes_step = int(round(zprofile_results[iref][jref].shape[-1] / nframes))
 label_function = lambda k : trs.choose('Time: {:.1f} of period',
                                        'Tiempo: {:.1f} del período').format(t_line[-1][0][k]/period_results[-1][0])
 
@@ -682,10 +687,10 @@ def draw_pml_box(i, j):
                       color='k', linewidth=1)
 
 def make_pic_line(k):
-    # fraction = #ACÁ ME QUEDÉEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+    tk = t_line[iref][jref][k * nframes_step]/period_results[-1][0]
     for i in range(len(series)):
         for j in range(len(series[i])):
-            kij = k * nframes_step[i][j]
+            kij = np.argmin(np.abs(t_line[i][j] / period_results[i][j] - tk))
             axes[i][j].clear()
             axes[i][j].plot(z_plane[i][j] * from_um_factor[i][j] * 1e3, 
                             zprofile_results[i][j][:, kij]  / amplitude_results[i][j],
