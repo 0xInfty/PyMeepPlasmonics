@@ -30,6 +30,7 @@ import v_materials as vmt
 import v_theory as vt
 import v_save as vs
 import v_utilities as vu
+import v_meep_analysis as vma
 
 english = False
 trs = vu.BilingualManager(english=english)
@@ -62,7 +63,7 @@ series_legend = ["Vacuum", "Water"]
 series_colors = [plab.cm.Reds, plab.cm.Blues]
 series_linestyles = ["solid"]*2
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/TestPeriods/Periods" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/TestPeriods/PeriodsBroken" + n)
 
 #%% LOAD DATA
 
@@ -168,187 +169,47 @@ width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in
 grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
 memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
 
-#%% POSITION RECONSTRUCTION FUNCTIONS
+#%% POSITION RECONSTRUCTION
 
-t_line_index = lambda t0, i, j : np.argmin(np.abs(np.asarray(t_line[i][j]) - t0))
-x_line_index = lambda x0, i, j : np.argmin(np.abs(np.asarray(x_line[i][j]) - x0))
+t_line_index = [[vma.def_index_function(t_line[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+x_line_index = [[vma.def_index_function(x_line[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-t_plane_index = lambda t0, i, j : np.argmin(np.abs(np.asarray(t_plane[i][j]) - t0))
-y_plane_index = lambda y0, i, j : np.argmin(np.abs(np.asarray(y_plane[i][j]) - y0))
-z_plane_index = lambda z0, i, j : np.argmin(np.abs(np.asarray(z_plane[i][j]) - z0))
+t_plane_index = [[vma.def_index_function(t_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+y_plane_index = [[vma.def_index_function(y_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+z_plane_index = [[vma.def_index_function(z_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-#%% ACTUAL POSITION RECONSTRUCTION
+x_line_cropped = [[x_line[i][j][:x_line_index[i][j](cell_width[i][j]/2 - pml_width[i][j])] for j in range(len(series[i]))] for i in range(len(series))]
+x_line_cropped = [[x_line_cropped[i][j][x_line_index[i][j](-cell_width[i][j]/2 + pml_width[i][j]):] for j in range(len(series[i]))] for i in range(len(series))]
 
-x_line_cropped = [[x_line[i][j][:x_line_index(cell_width[i][j]/2 - pml_width[i][j], i, j)] for j in range(len(series[i]))] for i in range(len(series))]
-x_line_cropped = [[x_line_cropped[i][j][x_line_index(-cell_width[i][j]/2 + pml_width[i][j], i, j):] for j in range(len(series[i]))] for i in range(len(series))]
+y_plane_cropped = [[y_plane[i][j][:y_plane_index[i][j](cell_width[i][j]/2 - pml_width[i][j])] for j in range(len(series[i]))] for i in range(len(series))]
+y_plane_cropped = [[y_plane_cropped[i][j][y_plane_index[i][j](-cell_width[i][j]/2 + pml_width[i][j]):] for j in range(len(series[i]))] for i in range(len(series))]
 
-y_plane_cropped = [[y_plane[i][j][:y_plane_index(cell_width[i][j]/2 - pml_width[i][j], i, j)] for j in range(len(series[i]))] for i in range(len(series))]
-y_plane_cropped = [[y_plane_cropped[i][j][y_plane_index(-cell_width[i][j]/2 + pml_width[i][j], i, j):] for j in range(len(series[i]))] for i in range(len(series))]
+z_plane_cropped = [[z_plane[i][j][:z_plane_index[i][j](cell_width[i][j]/2 - pml_width[i][j])] for j in range(len(series[i]))] for i in range(len(series))]
+z_plane_cropped = [[z_plane_cropped[i][j][z_plane_index[i][j](-cell_width[i][j]/2 + pml_width[i][j]):] for j in range(len(series[i]))] for i in range(len(series))]
 
-z_plane_cropped = [[z_plane[i][j][:z_plane_index(cell_width[i][j]/2 - pml_width[i][j], i, j)] for j in range(len(series[i]))] for i in range(len(series))]
-z_plane_cropped = [[z_plane_cropped[i][j][z_plane_index(-cell_width[i][j]/2 + pml_width[i][j], i, j):] for j in range(len(series[i]))] for i in range(len(series))]
+#%% DATA EXTRACTION
 
-#%% DATA EXTRACTION FUNCTIONS
+source_results = [[vma.get_source_from_line(results_line[i][j], x_line_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-last_stable_periods = 5
+period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j], peaks_sensitivity=.15) for j in range(len(series[i]))] for i in range(len(series))]
 
-def get_peaks_from_source(source, i, j):   
-    peaks = find_peaks(source_results[i][j], height=0)[0]
-    
-    mean_diff = np.mean(np.diff(peaks)[-last_stable_periods:])
-    selected_peaks = []
-    selection_criteria = lambda k : np.abs( mean_diff - (peaks[k+1] - peaks[k]) ) <= 0.1 * mean_diff
-    for k in range(len(peaks)):
-        if k == 0 and selection_criteria(k):
-            selected_peaks.append(peaks[k])
-        elif k == len(peaks)-1 and selection_criteria(k-1):
-            selected_peaks.append(peaks[k])
-        elif selection_criteria(k):
-            selected_peaks.append(peaks[k])
-    return selected_peaks
+amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j], peaks_sensitivity=.15) for j in range(len(series[i]))] for i in range(len(series))]
 
-def get_period_from_source(source, i, j):
-    peaks = get_peaks_from_source(source, i, j)
-    
-    keep_periods_from = 0
-    periods = np.array(t_line[i][j][peaks[1:]] - t_line[i][j][peaks[:-1]])
-    mean_periods = np.mean(periods[-last_stable_periods:])
-    for k, per in enumerate(periods):
-        if np.abs(per - mean_periods) > .1 * mean_periods:
-            keep_periods_from = max(keep_periods_from, k+1)
-    stable_periods = periods[keep_periods_from:]
-    return np.mean(stable_periods)
+zprofile_results = [[vma.get_zprofile_from_plane(results_plane[i][j], y_plane_index[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-def get_amplitude_from_source(source, i, j):
-    peaks = get_peaks_from_source(source, i, j)
-    
-    keep_periods_from = 0
-    heights = source_results[i][j][peaks]
-    mean_height = np.mean(source_results[i][j][peaks[-last_stable_periods:]])
-    for k, h in enumerate(heights):
-        if np.abs(h - mean_height) > .05 * mean_height:
-            keep_periods_from = max(keep_periods_from, k+1)
-    stable_heights = source_results[i][j][peaks[keep_periods_from:]]
-    return np.mean(stable_heights)
+zprofile_integral = [[vma.integrate_field_zprofile(zprofile_results[i][j], z_plane_index[i][j],
+                                                   cell_width[i][j], pml_width[i][j], period_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-def crop_field_zyplane(field, i, j):
-    cropped = field[: y_plane_index(cell_width[i][j]/2 - pml_width[i][j], i, j), :]
-    cropped = cropped[y_plane_index(-cell_width[i][j]/2 + pml_width[i][j], i, j) :, :]
-    cropped = cropped[:,: z_plane_index(cell_width[i][j]/2 - pml_width[i][j], i, j)]
-    cropped = cropped[:, z_plane_index(-cell_width[i][j]/2 + pml_width[i][j], i, j) :]
-    return cropped        
-    
-def crop_field_zprofile(field, i, j):
-    cropped = field[: z_plane_index(cell_width[i][j]/2 - pml_width[i][j], i, j)]
-    cropped = cropped[z_plane_index(-cell_width[i][j]/2 + pml_width[i][j], i, j) :]
-    return cropped
+zprofile_max = [[vma.find_peaks_field_zprofile(zprofile_results[i][j], z_plane_index[i][j],
+                                               r[i][j], cell_width[i][j], pml_width[i][j])[1] for j in range(len(series[i]))] for i in range(len(series))]
 
-def integrate_field_zprofile(field_profile, i, j):
-    integral = np.sum(crop_field_zprofile(field_profile, i, j)) * period_plane[i][j]
-    return integral
+resonance_zprofile = [[vma.get_single_resonance_from_yzplanes(results_plane[i][j],
+                                                              y_plane_index[i][j], z_plane_index[i][j], 
+                                                              r[i][j], cell_width[i][j], pml_width[i][j])[1] for j in range(len(series[i]))] for i in range(len(series))]
 
-def detect_sign_field_zprofile(field_profile, i, j):
-    return -np.sign(field_profile[0])
-
-def find_peaks_field_zprofile(field_profile, i, j):
-    sign = detect_sign_field_zprofile(field_profile, i, j)
-    peaks = find_peaks(sign * crop_field_zprofile(field_profile, i, j))[0]
-    peaks = np.array(peaks) + z_plane_index(-cell_width[i][j]/2 + pml_width[i][j], i, j)
-    if len(peaks) > 2: peaks = peaks[[0,-1]]
-    try:
-        peaks[0] = min(peaks[0], z_plane_index(-r[i][j]) - 1, i, j)
-        peaks[1] = max(peaks[1], z_plane_index(r[i][j]), i, j)
-        return peaks
-    except:
-        return (None, None)
-
-def get_max_index_zprofile(field_profile, i, j):
-    try: 
-        return min(find_peaks_field_zprofile(field_profile)[0],
-                   z_plane_index(-r[i][j], i, j))
-    except IndexError:
-        return None
-
-def get_max_field_zprofile(field_profile, i, j):
-    try: 
-        return np.mean( field_profile[ find_peaks_field_zprofile(field_profile, i, j) ] )
-    except RuntimeWarning:
-        return None
-
-def get_max_resonance_index(field_profile, i, j):
-    z_resonance_max = np.array([ get_max_field_zprofile(zprof, i, j) for zprof in field_profile.T])
-    first_index = int(np.argwhere( np.isnan(z_resonance_max) == False )[0])
-    t_resonance_max_index = find_peaks(z_resonance_max[first_index:], 
-                                       height=(np.max(z_resonance_max[first_index:])/2, None))[0]
-    t_resonance_max_index = np.array(t_resonance_max_index) + first_index
-    return t_resonance_max_index #, t_resonance_max, z_resonance_max
-
-def get_single_resonance_index(field_profile, i, j):
-    t_resonance_max_index = get_max_resonance_index(field_profile, i, j)
-    
-    zprofile_resonance = [crop_field_zprofile(field_profile[:,k], i, j) for k in t_resonance_max_index]
-    max_list = [np.max(zp) for zp in zprofile_resonance]
-    
-    max_index = np.argmax(max_list)
-    min_index = np.argmin(max_list)
-    return min_index, max_index    
-
-def get_resonance_profiles(field_profile, i, j):
-    t_resonance_max_index = get_max_resonance_index(field_profile, i, j)
-    min_index, max_index = get_single_resonance_index(field_profile, i, j)
-    
-    zprofile_resonance = [crop_field_zprofile(field_profile[:,k], i, j) for k in t_resonance_max_index]
-    
-    zprofile_resonance_mean = np.mean( np.array(zprofile_resonance), axis=0)
-    zprofile_resonance_min = zprofile_resonance[min_index]
-    zprofile_resonance_max = zprofile_resonance[max_index]
-    
-    return zprofile_resonance_min, zprofile_resonance_mean, zprofile_resonance_max
-
-def get_resonance_planes(field, field_profile, i, j):
-    t_resonance_max_index = get_max_resonance_index(field_profile, i, j)
-    min_index, max_index = get_single_resonance_index(field_profile, i, j)
-    
-    plane_resonance = [crop_field_zyplane(field[:,:,k], i, j) for k in t_resonance_max_index]
-    
-    plane_resonance_mean = np.mean( np.array(plane_resonance), axis=0)
-    plane_resonance_min = plane_resonance[min_index]
-    plane_resonance_max = plane_resonance[max_index]
-    
-    return plane_resonance_min, plane_resonance_mean, plane_resonance_max
-
-#%% ACTUAL DATA EXTRACTION
-
-source_results = [[np.asarray(results_line[i][j])[x_line_index(source_center[i][j], i, j), :] for j in range(len(series[i]))] for i in range(len(series))]
-
-period_results = [[get_period_from_source(source_results[i][j], i, j) for j in range(len(series[i]))] for i in range(len(series))]
-
-amplitude_results = [[get_amplitude_from_source(source_results[i][j], i, j) for j in range(len(series[i]))] for i in range(len(series))]
-
-zprofile_results = [[np.asarray(results_plane[i][j])[y_plane_index(0, i, j), :, :] for j in range(len(series[i]))] for i in range(len(series))]
-
-zprofile_integral = [[np.array([ integrate_field_zprofile(zprof, i, j) for zprof in zprofile_results[i][j].T]) for j in range(len(series[i]))] for i in range(len(series))]
-
-zprofile_max = [[np.array([ get_max_field_zprofile(zprof, i, j) for zprof in zprofile_results[i][j].T]) for j in range(len(series[i]))] for i in range(len(series))]
-
-resonance_max_index = [[get_max_resonance_index(zprofile_results[i][j], i, j) for j in range(len(series[i]))] for i in range(len(series))]
-
-resonance_zprofile = [[get_resonance_profiles(zprofile_results[i][j], i, j)[-1] for j in range(len(series[i]))] for i in range(len(series))]
-
-resonance_plane = [[get_resonance_planes(results_plane[i][j], zprofile_results[i][j], i, j)[-1] for j in range(len(series[i]))] for i in range(len(series))]
-
-# resonance_mean_zprofile = []
-# resonance_min_zprofile = []
-# resonance_max_zprofile = []
-# for i in range(len(series)):
-#     resonance_mean_zprofile.append([])
-#     resonance_min_zprofile.append([])
-#     resonance_max_zprofile.append([])
-#     for j in range(len(series[i])):
-#         res_min, res_mean, res_max = get_resonance_profiles(zprofile_results[i][j], i, j)
-#         resonance_mean_zprofile[-1].append(res_mean)
-#         resonance_min_zprofile[-1].append(res_min)
-#         resonance_max_zprofile[-1].append(res_max)
+resonance_plane = [[vma.get_single_resonance_from_yzplanes(results_plane[i][j],
+                                                           y_plane_index[i][j], z_plane_index[i][j], 
+                                                           r[i][j], cell_width[i][j], pml_width[i][j])[2] for j in range(len(series[i]))] for i in range(len(series))]
 
 #%% SHOW SOURCE AND FOURIER
 
