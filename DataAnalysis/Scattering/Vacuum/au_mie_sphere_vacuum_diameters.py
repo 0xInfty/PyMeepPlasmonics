@@ -14,22 +14,28 @@ import os
 import v_save as vs
 import v_utilities as vu
 
+english = False
+trs = vu.BilingualManager(english=english)
+
 #%% PARAMETERS
 
 # Saving directories
-folder = ["AuMieSphere/AuMie/7)Diameters/WLen4560",
-          "AuMieSphere/AuMie/7)Diameters/WLen4560"]
+folder = ["Scattering/AuSphere/AllVacTest/7)Diameters/WLen4560",
+          "Scattering/AuSphere/AllVacTest/7)Diameters/WLen4560"]
 home = vs.get_home()
 
 # Sorting and labelling data series
 sorting_function = [vu.sort_by_number, vu.sort_by_number]
 series_label = [lambda s : f"Meep {vu.find_numbers(s)[0]} nm",
                 lambda s : f"Mie {vu.find_numbers(s)[0]} nm"]
+series_label = [lambda s : trs.choose("MEEP Data", "Datos MEEP") + f" {vu.find_numbers(s)[0]} nm",
+                lambda s : trs.choose("Mie Theory", "Teoría Mie") + f" {vu.find_numbers(s)[0]} nm",]
 series_must = ["SC", "SC"] # leave "" per default
 series_column = [1, 2]
 
 # Scattering plot options
-plot_title = "Scattering for Au spheres in vacuum with different diameters"
+plot_title = trs.choose("Scattering for Au spheres of different diameters in vacuum",
+                        "Dispersión de esferas de Au de diferentes diámetros en vacío")
 series_colors = [plab.cm.Reds, plab.cm.Reds]
 series_linestyles = ["solid", "dashed"]
 plot_make_big = True
@@ -110,8 +116,9 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
         plt.plot(sd[:,0], sd[:,sc] / max(sd[:,sc]), 
                  linestyle=pls, color=spc, label=psl(ss))
 
-plt.xlabel("Longitud de onda [nm]")
-plt.ylabel("Sección eficaz de scattering normalizada")
+plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.ylabel(trs.choose("Normalized Scattering Cross Section",
+                      "Sección eficaz de dispersión normalizada"))
 plt.legend()
 if plot_make_big:
     mng = plt.get_current_fig_manager()
@@ -133,8 +140,8 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
         plt.plot(sd[:,0], sd[:,sc], 
                  linestyle=pls, color=spc, label=psl(ss))
 
-plt.xlabel("Longitud de onda [nm]")
-plt.ylabel("Eficiencia de scattering")
+plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.ylabel(trs.choose("Scattering Efficiency", "Eficacia de Dispersión"))
 plt.legend()
 if plot_make_big:
     mng = plt.get_current_fig_manager()
@@ -156,8 +163,9 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
         plt.plot(sd[:,0], sd[:,sc] * np.pi * (sp['r'] * sp['from_um_factor'] * 1e3)**2, 
                  linestyle=pls, color=spc, label=psl(ss))
 
-plt.xlabel("Longitud de onda [nm]")
-plt.ylabel("Sección eficaz de scattering [nm$^2$]")
+plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.ylabel(trs.choose("Scattering Cross Section [nm$^2$]",
+                      "Sección eficaz de dispersión [nm$^2$]"))
 plt.legend()
 if plot_make_big:
     mng = plt.get_current_fig_manager()
@@ -175,9 +183,10 @@ fig = plt.figure()
 plot_grid = gridspec.GridSpec(ncols=4, nrows=2, hspace=0.5, wspace=0.5, figure=fig)
 
 main_ax = fig.add_subplot(plot_grid[:,0:2])
-main_ax.set_title("Cuatro diámetros")
-main_ax.xaxis.set_label_text("Longitud de onda [nm]")
-main_ax.yaxis.set_label_text("Sección eficaz normalizada [u.a.]")
+main_ax.set_title(trs.choose("All Diameters", "Todos los diámetros"))
+main_ax.xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+main_ax.yaxis.set_label_text(trs.choose("Normalized Scattering Cross Section",
+                                        "Sección eficaz de dispersión normalizada"))
 
 for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
                                      series_label, colors, series_linestyles):
@@ -195,16 +204,14 @@ for pl in plot_list:
 for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column, 
                                          series_label, colors, series_linestyles):    
     for ax, ss, sd, sp, spc in zip(axes_list, s, d, p, pc):
-        ax.set_title(f"Diámetro {2*sp['r']*sp['from_um_factor']*1e3: 1.0f} nm")
+        ax.set_title(trs.choose("Diameter", "Diámetro") + 
+                     f" {2*sp['r']*sp['from_um_factor']*1e3: 1.0f} nm")
         ax.plot(sd[:,0], sd[:,sc] * np.pi * (sp['r'] * sp['from_um_factor'] * 1e3)**2, 
                 linestyle=pls, color=spc, label=psl(ss))
-        ax.xaxis.set_label_text("Longitud de onda [nm]")
-        ax.yaxis.set_label_text("Sección eficaz [nm$^2$]")
+        ax.xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+        ax.yaxis.set_label_text(trs.choose("Scattering Cross Section [nm$^2$]",
+                                           "Sección eficaz de dispersión [nm$^2$]"))
 
 fig.set_size_inches([13.09,  5.52])
 
-if plot_make_big:
-    mng = plt.get_current_fig_manager()
-    mng.window.showMaximized()
-del mng
 vs.saveplot(plot_file("AllScattBig.png"), overwrite=True)

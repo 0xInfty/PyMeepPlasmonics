@@ -23,24 +23,25 @@ trs = vu.BilingualManager(english=english)
 #%% PARAMETERS
 
 # Saving directories
-folder = ["Scattering/AuSphere/AllWatDiam"]
+folder = ["Scattering/AuSphere/AllVacTest/7)Diameters/WLen4560",
+          "Scattering/AuSphere/AllWatDiam"]
 home = vs.get_home()
 
 # Sorting and labelling data series
-sorting_function = [vu.sort_by_number]
-series_must = [""] # leave "" per default
-series_mustnt = ["More"] # leave "" per default
-series_column = [1]
+sorting_function = [vu.sort_by_number]*2
+series_must = ["SC", ""] # leave "" per default
+series_mustnt = ["", "More"] # leave "" per default
+series_column = [1]*2
 
 # Scattering plot options
-plot_title = trs.choose("Scattering for Au spheres of different diameters in water",
-                        "Dispersión de esferas de Au de diferentes diámetros en agua")
-series_colors = [plab.cm.Blues]
-series_label = [lambda s : trs.choose("MEEP Data", "Datos MEEP") + 
-                f" {vu.find_numbers(s)[0]} nm"]
-series_linestyles = ["solid"]
-theory_label = lambda s : trs.choose("Mie Theory", "Teoría Mie") + f" {vu.find_numbers(s)[0]} nm"
-theory_linestyle = "dashed"
+plot_title = trs.choose("Scattering for Au spheres of different diameters",
+                        "Dispersión de esferas de Au de diferentes diámetros")
+series_colors = [plab.cm.Reds, plab.cm.Blues]
+series_label = [lambda s : trs.choose("Vacuum", "Vacío") + f" {vu.find_numbers(s)[0]} nm",
+                lambda s : trs.choose("Water", "Agua") + f" {vu.find_numbers(s)[0]} nm"]
+series_linestyles = ["solid"]*2
+theory_linestyles = ["dashed"]*2
+
 plot_make_big = True
 plot_file = lambda n : os.path.join(home, "DataAnalysis", "AllWaterDiameters"+n)
 
@@ -81,7 +82,7 @@ resolution = []
 material = []
 paper = []
 index = []
-for p in params:
+for i, p in enumerate(params):
     r.append( [pi["r"] for pi in p] )
     from_um_factor.append( [pi["from_um_factor"] for pi in p] )
     resolution.append( [pi["resolution"] for pi in p] )
@@ -90,7 +91,10 @@ for p in params:
         try:
             index[-1].append( p["submerged_index"] )
         except KeyError:
-            index[-1].append( 1.333 )
+            if i==0:
+                index[-1].append( 1 )
+            else:
+                index[-1].append( 1.333 )
     try:
         paper.append( [pi["paper"] for pi in p])
     except:
@@ -160,26 +164,42 @@ dif_max_wlen = [max_wlen[0][i] - max_wlen_theory[0][i] for i in range(len(data[0
 
 #%% PLOT NORMALIZED
 
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
 
 plt.figure()
 plt.title(plot_title)
+
+lines_origin = []
+lines_series = []
 for i in range(len(series)):
     for j in range(len(series[i])):
-        plt.plot(data[i][j][:,0], 
-                 data[i][j][:,series_column[i]] / max(data[i][j][:,series_column[i]]), 
-                 linestyle=series_linestyles[i], color=colors[i][j], 
-                 label=series_label[i](series[i][j]))
-        plt.plot(data[i][j][:,0], 
-                 theory[i][j] / max(theory[i][j]), 
-                 linestyle=theory_linestyle, color=colors[i][j], 
-                 label=theory_label(series[i][j]))
+        l_meep, = plt.plot(data[i][j][:,0], 
+                           data[i][j][:,series_column[i]] / max(data[i][j][:,series_column[i]]), 
+                           linestyle=series_linestyles[i], color=colors[i][j], 
+                           label=series_label[i](series[i][j]))
+        l_theory, = plt.plot(data[i][j][:,0], 
+                             theory[i][j] / max(theory[i][j]), 
+                             linestyle=theory_linestyles[i], color=colors[i][j], 
+                             label=theory_label[i](series[i][j]))
+        if i==0 and j==len(series[0])-1:
+            lines_origin.append( [l_meep, l_theory] )
+        lines_series.append(l_meep)
 
 plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
 plt.ylabel(trs.choose("Normalized Scattering Cross Section",
                       "Sección eficaz de dispersión normalizada"))
-plt.legend()
+# plt.legend()
+
+first_legend = plt.legend(lines_origin, trs.choose(["CM Theory", "Ku Theory"],
+                                               ["Teoría CM", "Teoría Ku"]),
+                          loc="center")
+second_legend = plt.legend(
+    l_series, 
+    [l.get_label() for l in l_series],
+    loc="upper center")
+plt.gca().add_artist(first_legend)
+
 if plot_make_big:
     mng = plt.get_current_fig_manager()
     mng.window.showMaximized()
@@ -188,7 +208,7 @@ vs.saveplot(plot_file("AllScattNorm.png"), overwrite=True)
 
 #%% PLOT EFFIENCIENCY
 
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
         
 plt.figure()
@@ -201,8 +221,8 @@ for i in range(len(series)):
                  label=series_label[i](series[i][j]))
         plt.plot(data[i][j][:,0], 
                  theory[i][j], 
-                 linestyle=theory_linestyle, color=colors[i][j], 
-                 label=theory_label(series[i][j]))
+                 linestyle=theory_linestyles[i], color=colors[i][j], 
+                 label=theory_label[i](series[i][j]))
 
 plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
 plt.ylabel(trs.choose("Scattering Efficiency", "Eficacia de Dispersión"))
@@ -215,7 +235,7 @@ vs.saveplot(plot_file("AllScattEff.png"), overwrite=True)
 
 #%% PLOT IN UNITS
 
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
         
 plt.figure()
@@ -228,8 +248,8 @@ for i in range(len(series)):
                  label=series_label[i](series[i][j]))
         plt.plot(data[i][j][:,0], 
                  theory[i][j] * np.pi * (r[i][j] * from_um_factor[i][j] * 1e3)**2,
-                 linestyle=theory_linestyle, color=colors[i][j], 
-                 label=theory_label(series[i][j]))
+                 linestyle=theory_linestyles[i], color=colors[i][j], 
+                 label=theory_label[i](series[i][j]))
 
 plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
 plt.ylabel(trs.choose("Scattering Cross Section [nm$^2$]",
@@ -243,11 +263,11 @@ vs.saveplot(plot_file("AllScatt.png"), overwrite=True)
 
 #%% ONE HUGE PLOT
 
-colors = [sc(np.linspace(0,1,len(s)+3))[3:] 
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
-plot_grid = gridspec.GridSpec(ncols=4, nrows=2, hspace=0.5, wspace=0.5, figure=fig)
+plot_grid = gridspec.GridSpec(ncols=4, nrows=2, hspace=0.4, wspace=0.45, figure=fig)
 
 main_ax = fig.add_subplot(plot_grid[:,0:2])
 main_ax.set_title(trs.choose("All Diameters", "Todos los diámetros"))
@@ -255,39 +275,62 @@ main_ax.xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm
 main_ax.yaxis.set_label_text(trs.choose("Normalized Scattering Cross Section",
                                         "Sección eficaz de dispersión normalizada"))
         
+lines_origin = []
+lines_series = []
 for i in range(len(series)):
     for j in range(len(series[i])):
-        main_ax.plot(data[i][j][:,0], 
-                     data[i][j][:,series_column[i]] / max(data[i][j][:,series_column[i]]), 
-                     linestyle=series_linestyles[i], color=colors[i][j], 
-                     label=series_label[i](series[i][j]))
-        main_ax.plot(data[i][j][:,0], 
-                     theory[i][j] / max(theory[i][j]), 
-                     linestyle=theory_linestyle, color=colors[i][j], 
-                     label=theory_label(series[i][j]))
-main_ax.legend()
+        l_meep, = main_ax.plot(data[i][j][:,0], 
+                               data[i][j][:,series_column[i]] / max(data[i][j][:,series_column[i]]), 
+                               linestyle=series_linestyles[i], color=colors[i][j], 
+                               label=series_label[i](series[i][j]))
+        l_theory, = main_ax.plot(data[i][j][:,0], 
+                                 theory[i][j] / max(theory[i][j]), 
+                                 linestyle=theory_linestyles[i], color=colors[i][j], 
+                                 label=series_label[i](series[i][j]))
+        if i==0 and j==len(series[0])-1:
+            lines_origin = [l_meep, l_theory]
+        lines_series.append(l_meep)
+# main_ax.legend()
 
-plot_list = [[plot_grid[0,2], plot_grid[0,3], plot_grid[1,2], plot_grid[1,3]]]
-axes_list = [[ fig.add_subplot(pl) for pl in plot_list[0] ]]
+first_legend = main_ax.legend(lines_origin, trs.choose(["MEEP Data", "Mie Theory"],
+                                                       ["Datos MEEP", "Teoría Mie"]),
+                          loc="lower left")
+second_legend = plt.legend(
+    lines_series, 
+    [l.get_label() for l in lines_series],
+    loc="lower center",
+    ncol=2)
+main_ax.add_artist(first_legend)
+
+plot_list = [plot_grid[0,2], plot_grid[0,3], plot_grid[1,2], plot_grid[1,3]]
+axes_list = [fig.add_subplot(pl) for pl in plot_list]
+right_axes_list = [ ax.twinx() for ax in axes_list ]
+axes_list = [axes_list]*2
+right_axes_list = [right_axes_list]*2
 
 for i in range(len(series)):
     for j in range(len(series[i])):
-        axes_list[i][j].set_title(trs.choose("Diameter", "Diámetro") + 
-                                  f" {2 * r[i][j] * from_um_factor[i][j] * 1e3: 1.0f} nm")
-        axes_list[i][j].plot(data[i][j][:,0], 
-                             data[i][j][:,series_column[i]] * np.pi * (r[i][j] * from_um_factor[i][j] * 1e3)**2,
-                             linestyle=series_linestyles[i], color=colors[i][j], 
-                             label=series_label[i](series[i][j]))
-        axes_list[i][j].plot(data[i][j][:,0], 
-                             theory[i][j] * np.pi * (r[i][j] * from_um_factor[i][j] * 1e3)**2,
-                             linestyle=theory_linestyle, color=colors[i][j], 
-                             label=theory_label(series[i][j]))
-        axes_list[i][j].xaxis.set_label_text("Longitud de onda [nm]")
-        axes_list[i][j].yaxis.set_label_text("Sección eficaz [nm$^2$]")
-        axes_list[i][j].xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
-        axes_list[i][j].yaxis.set_label_text(trs.choose("Scattering Cross Section [nm$^2$]",
-                                                        "Sección eficaz de dispersión [nm$^2$]"))
+        axes_list[i][j].set_title(f"Diámetro {2 * r[i][j] * from_um_factor[i][j] * 1e3: 1.0f} nm")
+        if i == 0:
+            ax = axes_list[i][j]
+        else:
+            ax = right_axes_list[i][j]
+        ax.plot(data[i][j][:,0], 
+                data[i][j][:,series_column[i]] * np.pi * (r[i][j] * from_um_factor[i][j] * 1e3)**2,
+                linestyle=series_linestyles[i], color=colors[i][j], 
+                label=series_label[i](series[i][j]))
+        ax.plot(data[i][j][:,0], 
+                theory[i][j] * np.pi * (r[i][j] * from_um_factor[i][j] * 1e3)**2,
+                linestyle=theory_linestyles[i], color=colors[i][j], 
+                label=series_label[i](series[i][j]))
+        ax.xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+        if i == 0 and (j == 0 or j == 2):
+            ax.yaxis.set_label_text(trs.choose("Vacuum \n Scattering Cross Section [nm$^2$]",
+                                               "Vacío \n Sección eficaz de dispersión [nm$^2$]"))
+        if i == 1 and (j == 1 or j == 3):
+            ax.yaxis.set_label_text(trs.choose("Scattering Cross Section [nm$^2$] \n Water",
+                                               "Sección eficaz de dispersión [nm$^2$] \n Agua"))
 
-fig.set_size_inches([13.09,  5.52])
+fig.set_size_inches([18.45,  6.74])
 
 vs.saveplot(plot_file("AllScattBig.png"), overwrite=True)
