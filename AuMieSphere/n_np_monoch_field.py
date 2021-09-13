@@ -126,11 +126,12 @@ def main(from_um_factor, resolution, courant,
         empty_r_factor = 0.5
         
         # Sim temporal dimension
-        time_period_factor = 10    
+        time_period_factor = 20
+        norm_time_period_factor = 15
         
         # Files configuration
-        series = "TestFieldSerial"
-        folder = "Test/TestNewInstall"
+        series = "TestFieldNorm"
+        folder = "Test"
         
         # Run configuration
         parallel = False
@@ -140,8 +141,8 @@ def main(from_um_factor, resolution, courant,
         split_chunks_evenly = True
         
         # Routine configuration
-        normalize = False
-        hfield = True
+        normalize = True
+        hfield = False
         make_plots = True
         make_gifs = True
         
@@ -182,7 +183,7 @@ def main(from_um_factor, resolution, courant,
     
     # Au sphere
     r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
-    medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
+    medium = import_medium("Au", paper=paper, from_um_factor=from_um_factor) # Medium of sphere: gold (Au)
     if surface_index is None:
         surface_index = submerged_index
     
@@ -269,9 +270,11 @@ def main(from_um_factor, resolution, courant,
     # The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
     
+    #%%
+    
     if normalize:
     
-    #%% PLOT CELL
+    #% % PLOT CELL
     
         if pm.assign(0) and make_plots:
             
@@ -348,14 +351,14 @@ def main(from_um_factor, resolution, courant,
                                     f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
                          (5, 5), xycoords='figure points')
             
-            plt.savefig(sa.file("InitialSimBox.png"))
+            plt.savefig(sa.file("SimBoxNorm.png"))
             
             del pml_inn_square, pml_out_square
             if submerged_index!=1: del surrounding_square
             if surface_index!=submerged_index: del surface_square
             del fig, box, ax
         
-        #%% INITIALIZE
+        #% % INITIALIZE
         
         params = {}
         for p in params_list: params[p] = eval(p)
@@ -389,14 +392,14 @@ def main(from_um_factor, resolution, courant,
         
         rm.measure_ram()
         
-        #%% DEFINE SAVE STEP FUNCTIONS
+        #% % DEFINE SAVE STEP FUNCTIONS
         
         sampling_line = mp.Volume(center=mp.Vector3(),
-                                 size=mp.Vector3(cell_width),
-                                 dims=1)
+                                  size=mp.Vector3(cell_width),
+                                  dims=1)
         sampling_plane = mp.Volume(center=mp.Vector3(),
-                                  size=mp.Vector3(0, cell_width, cell_width),
-                                  dims=2)
+                                   size=mp.Vector3(0, cell_width, cell_width),
+                                   dims=2)
         
         save_line = mp.in_volume(sampling_line, 
                                  mp.to_appended("Lines-Norm",
@@ -427,7 +430,7 @@ def main(from_um_factor, resolution, courant,
                                           step_ram_function),
                                mp.at_end(step_ram_function)]
         
-        #%% RUN!
+        #% % RUN!
         
         rm.measure_ram()
         
@@ -440,7 +443,7 @@ def main(from_um_factor, resolution, courant,
         os.chdir(syshome)
         sim.filename_prefix = filename_prefix
         
-        #%% SAVE METADATA
+        #% % SAVE METADATA
         
         for p in params_list: params[p] = eval(p)
         
