@@ -266,6 +266,45 @@ plt.xlim([350, 850])
         
 plt.savefig(plot_file("SourceFFTZoom.png"))
 
+#%% SHOW RESONANCE OSCILLATIONS
+
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.figure()        
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+
+for i in range(len(series)):
+    for j in range(len(series[i])):
+            plt.plot(t_line[i][j]/period_results[i][j], 
+                     zprofile_integral[i][j], color=colors[i][j],
+                     label=series_label[i](series[i][j]))
+plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+plt.ylabel(trs.choose(r"Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
+                      r"Integral del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
+
+plt.legend()
+plt.savefig(plot_file("Integral.png"))
+
+plt.figure()        
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+
+for i in range(len(series)):
+    for j in range(len(series[i])):
+            plt.plot(t_line[i][j]/period_results[i][j], 
+                     zprofile_max[i][j]/amplitude_results[i][j], 
+                     color=colors[i][j],
+                     label=series_label[i](series[i][j]))
+# plt.plot(t_plane, zprofile_max)
+plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+plt.ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$ [a.u.]",
+                      r"Máximo del campo eléctrico $max[ E_z(z) ]$ [u.a.]"))
+
+plt.legend()
+plt.savefig(plot_file("Maximum.png"))
+
 #%% GET THEORY (SCATTERING)
 
 def wlen_range(material, surrounding_index):
