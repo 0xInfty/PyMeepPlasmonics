@@ -20,10 +20,10 @@ import v_utilities as vu
 #%% PARAMETERS
 
 # Saving directories
-vacuum_folder = "AuMieSphere/AuMie/7)Diameters/WLen4560"
-water_folder = "AuMieMediums/AllWater"
-glassnwater_folder = "AuMieMediums/GlassNWater"
-marian_folder = "AuMieSphere/AuMie/7)Diameters/Marians"
+vacuum_folder = "Scattering/AuSphere/AllVacTest/7)Diameters/WLen4560"
+water_folder = "Scattering/AuSphere/AllWatDiam"
+glassnwater_folder = "Scattering/AuSphere/GlassNWater"
+marian_folder = "Scattering/AuSphere/AllVacTest/7)Diameters/Marians"
 
 home = vs.get_home()
 
@@ -52,6 +52,7 @@ water_file = lambda f, s : os.path.join(water_path, f, s)
 
 water_series = os.listdir(water_path)
 water_series = vu.filter_by_string_must(water_series, "AllWater")
+water_series = vu.filter_by_string_must(water_series, "More", False)
 water_series = vu.sort_by_number(water_series, 0)
 
 water_data = []

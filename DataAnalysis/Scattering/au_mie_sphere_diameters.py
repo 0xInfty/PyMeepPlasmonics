@@ -25,6 +25,7 @@ trs = vu.BilingualManager(english=english)
 # Saving directories
 folder = ["Scattering/AuSphere/AllVacTest/7)Diameters/WLen4560",
           "Scattering/AuSphere/AllWatDiam"]
+marian_folder = "Scattering/AuSphere/AllVacTest/7)Diameters/Marians"
 home = vs.get_home()
 
 # Sorting and labelling data series
@@ -104,6 +105,22 @@ for i, p in enumerate(params):
     except:
         material.append( ["Au" for pi in p] )
 
+#%% GET EXPERIMENTAL DATA
+
+marian_path = os.path.join(home, marian_folder)
+marian_file = lambda s : os.path.join(marian_path, s)
+
+marian_series = os.listdir(marian_path)
+
+marian_series = vu.filter_by_string_must(marian_series, "exp")
+marian_series = vu.filter_by_string_must(marian_series, "glass")
+marian_series = vu.sort_by_number(marian_series)
+
+marian_data = []
+for s in marian_series:
+    marian_data.append(np.loadtxt(marian_file(s)))
+marian_data = [marian_data]
+
 #%% GET THEORY
 
 # theory = [[vmt.sigma_scatt_meep(r[i][j], material[i][j], paper[i][j], 
@@ -154,6 +171,11 @@ max_wlen_theory = []
 for t, d in zip(theory, data):
     max_wlen_theory.append( [d[i][np.argmax(t[i]), 0] for i in range(len(t))] )
     
+max_wlen_marian = []
+for md in marian_data[0]:
+    max_wlen_marian.append( md[np.argmax(md[:,1]), 0] )
+max_wlen_marian = [max_wlen_marian]
+    
 e_max_wlen = []
 for d, sc in zip(data, series_column):
     e_max_wlen.append( [ np.mean([
@@ -169,36 +191,21 @@ colors = [sc(np.linspace(0,1,len(s)+2))[2:]
 
 plt.figure()
 plt.title(plot_title)
-
-lines_origin = []
-lines_series = []
 for i in range(len(series)):
     for j in range(len(series[i])):
-        l_meep, = plt.plot(data[i][j][:,0], 
-                           data[i][j][:,series_column[i]] / max(data[i][j][:,series_column[i]]), 
-                           linestyle=series_linestyles[i], color=colors[i][j], 
-                           label=series_label[i](series[i][j]))
-        l_theory, = plt.plot(data[i][j][:,0], 
-                             theory[i][j] / max(theory[i][j]), 
-                             linestyle=theory_linestyles[i], color=colors[i][j], 
-                             label=theory_label[i](series[i][j]))
-        if i==0 and j==len(series[0])-1:
-            lines_origin.append( [l_meep, l_theory] )
-        lines_series.append(l_meep)
+        plt.plot(data[i][j][:,0], 
+                 data[i][j][:,series_column[i]] / max(data[i][j][:,series_column[i]]), 
+                 linestyle=series_linestyles[i], color=colors[i][j], 
+                 label=trs.choose("MEEP Data ", "Data MEEP ") + series_label[i](series[i][j]))
+        plt.plot(data[i][j][:,0], 
+                 theory[i][j] / max(theory[i][j]), 
+                 linestyle=theory_linestyles[i], color=colors[i][j], 
+                 label=trs.choose("Mie Theory ", "Teoría Mie ") + series_label[i](series[i][j]))
 
 plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
 plt.ylabel(trs.choose("Normalized Scattering Cross Section",
                       "Sección eficaz de dispersión normalizada"))
-# plt.legend()
-
-first_legend = plt.legend(lines_origin, trs.choose(["CM Theory", "Ku Theory"],
-                                               ["Teoría CM", "Teoría Ku"]),
-                          loc="center")
-second_legend = plt.legend(
-    l_series, 
-    [l.get_label() for l in l_series],
-    loc="upper center")
-plt.gca().add_artist(first_legend)
+plt.legend()
 
 if plot_make_big:
     mng = plt.get_current_fig_manager()
@@ -218,11 +225,11 @@ for i in range(len(series)):
         plt.plot(data[i][j][:,0], 
                  data[i][j][:,series_column[i]], 
                  linestyle=series_linestyles[i], color=colors[i][j], 
-                 label=series_label[i](series[i][j]))
+                 label=trs.choose("MEEP Data ", "Data MEEP ") + series_label[i](series[i][j]))
         plt.plot(data[i][j][:,0], 
                  theory[i][j], 
                  linestyle=theory_linestyles[i], color=colors[i][j], 
-                 label=theory_label[i](series[i][j]))
+                 label=trs.choose("Mie Theory ", "Teoría Mie ") + series_label[i](series[i][j]))
 
 plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
 plt.ylabel(trs.choose("Scattering Efficiency", "Eficacia de Dispersión"))
@@ -245,11 +252,11 @@ for i in range(len(series)):
         plt.plot(data[i][j][:,0], 
                  data[i][j][:,series_column[i]] * np.pi * (r[i][j] * from_um_factor[i][j] * 1e3)**2,
                  linestyle=series_linestyles[i], color=colors[i][j], 
-                 label=series_label[i](series[i][j]))
+                 label=trs.choose("MEEP Data ", "Data MEEP ") + series_label[i](series[i][j]))
         plt.plot(data[i][j][:,0], 
                  theory[i][j] * np.pi * (r[i][j] * from_um_factor[i][j] * 1e3)**2,
                  linestyle=theory_linestyles[i], color=colors[i][j], 
-                 label=theory_label[i](series[i][j]))
+                 label=trs.choose("Mie Theory ", "Teoría Mie ") + series_label[i](series[i][j]))
 
 plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
 plt.ylabel(trs.choose("Scattering Cross Section [nm$^2$]",
