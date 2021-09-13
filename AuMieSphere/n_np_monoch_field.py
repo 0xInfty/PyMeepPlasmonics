@@ -68,10 +68,10 @@ rm.measure_ram()
             type=float, default=0.38,
             help="PML layer width expressed in multiples of maximum wavelength")
 @cli.option("--time-period-factor", "-tpfc", "time_period_factor", 
-            type=float, default=10,
+            type=float, default=20,
             help="Simulation total time expressed as multiples of periods")
 @cli.option("--norm-time-period-factor", "-ntpfc", "norm_time_period_factor",
-            type=float, default=10)
+            type=float, default=15)
 @cli.option("--series", "-s", type=str, 
             help="Series name used to create a folder and save files")
 @cli.option("--folder", "-f", type=str, 
