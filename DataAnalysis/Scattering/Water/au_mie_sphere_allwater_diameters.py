@@ -102,31 +102,16 @@ for p in params:
 
 #%% GET THEORY
 
-# theory = [[vmt.sigma_scatt_meep(r[i][j], material[i][j], paper[i][j], 
-#                                 data[i][j][:,0], # wavelength in nm
-#                                 index[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+theory = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3,
+                                material[i][j], paper[i][j], 
+                                data[i][j][:,0], # wavelength in nm
+                                surrounding_index=index[i][j],
+                                asEffiency=True) 
+           for j in range(len(series[i]))] for i in range(len(series))]
 
-theory = [] # Scattering effiency
-for i in range(len(series)):
-    theory.append([])    
-    for j in range(len(series[i])):
-        wlen_ij = data[i][j][:,0] # nm
-        freq_ij = 1 / wlen_ij # 1/nm
-        freqmeep_ij = (1e3 * from_um_factor[i][j]) / wlen_ij # Meep units
-        medium_ij = import_medium(material[i][j], 
-                                  paper=paper[i][j],
-                                  from_um_factor=from_um_factor[i][j])
-        theory[-1].append(np.array(
-            [ps.MieQ(np.sqrt(medium_ij.epsilon(freqmeep_ij[k])[0,0] * medium_ij.mu(freqmeep_ij[k])[0,0]), 
-                     wlen_ij[k], # Wavelength (nm)
-                     2*r[i][j]*1e3*from_um_factor[i][j], # Diameter (nm)
-                     nMedium=index[i][j], # Refraction Index of Medium
-                     asDict=True)['Qsca'] 
-             for k in range(len(wlen_ij))]))
+max_wlen_theory = [[ data[i][j][ np.argmax(theory[i][j]) , 0 ] for j in range(len(series[i]))] for i in range(len(series))]
 
 #%% GET MAX WAVELENGTH
-
-# max_wlen_theory = [[ data[i][j][ np.argmax(theory[i][j]) , 0 ] for j in range(len(series[i]))] for i in range(len(series))]
 
 # def wlen_range(material, surrounding_index):
 #     if material=="Au":
@@ -145,13 +130,9 @@ for i in range(len(series)):
 max_wlen = []
 for d, sc in zip(data, series_column):
     max_wlen.append( [d[i][np.argmax(d[i][:,sc]), 0] for i in range(len(d))] )
-
-max_wlen_theory = []
-for t, d in zip(theory, data):
-    max_wlen_theory.append( [d[i][np.argmax(t[i]), 0] for i in range(len(t))] )
-    
+   
 e_max_wlen = []
-for d, sc in zip(data, series_column):
+for d, t, sc in zip(data, theory, series_column):
     e_max_wlen.append( [ np.mean([
         abs(d[i][np.argmax(d[i][:,sc])-1, 0] - d[i][np.argmax(t[i]), 0]),
         abs(d[i][np.argmax(d[i][:,sc])+1, 0] - d[i][np.argmax(t[i]), 0])
