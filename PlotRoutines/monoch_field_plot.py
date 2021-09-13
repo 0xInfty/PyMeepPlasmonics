@@ -93,7 +93,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         plot_title_base = trs.choose('Dimnesionless monochromatic wave', 
                                      "Onda monocromática adimensional")
     
-    #%% GENERAL USEFUL FUNCTIONS
+    #%% POSITION RECONSTRUCTION FUNCTIONS
     
     t_line_index = lambda t0 : np.argmin(np.abs(t_line - t0))        
     x_line_index = lambda x0 : np.argmin(np.abs(x_line - x0))
@@ -102,13 +102,22 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
     y_plane_index = lambda y0 : np.argmin(np.abs(y_plane - y0))
     z_plane_index = lambda z0 : np.argmin(np.abs(z_plane - z0))
     
-    #%%
+    #%% ACTUAL POSITION RECONSTRUCTION
+    
+    x_line_cropped = x_line[:x_line_index(cell_width/2 - pml_width)]
+    x_line_cropped = x_line_cropped[x_line_index(-cell_width/2 + pml_width):]
+
+    y_plane_cropped = y_plane[:y_plane_index(cell_width/2 - pml_width)]
+    y_plane_cropped = y_plane_cropped[y_plane_index(-cell_width/2 + pml_width):]
+    
+    z_plane_cropped = z_plane[:z_plane_index(cell_width/2 - pml_width)]
+    z_plane_cropped = z_plane_cropped[z_plane_index(-cell_width/2 + pml_width):]
+
+    #%% DATA EXTRACTION FUNCTIONS
     
     last_stable_periods = 5
     
-    source_results = np.asarray(results_line[x_line_index(source_center), :])
-        
-    def get_peaks_from_source(source):
+    def get_peaks_from_source(source):   
         peaks = find_peaks(source, height=0)[0]
         
         mean_diff = np.mean(np.diff(peaks)[-last_stable_periods:])
@@ -117,10 +126,13 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         for k in range(len(peaks)):
             if k == 0 and selection_criteria(k):
                 selected_peaks.append(peaks[k])
+                pm.log(k, " entered first if")
             elif k == len(peaks)-1 and selection_criteria(k-1):
                 selected_peaks.append(peaks[k])
+                pm.log(k, " entered first elif")
             elif selection_criteria(k):
                 selected_peaks.append(peaks[k])
+                pm.log(k, " entered second elif")
         return selected_peaks
     
     def get_period_from_source(source):
@@ -147,10 +159,6 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         stable_heights = source_results[peaks[keep_periods_from:]]
         return np.mean(stable_heights)
     
-    period = get_period_from_source(source_results)
-    
-    amplitude = get_amplitude_from_source(source_results)
-    
     def crop_field_xline(field):
         cropped = field[: x_line_index(cell_width/2 - pml_width)]
         cropped = cropped[x_line_index(-cell_width/2 + pml_width) :]
@@ -175,6 +183,14 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
     def detect_sign_field_zprofile(field_profile):
         return -np.sign(field_profile[0])
     
+    #%%
+    
+    source_results = vma.get_source_from_line(results_line, x_line_index, source_center)
+    
+    period = get_period_from_source(source_results)
+    
+    amplitude = get_amplitude_from_source(source_results)
+        
     xaxis_results = np.asarray([crop_field_xline(field) for field in np.array(results_line).T]).T
        
     zprofile_results = np.asarray(results_plane[y_plane_index(0), :, :])
