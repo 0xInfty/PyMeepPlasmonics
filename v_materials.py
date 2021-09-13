@@ -1145,7 +1145,7 @@ def sigma_scatt_meep(r, material, paper, wlen,
     epsilon = np.array([ medium.epsilon(1 / wl)[0,0] for wl in wlen ])
     N = vt.N_from_epsilon( epsilon )
     
-    scattering = vt.sigma_scatt(r,  wlen,  N, 
+    scattering = vt.sigma_scatt(r,  wlen,  inner_N=N, 
                                 surrounding_N=surrounding_index,
                                 asEffiency=asEffiency)
     

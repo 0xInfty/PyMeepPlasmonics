@@ -195,7 +195,7 @@ def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
         surrounding_N = [*[surrounding_N]*len(wlen)]
     
     sigma_scatt = np.array([ps.MieQ(
-        iN, wl, 2*r, sN, asCrossSection=not(asEffiency))[1] 
+        iN, wl, 2*r, nMedium=sN, asCrossSection=not(asEffiency))[1] 
             for wl, iN, sN in zip(wlen, inner_N, surrounding_N)])
     
     if len(sigma_scatt)>1:
