@@ -68,8 +68,10 @@ rm.measure_ram()
             type=float, default=0.38,
             help="PML layer width expressed in multiples of maximum wavelength")
 @cli.option("--time-period-factor", "-tpfc", "time_period_factor", 
-            type=float, default=10,
+            type=float, default=20,
             help="Simulation total time expressed as multiples of periods")
+@cli.option("--norm-period-factor", "-ntpfc", "norm_period_factor",
+            type=float, default=8)
 @cli.option("--series", "-s", type=str, 
             help="Series name used to create a folder and save files")
 @cli.option("--folder", "-f", type=str, 
@@ -81,6 +83,15 @@ rm.measure_ram()
             help="Number of cores used to run the program in parallel")
 @cli.option("--n-nodes", "-nn", "n_nodes", type=int, default=0,
             help="Number of nodes used to run the program in parallel")
+@cli.option("--load-field", "-loadf", "load_field", 
+            type=bool, default=True,
+            help="Whether to search the normfield database and load, if possible, or not.")
+# @cli.option("--load-chunks", "-loadc", "load_chunks", 
+#             type=bool, default=True,
+#             help="Whether to search the chunks layout database and load, if possible, or not.")
+@cli.option("--load-resources", "-loadr", "load_resources", 
+            type=bool, default=False,
+            help="Whether to necessarily load monitored resources, if possible, or not")
 @cli.option("--hfield", "-hf", "hfield", type=bool, default=False,
             help="Whether to also save and analyse magnetic field or not")
 @cli.option("--make-plots", "-plt", "make_plots", 
@@ -92,10 +103,10 @@ rm.measure_ram()
 def main(from_um_factor, resolution, courant,
          r, material, paper, wlen, submerged_index, overlap, surface_index,
          empty_r_factor, pml_wlen_factor, 
-         time_period_factor,
+         time_period_factor, norm_period_factor,
          series, folder,
          n_cores, n_nodes, split_chunks_evenly,
-         hfield, make_plots, make_gifs):
+         hfield, load_field, load_resources, make_plots, make_gifs):
     
     #%% DEFAULT PARAMETERS
     
@@ -122,11 +133,12 @@ def main(from_um_factor, resolution, courant,
         empty_r_factor = 0.5
         
         # Sim temporal dimension
-        time_period_factor = 10    
+        time_period_factor = 20
+        norm_period_factor = 15
         
         # Files configuration
-        series = "TestFieldSerial"
-        folder = "Test/TestNewInstall"
+        series = "TestFieldNorm"
+        folder = "Test"
         
         # Run configuration
         parallel = False
@@ -136,7 +148,9 @@ def main(from_um_factor, resolution, courant,
         split_chunks_evenly = True
         
         # Routine configuration
-        hfield = True
+        hfield = False
+        load_field = True
+        load_resources = True
         make_plots = True
         make_gifs = True
         
@@ -177,7 +191,7 @@ def main(from_um_factor, resolution, courant,
     
     # Au sphere
     r = r  / ( from_um_factor * 1e3 )  # Radius of sphere now in Meep units
-    medium = import_medium("Au", from_um_factor, paper=paper) # Medium of sphere: gold (Au)
+    medium = import_medium("Au", paper=paper, from_um_factor=from_um_factor) # Medium of sphere: gold (Au)
     if surface_index is None:
         surface_index = submerged_index
     
@@ -192,6 +206,7 @@ def main(from_um_factor, resolution, courant,
     
     # Time configuration
     until_time = time_period_factor * wlen # Should multiply and divide by submerged_index
+    norm_until_time = norm_period_factor * wlen
     period_line = wlen / n_period_line # If I use period instead of wlen, the discretization will be different
     period_plane = wlen / n_period_plane
     
@@ -207,7 +222,8 @@ def main(from_um_factor, resolution, courant,
                    "material", "r", "paper", 
                    "submerged_index", "wlen", "surface_index", "overlap",
                    "cell_width", "pml_width", "empty_width", "source_center",
-                   "until_time", "time_period_factor", 
+                   "until_time", "norm_until_time", 
+                   "time_period_factor", "norm_period_factor",
                    "n_period_line", "n_period_plane", "period_line", "period_plane",
                    "parallel", "n_processes", "n_cores", "n_nodes",
                    "split_chunks_evenly", "hfield",
@@ -224,6 +240,7 @@ def main(from_um_factor, resolution, courant,
     source_center = -0.5*cell_width + pml_width
     
     until_time = vu.round_to_multiple(until_time, courant/resolution, round_up=True)
+    norm_until_time = vu.round_to_multiple(norm_until_time, courant/resolution, round_up=True)
     period_line = vu.round_to_multiple(period_line, courant/resolution, round_down=True)
     period_plane = vu.round_to_multiple(period_plane, courant/resolution, round_down=True)
     
@@ -245,9 +262,11 @@ def main(from_um_factor, resolution, courant,
                            size=mp.Vector3(
                                cell_width/2 - r + overlap,
                                cell_width, cell_width))
-        geometry = [surface, nanoparticle]
+        initial_geometry = [surface]
+        final_geometry = [surface, nanoparticle]
     else:
-        geometry = [nanoparticle]
+        initial_geometry = []
+        final_geometry = [nanoparticle]
     # If required, a certain material surface underneath it
     
     sources = [mp.Source(mp.ContinuousSource(wavelength=wlen, 
@@ -260,7 +279,296 @@ def main(from_um_factor, resolution, courant,
     # The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
     
-    #%% PLOT CELL
+    #%% FIRST RUN
+    
+    rm.measure_ram()
+    
+    params = {}
+    for p in params_list: params[p] = eval(p)
+    
+    # stable, max_courant = vm.check_stability(params)
+    # if stable:
+    #     pm.log("As a whole, the simulation should be stable")
+    # else:
+    #     pm.log("As a whole, the simulation might be unstable")
+    #     pm.log(f"Recommended maximum Courant factor is {max_courant}")
+    # del stable, max_courant
+        
+    if load_field:
+        try:
+            norm_path = vm.check_normfield(params)[-1]
+            if load_resources:
+                if os.path.isfile( os.path.join(norm_path, "Resources.h5") ):
+                    norm_needed = False
+                    pm.log("Found resources")
+                else:
+                    norm_needed = True
+                    pm.log("Didn't find resources")
+            else:
+                norm_needed  = False
+        except:
+            norm_needed = True
+    else:
+        norm_needed = True
+        
+    # if load_chunks and not split_chunks_evenly:
+    #     try:
+    #         chunks_path = vm.check_chunks(params)[-1]
+    #         chunk_layout = os.path.join(chunks_path, "Layout.h5")
+    #         norm_needed = False
+    #     except:
+    #         chunks_needed = True
+    #         norm_needed = True
+    # else:
+    #     if not split_chunks_evenly:
+    #         chunks_needed = True
+    #         norm_needed = True
+    #     else:
+    #         chunk_layout = None
+    #         chunks_needed = False
+    
+    # if chunks_needed:
+
+    #     sim = mp.Simulation(resolution=resolution,
+    #                         Courant=courant,
+    #                         geometry=final_geometry,
+    #                         sources=sources,
+    #                         k_point=mp.Vector3(),
+    #                         default_material=mp.Medium(index=submerged_index),
+    #                         cell_size=cell_size,
+    #                         boundary_layers=pml_layers,
+    #                         output_single_precision=True,
+    #                         split_chunks_evenly=split_chunks_evenly)
+    #                         # symmetries=symmetries,
+    
+    #     sim.init_sim()
+        
+    #     chunks_path = vm.save_chunks(sim, params, path)         
+    #     chunk_layout = os.path.join(chunks_path, "Layout.h5")
+        
+    #     del sim
+        
+    if not norm_needed:
+        rm.load( os.path.join(norm_path, "Resources.h5") )
+    else:
+    
+        #% % FIRST RUN: PLOT CELL
+    
+        if pm.assign(0) and make_plots:
+            
+            fig, ax = plt.subplots()
+            
+            # PML borders
+            pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
+                                           cell_width, cell_width,
+                                           fill=False, edgecolor="m", linestyle="dashed",
+                                           hatch='/', 
+                                           zorder=-20,
+                                           label=trs.choose("PML borders", "Bordes PML"))
+            pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
+                                            -cell_width/2+pml_width), 
+                                           cell_width - 2*pml_width, cell_width - 2*pml_width,
+                                           facecolor="white", edgecolor="m", 
+                                           linestyle="dashed", linewidth=1, zorder=-10)
+           
+            # Surrounding medium
+            if submerged_index != 1:
+                surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
+                                                   cell_width, cell_width,
+                                                   color="blue", alpha=.1, zorder=-6,
+                                                   label=trs.choose(fr"Medium $n$={submerged_index}",
+                                                                    fr"Medio $n$={submerged_index}"))
+                
+            # Surface medium
+            if surface_index != submerged_index:
+                surface_square = plt.Rectangle((r - overlap, -cell_width/2),
+                                               cell_width/2 - r + overlap, 
+                                               cell_width,
+                                               edgecolor="navy", hatch=r"\\", 
+                                               fill=False, zorder=-3,
+                                               label=trs.choose(fr"Surface $n$={surface_index}",
+                                                                fr"Superficie $n$={surface_index}"))
+            
+            # Source
+            ax.vlines(source_center, -cell_width/2, cell_width/2,
+                      color="r", linestyle="dashed", zorder=5, 
+                      label=trs.choose("Planewave Source", "Fuente de ondas plana"))
+            
+            # Sampling line
+            ax.hlines(0, -cell_width/2, cell_width/2,
+                      color="limegreen", linestyle=":", zorder=7, 
+                      label=trs.choose("Sampling Line", "Línea de muestreo"))
+            
+            # Sampling plane
+            ax.vlines(0, -cell_width/2, cell_width/2,
+                      color="limegreen", linestyle="dashed", zorder=7, 
+                      label=trs.choose("Sampling Plane", "Plano de muestreo"))
+            
+            if submerged_index!=1: ax.add_patch(surrounding_square)
+            if surface_index!=submerged_index: ax.add_patch(surface_square)
+            ax.add_patch(pml_out_square)
+            ax.add_patch(pml_inn_square)
+            
+            # General configuration
+            box = ax.get_position()
+            box.x0 = box.x0 - .26 * (box.x1 - box.x0)
+            # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
+            box.y1 = box.y1 + .10 * (box.y1 - box.y0)
+            ax.set_position(box)           
+            plt.legend(bbox_to_anchor=trs.choose( (1.47, 0.5), (1.54, 0.5) ), 
+                       loc="center right", frameon=False)
+            
+            fig.set_size_inches(7.5, 4.8)
+            ax.set_aspect("equal")
+            plt.xlim(-cell_width/2, cell_width/2)
+            plt.ylim(-cell_width/2, cell_width/2)
+            plt.xlabel(trs.choose("Position X [Mp.u.]", "Posición X [u.Mp.]"))
+            plt.ylabel(trs.choose("Position Z [Mp.u.]", "Posición Z [u.Mp.]"))
+            
+            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                         (5, 5), xycoords='figure points')
+            
+            plt.savefig(sa.file("SimBoxNorm.png"))
+            
+            del pml_inn_square, pml_out_square
+            if submerged_index!=1: del surrounding_square
+            if surface_index!=submerged_index: del surface_square
+            del fig, box, ax
+        
+        #% % FIRST RUN: INITIALIZE
+        
+        params = {}
+        for p in params_list: params[p] = eval(p)
+        
+        # stable, max_courant = vm.check_stability(params)
+        # if stable:
+        #     pm.log("As a whole, the simulation should be stable")
+        # else:
+        #     pm.log("As a whole, the simulation could not be stable")
+        #     pm.log(f"Recommended maximum courant factor is {max_courant}")
+        # del stable, max_courant
+        
+        rm.measure_ram()
+        
+        sim = mp.Simulation(resolution=resolution,
+                            Courant=courant,
+                            geometry=initial_geometry,
+                            sources=sources,
+                            k_point=mp.Vector3(),
+                            default_material=mp.Medium(index=submerged_index),
+                            cell_size=cell_size,
+                            boundary_layers=pml_layers,
+                            output_single_precision=True,
+                            split_chunks_evenly=split_chunks_evenly)
+        
+        rm.measure_ram()
+        
+        rm.start_measure_time()
+        sim.init_sim()
+        rm.end_measure_time()
+        
+        rm.measure_ram()
+        
+        #% % FIRST RUN: DEFINE SAVE STEP FUNCTIONS
+        
+        sampling_line = mp.Volume(center=mp.Vector3(),
+                                  size=mp.Vector3(cell_width),
+                                  dims=1)
+        
+        save_line = mp.in_volume(sampling_line, 
+                                 mp.to_appended("Lines-Norm",
+                                                mp.output_efield_z))
+        
+        to_do_while_running = [mp.at_every(period_line, save_line)]
+        
+        if hfield:
+            save_hline = mp.in_volume(sampling_line, 
+                                      mp.to_appended("HLines-Norm",
+                                                     mp.output_hfield_y))
+            to_do_while_running = [*to_do_while_running, 
+                                   mp.at_every(period_line, save_hline)]
+        
+        step_ram_function = lambda sim : rm.measure_ram()
+        
+        to_do_while_running = [*to_do_while_running,
+                               mp.at_beginning(step_ram_function), 
+                               mp.at_time(int(until_time / 2), 
+                                          step_ram_function),
+                               mp.at_end(step_ram_function)]
+        
+        #% % FIRST RUN: RUN!
+        
+        rm.measure_ram()
+        
+        filename_prefix = sim.filename_prefix
+        sim.filename_prefix = "Field"    
+        os.chdir(path)
+        rm.start_measure_time()
+        sim.run(*to_do_while_running, until=norm_until_time)
+        rm.end_measure_time()
+        os.chdir(syshome)
+        sim.filename_prefix = filename_prefix
+        
+        #% % FIRST RUN: SAVE METADATA
+        
+        for p in params_list: params[p] = eval(p)
+        
+        x, y, z, more = sim.get_array_metadata(vol=sampling_line)
+        del more
+        
+        if pm.assign(0):
+            
+            f = h5.File(sa.file("Field-Lines-Norm.h5"), "r+")
+            keys = [vu.camel(k) for k in f.keys()]
+            for oldk, newk in zip(list(f.keys()), keys):
+                try:
+                    f[newk] = f[oldk]
+                    del f[oldk]
+                except:
+                    pass
+            
+            f["T"] = np.arange(0, f["Ez"].shape[-1]) * period_line
+            for k, array in zip(["X","Y","Z"], [x, y, z]):  
+                f[k] = array
+            
+            for k in f.keys(): 
+                for kpar in params.keys(): 
+                    f[k].attrs[kpar] = params[kpar]
+            
+            f.close()
+            del f, keys, oldk, newk, k, kpar, array
+        
+            if hfield:
+                
+                fh = h5.File(sa.file("Field-HLines-Norm.h5"), "r+")
+                keys = [vu.camel(k) for k in fh.keys()]
+                for oldk, newk in zip(list(fh.keys()), keys):
+                    fh[newk] = fh[oldk]
+                    del fh[oldk]
+                    
+                f = h5.File(sa.file("Field-Lines-Norm.h5"), "r+")
+                for k in fh.keys():
+                    array = np.array(fh[k])
+                    f[k] = array
+                del array
+                
+                f.close()
+                fh.close()
+                os.remove(sa.file("Field-HLines-Norm.h5"))
+                
+                del f, fh, keys, oldk, newk, k
+        
+        norm_path = vm.save_normfield(params, path)
+        
+        rm.save(os.path.join(norm_path, "Resources.h5"), params)
+        rm.save(sa.file("Resources.h5"), params)
+        
+        mp.all_wait()
+        
+        sim.reset_meep()
+    
+    #%% SECOND RUN: PLOT CELL
 
     if pm.assign(0) and make_plots:
         
@@ -356,10 +664,11 @@ def main(from_um_factor, resolution, courant,
         if surface_index!=submerged_index: del surface_square
         del fig, box, ax
     
-    #%% INITIALIZE
+    #%% SECOND RUN: INITIALIZE
     
     params = {}
     for p in params_list: params[p] = eval(p)
+    params["norm_path"] = norm_path
     
     # stable, max_courant = vm.check_stability(params)
     # if stable:
@@ -373,7 +682,7 @@ def main(from_um_factor, resolution, courant,
     
     sim = mp.Simulation(resolution=resolution,
                         Courant=courant,
-                        geometry=geometry,
+                        geometry=final_geometry,
                         sources=sources,
                         k_point=mp.Vector3(),
                         default_material=mp.Medium(index=submerged_index),
@@ -390,7 +699,13 @@ def main(from_um_factor, resolution, courant,
     
     rm.measure_ram()
     
-    #%% DEFINE SAVE STEP FUNCTIONS
+    #%% LOAD FIELD FROM FILE
+    
+    norm_amplitude, norm_period = vm.load_normfield(norm_path)
+
+    rm.measure_ram()
+    
+    #%% SECOND RUN: DEFINE SAVE STEP FUNCTIONS
     
     sampling_line = mp.Volume(center=mp.Vector3(),
                              size=mp.Vector3(cell_width),
@@ -428,7 +743,7 @@ def main(from_um_factor, resolution, courant,
                                       step_ram_function),
                            mp.at_end(step_ram_function)]
     
-    #%% RUN!
+    #%% SECOND RUN: RUN!
     
     rm.measure_ram()
     
@@ -441,9 +756,12 @@ def main(from_um_factor, resolution, courant,
     os.chdir(syshome)
     sim.filename_prefix = filename_prefix
     
-    #%% SAVE METADATA
+    #%% SECOND RUN: SAVE METADATA
     
     for p in params_list: params[p] = eval(p)
+    params["norm_amplitude"] = norm_amplitude
+    params["norm_period"] = norm_period
+    params["norm_path"] = norm_path
     
     volumes = [sampling_line, sampling_plane]
     dimensions = []
@@ -463,7 +781,7 @@ def main(from_um_factor, resolution, courant,
             keys = [vu.camel(k) for k in f.keys()]
             for oldk, newk in zip(list(f.keys()), keys):
                 try:
-                    f[newk] = f[oldk]
+                    f[newk] = np.asarray(f[oldk] / norm_amplitude)
                     del f[oldk]
                 except:
                     pass
@@ -510,7 +828,7 @@ def main(from_um_factor, resolution, courant,
     
     mp.all_wait()
     
-    #%% GET READY TO LOAD DATA
+    #%% SECOND RUN: MAKE PLOTS IF REQUIRED
     
     if make_plots or make_gifs:
         
