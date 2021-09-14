@@ -7,6 +7,7 @@ Created on Sat Sep 11 12:02:05 2021
 """
 
 import numpy as np
+from statistics import mode
 from scipy.signal import find_peaks
 
 #%% GENERAL: INDEX FUNCTION
@@ -135,28 +136,44 @@ def detect_sign_field_zprofile(zprofile_field):
     return -np.sign(zprofile_field[0,...])
 
 def find_peaks_field_zprofile(zprofile_field, z_plane_index, 
-                              r, cell_width, pml_width):
+                              r, cell_width, pml_width,
+                              zprofile_acceptable_depth=0.1):
     
     zprofile_signs = detect_sign_field_zprofile(zprofile_field)
     
-    zprofile_peaks = []
-    zprofile_maxs = []
+    zprofile_initial_peaks = []
     for zprof, sign in zip(np.rollaxis(zprofile_field, -1), zprofile_signs):
             
         two_peaks = find_peaks(sign * crop_field_zprofile(zprof, z_plane_index,
                                                           cell_width, pml_width))[0]
-        two_peaks = np.array(two_peaks) + z_plane_index(-cell_width/2 + pml_width)
-        if len(two_peaks) > 2: two_peaks = two_peaks[[0,-1]]
         try:
-            two_peaks[0] = min(two_peaks[0], z_plane_index(-r) - 1)
+            two_peaks = np.array(two_peaks) + z_plane_index(-cell_width/2 + pml_width)
+            if len(two_peaks) > 2: two_peaks = two_peaks[[0,-1]]
+            # z_plane_length = z_plane_index(cell_width/2 - pml_width) - z_plane_index(-cell_width/2 + pml_width)
+            # acceptable_depth_steps = int(zprofile_acceptable_depth * z_plane_length / 2)
+            # two_peaks[0] = min(two_peaks[0], z_plane_index(-r) - 1 + acceptable_depth_steps)
+            # two_peaks[1] = max(two_peaks[1], z_plane_index(r) - acceptable_depth_steps)
+            # two_peaks[0] = min(two_peaks[0], z_plane_index(-r) - 1)
+            two_peaks[0] = min(two_peaks[0], z_plane_index(-r))
             two_peaks[1] = max(two_peaks[1], z_plane_index(r))
-            chosen_peak = min(two_peaks[0], z_plane_index(-r))
-            zprofile_peaks.append( chosen_peak )
-            zprofile_maxs.append( zprof[chosen_peak] )
+            chosen_peak = two_peaks[0]
+            zprofile_initial_peaks.append( chosen_peak )
         except IndexError or RuntimeWarning:
-            zprofile_peaks.append( -1 )
-            zprofile_maxs.append( 0 )
+            zprofile_initial_peaks.append( -1 )
+        
+    zprofile_initial_peaks = np.array(zprofile_initial_peaks)
             
+    most_common_peak = mode( zprofile_initial_peaks[zprofile_initial_peaks>=0] )
+    
+    zprofile_peaks = []
+    zprofile_maxs = []
+    for peak, zprof in zip(zprofile_initial_peaks, np.rollaxis(zprofile_field, -1)):
+        if peak >= 0: 
+            zprofile_peaks.append( peak )
+            zprofile_maxs.append( zprof[chosen_peak] )
+        else:
+            zprofile_peaks.append( most_common_peak )
+            zprofile_maxs.append( zprof[most_common_peak] )
     zprofile_peaks = np.array(zprofile_peaks)
     zprofile_maxs = np.array(zprofile_maxs)
     
@@ -201,9 +218,12 @@ def get_single_resonance_from_yzplanes(yzplane_field,
                                        last_stable_periods=5):
     # zprofile_field has time as the last dimension
     
-    all_index, all_zprofile, all_yzplane = get_all_resonance_from_yzplanes(
-        yzplane_field, y_plane_index, z_plane_index, r, cell_width, pml_width)
+    all_index = get_all_resonance_from_yzplanes(
+        yzplane_field, y_plane_index, z_plane_index, r, cell_width, pml_width)[0]
         
+    all_zprofile = get_zprofile_from_plane(yzplane_field[...,all_index], y_plane_index) 
+    all_yzplane = yzplane_field[...,all_index]
+    
     mean_diff = np.mean(np.diff(all_index)[-last_stable_periods:])
     def selection_criteria(k):
         eval_point = np.abs( mean_diff - (all_index[k+1] - all_index[k]) )
@@ -221,7 +241,8 @@ def get_single_resonance_from_yzplanes(yzplane_field,
             selected_index.append(k)
             # print(k, " entered second elif")
     
-    max_values = [np.max(all_zprofile[...,k]) for k in selected_index]
+    max_values = find_peaks_field_zprofile(all_zprofile[...,selected_index], 
+                                           z_plane_index, r, cell_width, pml_width)[1]
    
     mean_value = np.mean(max_values[-last_stable_periods:])
     def selection_criteria(k):
@@ -239,7 +260,9 @@ def get_single_resonance_from_yzplanes(yzplane_field,
     # min_index = np.argmin(max_values)
 
     resonance_index = all_index[stable_index[max_index]]
-    resonance_zprofile = all_zprofile[..., stable_index[max_index]]
-    resonance_yzplane = all_yzplane[..., stable_index[max_index]]
+    resonance_zprofile = crop_field_zprofile(all_zprofile[..., stable_index[max_index]], 
+                                             z_plane_index, cell_width, pml_width)
+    resonance_yzplane = crop_field_zyplane(all_yzplane[..., stable_index[max_index]], 
+                                           y_plane_index, z_plane_index, cell_width, pml_width)
     
     return resonance_index, resonance_zprofile, resonance_yzplane
