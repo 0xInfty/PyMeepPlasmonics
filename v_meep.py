@@ -26,10 +26,12 @@ import meep as mp
 import numpy as np
 import os
 import resource as res
+from shutil import copy
 from time import sleep, time
 import v_materials as vmt
 import v_save as vs
 import v_utilities as vu
+import v_meep_analysis as vma
 
 sysname = vs.get_sys_name()
 syshome = vs.get_sys_home()
@@ -51,6 +53,13 @@ chunks_key_params = ["from_um_factor", "resolution", "courant",
                      "until_after_sources",
                      "parallel", "n_processes", "n_cores", "n_nodes",
                      "split_chunks_evenly", "near2far"]
+
+normfield_key_params = ["from_um_factor", "resolution", "courant",
+                        "submerged_index", "wlen", "surface_index", "overlap",
+                        "cell_width", "pml_width", "source_center",
+                        "norm_until_time", "period_line", 
+                        "parallel", "n_processes", "n_cores", "n_nodes",
+                        "split_chunks_evenly", "hfield"]
 
 # %%
 
@@ -935,6 +944,157 @@ def check_chunks(params):
     except IndexError:
         print("Chunks database must be empty!")
         return []
+
+# %%
+
+def save_normfield(params, path):
+
+    comm = MPI.COMM_WORLD
+    mpi_rank = comm.Get_rank()
+
+    n_processes = mp.count_processors()
+    parallel = n_processes > 1
+    parallel_assign = parallel_manager(n_processes, parallel)[0]
+
+    dir_file = os.path.join(home, "FieldData/FieldDataDirectory.txt")
+    dir_backup = os.path.join(home, f"FieldData/FieldDataDir{sysname}Backup.txt")
+
+    if mpi_rank == 0:
+        new_norm_path = vs.datetime_dir(os.path.join(home, "FieldData/NormField"),
+                                        strftime="%Y%m%d%H%M%S")
+        broadcasted_data = {'path': new_norm_path}
+        os.makedirs(new_norm_path)
+    else:
+        broadcasted_data = None
+    broadcasted_data = comm.bcast(broadcasted_data, root=0)
+    new_norm_path = broadcasted_data["path"]
+
+    # os.path.chdir(new_norm_path)
+    if parallel_assign(0):
+        copy(os.path.join(path, "Field-Lines-Norm.h5"),
+             os.path.join(new_norm_path, "Field-Lines-Norm.h5"))
+    # os.chdir(syshome)
+
+    database = vs.retrieve_footer(dir_file)
+    if parallel_assign(1):
+        vs.savetxt(dir_backup, np.array([]), footer=database, overwrite=True)
+
+    database["norm_path"].append(os.path.split(new_norm_path)[-1])
+    database["path"].append(path)
+    for key in normfield_key_params:
+        try:
+            if isinstance(params[key], np.ndarray):
+                database[key].append(list(params[key]))
+            else:
+                database[key].append(params[key])
+        except:
+            raise ValueError(f"Missing key parameter: {key}")
+
+    if parallel_assign(0):
+        vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
+
+    return new_norm_path
+
+# %%
+
+def check_normfield(params):
+
+    dir_file = os.path.join(home, "FieldData/FieldDataDirectory.txt")
+
+    database = vs.retrieve_footer(dir_file)
+
+    try:
+        database_array = []
+        for key in normfield_key_params:
+            if key in params.keys():
+                if isinstance(database[key][0], bool):
+                    aux_data = [int(data) for data in database[key]]
+                    database_array.append(aux_data)
+                else:
+                    try:
+                        if len(list(database[key][0])) > 1:
+                            for i in range(len(list(database[key][0]))):
+                                aux_data = [data[i] for data in database[key]]
+                                database_array.append(aux_data)
+                        else:
+                            database_array.append(database[key])
+                    except:
+                        database_array.append(database[key])
+        database_array = np.array(database_array)
+
+        desired_array = []
+        for key in normfield_key_params:
+            if key in params.keys():
+                if isinstance(params[key], bool):
+                    desired_array.append(int(params[key]))
+                else:
+                    try:
+                        if len(list(params[key])) > 1:
+                            for i in range(len(list(params[key]))):
+                                desired_array.append(params[key][i])
+                        else:
+                            desired_array.append(params[key])
+                    except:
+                        desired_array.append(params[key])
+        desired_array = np.array(desired_array)
+
+        boolean_array = []
+        for array in database_array.T:
+            boolean_array.append(
+                np.all(array - desired_array.T == np.zeros(desired_array.T.shape)))
+        index = [i for i, boolean in enumerate(boolean_array) if boolean]
+
+        if len(index) == 0:
+            print("No coincidences where found at the normfield database!")
+        elif len(index) == 1:
+            print(
+                f"You could use normfield data from '{database['path'][index[-1]]}'")
+        else:
+            print("More than one coincidence was found at the normfield database!")
+            print(
+                f"You could use normfield data from '{database['path'][index[-1]]}'")
+
+        try:
+            norm_path_list = [os.path.join(
+                home, "FieldData", database['norm_path'][i]) for i in index]
+        except:
+            norm_path_list = []
+
+        return norm_path_list
+
+    except IndexError:
+        print("Normfield database must be empty!")
+        return []
+
+# %%
+
+def load_normfield(norm_path):
+
+    print(f"Loading field from '{norm_path}'")
+    
+    n_processes = mp.count_processors()
+    parallel = n_processes > 1
+    parallel_assign = parallel_manager(n_processes, parallel)[0]
+    
+    norm_file = parallel_hdf_file(os.path.join(norm_path, "Field-Lines-Norm.h5"), 
+                                  "r", parallel)
+    
+    results_line_norm = norm_file["Ez"]
+    source_center = norm_file["Ez"].attrs["source_center"]
+    
+    t_line_norm = np.asarray(norm_file["T"])
+    x_line_norm = np.asarray(norm_file["X"])
+    
+    t_line_norm_index = vma.def_index_function(t_line_norm)
+    x_line_norm_index = vma.def_index_function(x_line_norm)
+    
+    source_results = vma.get_source_from_line(results_line_norm, x_line_norm_index, source_center)
+    norm_period = vma.get_period_from_source(source_results, t_line_norm)
+    norm_amplitude = vma.get_amplitude_from_source(source_results)
+    
+    norm_file.close()
+            
+    return norm_amplitude, norm_period
 
 # %%
 
