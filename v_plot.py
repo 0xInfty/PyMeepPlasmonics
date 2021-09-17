@@ -108,3 +108,48 @@ def add_style(figure_id=None, new_figure=False, **kwargs):
     fig.tight_layout = kwargs['tight_layout']
     
     plt.show()
+   
+#%%
+
+def add_subplot_axes(ax, rect):
+    """Adds a sub-set of axes inside an existing set of axes.
+    
+    This function was taken from StackOverflow on September 2021.
+    https://stackoverflow.com/questions/17458580/embedding-small-plots-inside-subplots-in-matplotlib
+    
+    Parameters
+    ----------
+    ax : plt.Axes or plt.AxesSubplot instance
+        The currently existing set of axes.
+    rect : list or iterable of length 4
+        The desired dimensions for the new sub-set of axes: [x, y, width, height]
+    
+    Returns
+    -------
+    subax : plt.AxesSubplot instance
+        The newly created sub-set of axes.
+    """
+    
+    
+    fig = ax.figure #plt.gcf()
+    box = ax.get_position()
+    width = box.width
+    height = box.height
+    
+    inax_position  = ax.transAxes.transform(rect[0:2])
+    transFigure = fig.transFigure.inverted()
+    infig_position = transFigure.transform(inax_position)    
+    x = infig_position[0]
+    y = infig_position[1]
+    width *= rect[2]
+    height *= rect[3]
+    
+    subax = fig.add_axes([x,y,width,height])
+    x_labelsize = subax.get_xticklabels()[0].get_size()
+    y_labelsize = subax.get_yticklabels()[0].get_size()
+    x_labelsize *= rect[2]**0.5
+    y_labelsize *= rect[3]**0.5
+    subax.xaxis.set_tick_params(labelsize=x_labelsize)
+    subax.yaxis.set_tick_params(labelsize=y_labelsize)
+    
+    return subax
