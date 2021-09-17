@@ -115,7 +115,7 @@ def main(from_um_factor, resolution, courant,
         courant = 0.5
         
         # Cell specifications
-        displacement = 50 # Displacement of the surface relative to the dipole
+        displacement = 0 # Displacement of the surface relative to the dipole
         submerged_index = 1 # 1.33 for water
         surface_index = None # 1.54 for glass
         
@@ -136,7 +136,7 @@ def main(from_um_factor, resolution, courant,
         second_time_factor = 10
         
         # Saving directories
-        series = "TestDipoleSerial" # "2nd"
+        series = "TestDipoleVacStanding" # "2nd"
         folder = "Test/TestDipole" # DataAnalysis/DipoleStandingGlassTest"
         
         # Run configuration
@@ -155,6 +155,7 @@ def main(from_um_factor, resolution, courant,
     
     # Frequency and wavelength
     cutoff = 3.2 # Gaussian planewave source's parameter of shape
+    radial_factor = 2000
     nazimuthal = 32 # Suggestion: multiple of 8, to make plots correctly.
     npolar = 40 # Suggestion: multiple of 4, to make plots correctly.
     
@@ -229,7 +230,7 @@ def main(from_um_factor, resolution, courant,
     params_list = ["from_um_factor", "resolution_wlen", "resolution", "courant",
                    "submerged_index", "displacement", "surface_index",
                    "wlen_center", "wlen_width", "cutoff", "standing",
-                   "nfreq", "nazimuthal", "npolar", 
+                   "nfreq", "nazimuthal", "npolar", "radial_factor",
                    "flux_box_size", "surface_box_size", 
                    "empty_wlen_factor", "flux_wlen_factor", "flux_padd_factor",
                    "cell_width", "pml_width", "empty_width",
@@ -466,7 +467,7 @@ def main(from_um_factor, resolution, courant,
     freqs = np.linspace(freq_center - freq_center/2, freq_center + freq_width/2, nfreq)
     wlens = 1/freqs
     
-    radial_distance = 2000 * wlen_center
+    radial_distance = radial_factor * wlen_center
     azimuthal_angle = np.arange(0, 2 + 2/nazimuthal, 2/nazimuthal) # in multiples of pi
     polar_angle = np.arange(0, 1 + 1/npolar, 1/npolar)
     
@@ -520,7 +521,7 @@ def main(from_um_factor, resolution, courant,
                 pm.log("Calculated first Poynting")
             elif i==0 and j==len(sim_polar_angle)-1:
                 pm.log("Calculated last Poynting for first azimuthal angle")
-        
+            
     del phi, theta, farfield_dict, Px, Py, Pz
         
     # mp.all_wait()
@@ -561,6 +562,10 @@ def main(from_um_factor, resolution, courant,
         
     if pm.assign(0):
             f = h5.File(sa.file("Base-Results.h5"), "w")
+            f["f"] = freqs
+            f["lambda"] = wlens * from_um_factor * 1e3
+            f["theta"] = polar_angle
+            f["phi"] = azimuthal_angle
             f["Px"] = poynting_x
             f["Py"] = poynting_y
             f["Pz"] = poynting_z
@@ -833,6 +838,10 @@ def main(from_um_factor, resolution, courant,
     
         if pm.assign(0):
                 f = h5.File(sa.file("Further-Results.h5"), "w")
+                f["f"] = freqs
+                f["lambda"] = wlens * from_um_factor * 1e3
+                f["theta"] = polar_angle
+                f["phi"] = azimuthal_angle
                 f["Px"] = poynting_x
                 f["Py"] = poynting_y
                 f["Pz"] = poynting_z
