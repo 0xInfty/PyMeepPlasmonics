@@ -117,7 +117,7 @@ plt.xlabel("Time factor cell")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET elapsed TIME COMPARED
+#%% GET ELAPSED TIME COMPARED
 
 time_factor_cell = [[p["time_factor_cell"] for p in par] for par in params]
 elapsed_time = [[p["elapsed"] for p in par] for par in params]

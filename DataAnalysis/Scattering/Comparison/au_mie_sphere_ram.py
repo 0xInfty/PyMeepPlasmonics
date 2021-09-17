@@ -339,7 +339,7 @@ plt.xticks( resolution[ np.argmax([len(res) for res in resolution]) ] )
 plt.tight_layout()
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
-#%% GET elapsed TIME COMPARED
+#%% GET ELAPSED TIME COMPARED
 
 elapsed_time = [[p["elapsed"] for p in par] for par in params]
 # total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]

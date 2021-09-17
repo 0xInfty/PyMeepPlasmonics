@@ -176,7 +176,7 @@ plt.xlabel("Resolution")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET elapsed TIME COMPARED
+#%% GET ELAPSED TIME COMPARED
 
 elapsed_time = [[p["elapsed"] for p in par] for par in params]
 total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
@@ -252,7 +252,7 @@ plt.xlabel("Resolution")
 plt.ylabel("elapsed time in loading flux [s]")
 plt.savefig(plot_file("ComparedLoadTime.png"), bbox_inches='tight')
 
-#%% GET elapsed TIME JC
+#%% GET ELAPSED TIME JC
 
 def quartic_fit(X, A, b):
     return A * (X)**4 + b

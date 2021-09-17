@@ -122,7 +122,7 @@ plt.xlabel("Resolution")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET elapsed TIME
+#%% GET ELAPSED TIME
 
 elapsed_time = [params[0][i]["elapsed"] for i in range(len(data[0]))]
 total_elapsed_time = [sum(et) for et in elapsed_time]

@@ -104,6 +104,16 @@ for i, p in enumerate(params):
         material.append( [pi["material"] for pi in p] )
     except:
         material.append( ["Au" for pi in p] )
+        
+minor_division = [[fum * 1e3 / res for fum, res in zip(frum, reso)] for frum, reso in zip(from_um_factor, resolution)]
+try:
+    width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in params] 
+    effective_width_points = [[(p["cell_width"] - 2 * params["pml_width"]) * p["resolution"] for p in par] for par in params]
+except:
+    width_points = [[2*int(p["pml_width"] + p["air_width"] + p["r"]) * p["resolution"] for p in par] for par in params] 
+    effective_width_points = [[2*int(p["air_width"] + p["r"]) * p["resolution"] for p in par] for par in params]
+grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
+memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
 
 #%% GET EXPERIMENTAL DATA
 

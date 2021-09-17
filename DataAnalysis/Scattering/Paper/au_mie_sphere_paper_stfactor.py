@@ -117,7 +117,7 @@ plt.xlabel("Second time factor")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET elapsed TIME COMPARED
+#%% GET ELAPSED TIME COMPARED
 
 second_time_factor = [[p["second_time_factor"] for p in par] for par in params]
 elapsed_time = [[p["elapsed"] for p in par] for par in params]

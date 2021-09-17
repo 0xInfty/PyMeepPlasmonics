@@ -133,7 +133,7 @@ plt.xlabel("Wavelength range maximum [nm]")
 plt.ylabel("Difference in wavelength $\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
 vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
-#%% GET elapsed TIME COMPARED
+#%% GET ELAPSED TIME COMPARED
 
 wlen_range_max = [[vu.find_numbers(s)[0] for s in ser] for ser in series]
 elapsed_time = [[p["elapsed"] for p in par] for par in params]

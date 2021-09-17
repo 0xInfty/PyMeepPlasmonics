@@ -154,7 +154,7 @@ plt.xlabel("Courant factor")
 plt.ylabel("Mean quadratic difference in scattering effiency")
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
-#%% GET elapsed TIME COMPARED
+#%% GET ELAPSED TIME COMPARED
 
 courant = [[vu.find_numbers(s)[0] for s in ser] for ser in series]
 elapsed_time = [[p["elapsed"] for p in par] for par in params]

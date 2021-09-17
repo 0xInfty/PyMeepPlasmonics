@@ -186,7 +186,7 @@ fig.axes[1].set_xlim(-5, 55)
 plt.ylim(-2, 14)
 vs.saveplot(plot_file("WLenDiff2Zoom.png"), overwrite=True)
 
-#%% GET elapsed TIME COMPARED
+#%% GET ELAPSED TIME COMPARED
 
 flux_r_factor = [[vu.find_numbers(s)[0] for s in ser] for ser in series]
 elapsed_time = [[p["elapsed"] for p in par] for par in params]

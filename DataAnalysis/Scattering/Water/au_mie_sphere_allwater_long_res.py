@@ -247,7 +247,7 @@ plt.xlabel("Minor spatial division [nm]")
 plt.ylabel("Mean squared difference MSD( $C^{MEEP} - C^{MIE}$ )")
 vs.saveplot(plot_file("QuaDiffDiv.png"), overwrite=True)
 
-#%% GET elapsed TIME COMPARED
+#%% GET ELAPSED TIME COMPARED
 
 elapsed_time = [[p["elapsed"] for p in par] for par in params]
 total_elapsed_time = [[sum(p["elapsed"]) for p in par] for par in params]
