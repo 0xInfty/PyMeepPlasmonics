@@ -10,26 +10,25 @@ Routines/np_monoch_field
 
 import imageio as mim
 import matplotlib.pyplot as plt
-import meep as mp
 import numpy as np
 import os
-from scipy.signal import find_peaks
 import v_meep as vm
-import v_save as vs
+import v_meep_analysis as vma
 import v_utilities as vu
 
 #%% PARAMETERS
 
 """
-series = "Periods532"
-folder = "Field/NPMonoch/TestPeriods/Water"
+series = "Norm532Res3"
+folder = "Field/NPMonoch/AuSphere/VacWatField/Vacuum"
 
 hfield = False
 
 make_plots = True
-make_gifs = False
+make_gifs = True
 
 english = False
+maxnframes = 300
 """
 
 #%% 
@@ -71,142 +70,129 @@ def plots_np_monoch_field(series, folder, hfield=False,
     y_plane = np.array(g["Y"])
     z_plane = np.array(g["Z"])
     
-    from_um_factor = f["Ez"].attrs["from_um_factor"]
+    params = dict(f["Ez"].attrs)
     
-    r = f["Ez"].attrs["r"]
-    material = f["Ez"].attrs["material"]
+    from_um_factor = params["from_um_factor"]
     
-    wlen = f["Ez"].attrs["wlen"]
+    r = params["r"]
+    material = params["material"]
     
-    cell_width = f["Ez"].attrs["cell_width"]
-    pml_width = f["Ez"].attrs["pml_width"]
-    source_center = f["Ez"].attrs["source_center"]
+    wlen = params["wlen"]
     
-    until_time = f["Ez"].attrs["until_time"]
-    period_line = f["Ez"].attrs["period_line"]
-    period_plane = f["Ez"].attrs["period_plane"]
+    cell_width = params["cell_width"]
+    pml_width = params["pml_width"]
+    source_center = params["source_center"]
     
-    #%% GENERAL USEFUL FUNCTIONS
+    until_time = params["until_time"]
+    period_line = params["period_line"]
+    period_plane = params["period_plane"]
     
-    t_line_index = lambda t0 : np.argmin(np.abs(t_line - t0))        
-    x_line_index = lambda x0 : np.argmin(np.abs(x_line - x0))
+    try:
+        norm_until_time = params["norm_until_time"]
+        norm_amplitude = params["norm_amplitude"]
+        norm_period = params["norm_period"]
+        norm_path = params["norm_path"]
+        requires_normalization = False
+    except:
+        requires_normalization = True
+       
+    try:
+        
+        try:
+            h = pm.hdf_file(sa.file("Field-Lines-Norm.h5"), "r")
+            
+        except:
+            h = pm.hdf_file(os.path.join(norm_path, "Field-Lines-Norm.h5"), "r")
+            
+        print("Loaded available normfield")
+        
+    except:
+        
+        norm_path = vm.check_normfield(params)
+        
+        try:
+            h = pm.hdf_file(os.path.join(norm_path[0], "Field-Lines-Norm.h5"), "r")
+            print("Loaded compatible normfield")
+            
+        except:
+            h = f
+            print(f"Using NP data for normalization.",
+                  "This is by all means not ideal!!",
+                  "If possible, run again these simulations.")
     
-    t_plane_index = lambda t0 : np.argmin(np.abs(t_plane - t0))
-    y_plane_index = lambda y0 : np.argmin(np.abs(y_plane - y0))
-    z_plane_index = lambda z0 : np.argmin(np.abs(z_plane - z0))
+    results_line_norm = h["Ez"]
+    t_line_norm = np.asarray(h["T"])
+    x_line_norm = np.asarray(h["X"])
+    
+    #%% POSITION RECONSTRUCTION
+    
+    t_line_index = vma.def_index_function(t_line)
+    x_line_index = vma.def_index_function(x_line)
+    
+    t_plane_index = vma.def_index_function(t_plane)
+    y_plane_index = vma.def_index_function(y_plane)
+    z_plane_index = vma.def_index_function(z_plane)
+    
+    t_line_norm_index = vma.def_index_function(t_line_norm)
+    x_line_norm_index = vma.def_index_function(x_line_norm)
+        
+    x_line_cropped = x_line[:x_line_index(cell_width/2 - pml_width)+1]
+    x_line_cropped = x_line_cropped[x_line_index(-cell_width/2 + pml_width):]
+
+    y_plane_cropped = y_plane[:y_plane_index(cell_width/2 - pml_width)+1]
+    y_plane_cropped = y_plane_cropped[y_plane_index(-cell_width/2 + pml_width):]
+    
+    z_plane_cropped = z_plane[:z_plane_index(cell_width/2 - pml_width)+1]
+    z_plane_cropped = z_plane_cropped[z_plane_index(-cell_width/2 + pml_width):]
     
     #%%
-    
-    last_stable_periods = 5
-    
-    source_results = np.asarray(results_line[x_line_index(source_center), :])
         
-    def get_peaks_from_source(source):
-        peaks = find_peaks(source, height=0)[0]
+    source_results = vma.get_source_from_line(results_line_norm, 
+                                              x_line_norm_index, 
+                                              source_center)
         
-        mean_diff = np.mean(np.diff(peaks)[-last_stable_periods:])
-        selected_peaks = []
-        selection_criteria = lambda k : np.abs( mean_diff - (peaks[k+1] - peaks[k]) ) <= 0.1 * mean_diff
-        for k in range(len(peaks)):
-            if k == 0 and selection_criteria(k):
-                selected_peaks.append(peaks[k])
-            elif k == len(peaks)-1 and selection_criteria(k-1):
-                selected_peaks.append(peaks[k])
-            elif selection_criteria(k):
-                selected_peaks.append(peaks[k])
-        return selected_peaks
-    
-    def get_period_from_source(source):
-        peaks = get_peaks_from_source(source)
+    if not requires_normalization:
         
-        keep_periods_from = 0
-        periods = np.array(t_line[peaks[1:]] - t_line[peaks[:-1]])
-        mean_periods = np.mean(periods[-last_stable_periods:])
-        for k, per in enumerate(periods):
-            if np.abs(per - mean_periods) > .1 * mean_periods:
-                keep_periods_from = max(keep_periods_from, k+1)
-        stable_periods = periods[keep_periods_from:]
-        return np.mean(stable_periods)
-    
-    def get_amplitude_from_source(source):
-        peaks = get_peaks_from_source(source)
+        period, amplitude = norm_period, norm_amplitude
         
-        keep_periods_from = 0
-        heights = source_results[peaks]
-        mean_height = np.mean(source_results[peaks[-last_stable_periods:]])
-        for k, h in enumerate(heights):
-            if np.abs(h - mean_height) > .05 * mean_height:
-                keep_periods_from = max(keep_periods_from, k+1)
-        stable_heights = source_results[peaks[keep_periods_from:]]
-        return np.mean(stable_heights)
+    else:          
+        
+        period = vma.get_period_from_source(source_results, t_line)
+        amplitude = vma.get_amplitude_from_source(source_results)
+        
+        results_plane = np.asarray(results_plane) / amplitude
+        results_line = np.asarray(results_line) / amplitude
     
-    period = get_period_from_source(source_results)
-    
-    amplitude = get_amplitude_from_source(source_results)
+    sim_source_results = vma.get_source_from_line(results_line, 
+                                                  x_line_index, 
+                                                  source_center)
 
-    def crop_field_zyplane(field):
-        cropped = field[: y_plane_index(cell_width/2 - pml_width), :]
-        cropped = cropped[y_plane_index(-cell_width/2 + pml_width) :, :]
-        cropped = cropped[:,: z_plane_index(cell_width/2 - pml_width)]
-        cropped = cropped[:, z_plane_index(-cell_width/2 + pml_width) :]
-        return cropped        
-        
-    def crop_field_zprofile(field):
-        cropped = field[: z_plane_index(cell_width/2 - pml_width)]
-        cropped = cropped[z_plane_index(-cell_width/2 + pml_width) :]
-        return cropped
+    zprofile_results = vma.get_zprofile_from_plane(results_plane, y_plane_index)
     
-    def integrate_field_zprofile(field_profile):
-        integral = np.sum(crop_field_zprofile(field_profile)) * period_plane
-        return integral
+    zprofile_integral = vma.integrate_field_zprofile(zprofile_results, z_plane_index,
+                                                     cell_width, pml_width, 
+                                                     period_plane)
     
-    def detect_sign_field_zprofile(field_profile):
-        return -np.sign(field_profile[0])
+    zprofile_max = vma.find_zpeaks_zprofile(zprofile_results, z_plane_index,
+                                            cell_width, pml_width)[-1]
     
-    def find_peaks_field_zprofile(field_profile):
-        sign = detect_sign_field_zprofile(field_profile)
-        peaks = find_peaks(sign * crop_field_zprofile(field_profile))[0]
-        peaks = np.array(peaks) + z_plane_index(-cell_width/2 + pml_width)
-        if len(peaks) > 2: peaks = peaks[[0,-1]]
-        try:
-            peaks[0] = min(peaks[0], z_plane_index(-r) - 1)
-            peaks[1] = max(peaks[1], z_plane_index(r))
-            return peaks
-        except:
-            return (None, None)
+    field_peaks_all_index = vma.get_all_field_peaks_from_yzplanes(results_plane,
+                                                                  y_plane_index, 
+                                                                  z_plane_index, 
+                                                                  cell_width, 
+                                                                  pml_width)[0]
     
-    def get_max_index_zprofile(field_profile):
-        try: 
-            return min(find_peaks_field_zprofile(field_profile)[0],
-                       z_plane_index(-r))
-        except IndexError:
-            return None
+    field_peaks_results = vma.get_single_field_peak_from_yzplanes(results_plane,
+                                                                  y_plane_index, 
+                                                                  z_plane_index, 
+                                                                  cell_width, 
+                                                                  pml_width)
+    field_peaks_single_index = field_peaks_results[0]
+    field_peaks_zprofile = field_peaks_results[2]
+    field_peaks_plane = field_peaks_results[3]
+    del field_peaks_results
     
-    def get_max_field_zprofile(field_profile):
-        try: 
-            return np.mean( field_profile[ find_peaks_field_zprofile(field_profile) ] )
-        except RuntimeWarning:
-            return None
-    
-    def get_max_resonance_index(zprofile_results):
-        z_resonance_max = np.array([ get_max_field_zprofile(zprof) for zprof in zprofile_results.T])
-        first_index = int(np.argwhere( np.isnan(z_resonance_max) == False )[0])
-        t_resonance_max_index = find_peaks(z_resonance_max[first_index:], 
-                                           height=(np.max(z_resonance_max[first_index:])/2, None))[0]
-        t_resonance_max_index = np.array(t_resonance_max_index) + first_index
-        # t_resonance_max = t_plane[t_resonance_max_index]
-        # z_resonance_max = z_resonance_max[t_resonance_max_index]
-        return t_resonance_max_index #, t_resonance_max, z_resonance_max
-        
-    zprofile_results = np.asarray(results_plane[y_plane_index(0), :, :])
-    
-    zprofile_integral = np.array([ integrate_field_zprofile(zprof) for zprof in zprofile_results.T])
-    
-    zprofile_max = np.array([ get_max_field_zprofile(zprof) for zprof in zprofile_results.T])
-    
-    resonance_max_index = get_max_resonance_index(zprofile_results)
-    
-    #%% SHOW SOURCE AND FOURIER
+    #%% SHOW SOURCE AND FOURIER USED FOR NORMALIZATION
     
     if make_plots and pm.assign(0): 
 
@@ -214,10 +200,10 @@ def plots_np_monoch_field(series, folder, hfield=False,
         plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
-        plt.plot(t_line, source_results)
+        plt.plot(t_line_norm, source_results)
         plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
-        plt.ylabel(trs.choose(r"Electric Field $E_z$ [a.u.]",
-                              r"Campo eléctrico $E_z$ [u.a.]"))
+        plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$ [a.u.]", 
+                              r"Campo eléctrico $E_z(y=z=0)$ [u.a.]"))
         
         plt.savefig(sa.file("Source.png"))
         
@@ -245,9 +231,48 @@ def plots_np_monoch_field(series, folder, hfield=False,
                 
         plt.savefig(sa.file("SourceFFTZoom.png"))
         
-    #%% SHOW PROFILE AND RESONANCE
+    #%% SHOW SOURCE AND FOURIER DURING SIMULATION
     
-    if make_plots and pm.assign(0): 
+    if make_plots and pm.assign(1): 
+    
+        plt.figure()        
+        plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
+                             'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
+                             ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
+        plt.plot(t_line, sim_source_results)
+        plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+        plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$ [a.u.]", 
+                              r"Campo eléctrico $E_z(y=z=0)$ [u.a.]"))
+        
+        plt.savefig(sa.file("SimSource.png"))
+        
+        fourier = np.abs(np.fft.rfft(sim_source_results))
+        fourier_freq = np.fft.rfftfreq(len(sim_source_results), d=period_line)
+        fourier_wlen = from_um_factor * 1e3 / fourier_freq
+        fourier_max_wlen = fourier_wlen[ np.argmax(fourier) ]
+        
+        plt.figure()
+        plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
+                             'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
+                             ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
+        plt.plot(fourier_wlen, fourier, 'k', linewidth=3)
+        plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+        plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$ [u.a.]",
+                              r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$ [u.a.]"))
+        
+        plt.annotate(trs.choose(f"Maximum at {fourier_max_wlen:.2f} nm",
+                                f"Máximo en {fourier_max_wlen:.2f} nm"),
+                     (5, 5), xycoords='figure points')
+        
+        plt.savefig(sa.file("SimSourceFFT.png"))
+        
+        plt.xlim([350, 850])
+                
+        plt.savefig(sa.file("SimSourceFFTZoom.png"))
+        
+    #%% SHOW FIELD PEAKS INTENSIFICATION OSCILLATIONS
+    
+    if make_plots and pm.assign(0):
 
         plt.figure()        
         plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
@@ -266,83 +291,112 @@ def plots_np_monoch_field(series, folder, hfield=False,
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
         plt.plot(t_plane, zprofile_max)
         plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
-        plt.ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$ [a.u.]",
-                              r"Máximo del campo eléctrico $max[ E_z(z) ]$ [u.a.]"))
+        plt.ylabel(trs.choose(r"Normalized Electric Field Maximum $max[ E_z(z) ]$",
+                              r"Máximo del campo eléctrico normalizado $max[ E_z(z) ]$"))
         
         plt.savefig(sa.file("Maximum.png"))
         
-        plt.figure()        
-        plt.suptitle(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
-                                'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
-                                ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
-        ax = plt.subplot()
-        ax2 = plt.twinx()
-        l2, = ax.plot(t_plane, zprofile_integral / np.max(np.abs(zprofile_integral)), 
-                      "C0", linewidth=2, alpha=0.5, zorder=0)
-        l, = ax.plot(t_line, source_results  / np.max(np.abs(source_results)), 
-                     "k", linewidth=1)
-        ax.set_xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
-        ax.set_ylabel(trs.choose(r"Normalized Electric Field $E_z$ [a.u.]",
-                                 r"Campo eléctrico normalizado $E_z$ [u.a.]"))
-        ax2.set_ylabel(trs.choose(r"Normalized Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
-                                  r"Integral normalizada del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
-        plt.legend([l, l2], ["Source", "Resonance"])
+    #%% PLOT MAXIMUM INTENSIFICATION PROFILE
         
-        plt.savefig(sa.file("IntegralSource.png"))
-        
-        plt.figure()        
-        plt.suptitle(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
-                                'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
-                                ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
-        ax = plt.subplot()
-        ax2 = plt.twinx()
-        l2, = ax.plot(t_plane, zprofile_max, 
-                      "C0", linewidth=2, alpha=0.5, zorder=0)
-        l, = ax.plot(t_line, source_results, "k", linewidth=1)
-        ax.set_xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
-        ax.set_ylabel(trs.choose(r"Electric Field $E_z$ [a.u.]",
-                                 r"Campo eléctrico $E_z$ [u.a.]"))
-        ax2.set_ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$ [a.u.]",
-                                  r"Máximo del campo eléctrico $max[ E_z(z) ]$ [u.a.]"))
-        plt.legend([l, l2], ["Source", "Resonance"])
-        
-        plt.savefig(sa.file("MaximumSource.png"))
-        
-        def draw_pml_box():
-            plt.hlines(-cell_width/2 + pml_width, 
-                       -cell_width/2 + pml_width, 
-                       cell_width/2 - pml_width,
-                       linestyle=":", color='k')
-            plt.hlines(cell_width/2 - pml_width, 
-                       -cell_width/2 + pml_width, 
-                       cell_width/2 - pml_width,
-                       linestyle=":", color='k')
-            plt.vlines(-cell_width/2 + pml_width, 
-                       -cell_width/2 + pml_width, 
-                       cell_width/2 - pml_width,
-                       linestyle=":", color='k')
-            plt.vlines(cell_width/2 - pml_width, 
-                       -cell_width/2 + pml_width, 
-                       cell_width/2 - pml_width,
-                       linestyle=":", color='k')
-        
-        Y, Z = np.meshgrid(y_plane, z_plane)
-        lims = (np.min(results_plane), np.max(results_plane))
+    if make_plots and pm.assign(1): 
         
         plt.figure()
+        plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
+                             'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
+                             ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
+        plt.plot(z_plane, zprofile_results[..., field_peaks_single_index])
+        plt.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
+        plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
+        
+        # plt.xlim(min(z_plane), max(z_plane))
+        plt.xlabel(trs.choose("Position Z [Mp.u.]", "Position Z [u.Mp.]"))
+        plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
+                              r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+        
+        plt.savefig(sa.file("ZProfile.png"))
+        
+        plt.figure()
+        plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
+                             'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
+                             ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
+        plt.plot(z_plane_cropped  * from_um_factor * 1e3, 
+                 field_peaks_zprofile)
+        plt.axvline(-r * from_um_factor * 1e3, color="k", linestyle="dashed")
+        plt.axvline(r * from_um_factor * 1e3, color="k", linestyle="dashed")
+        
+        # plt.xlim(min(z_plane_cropped) * from_um_factor * 1e3, 
+        #          max(z_plane_cropped) * from_um_factor * 1e3)
+        plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
+        plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
+                              r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+        
+        plt.savefig(sa.file("CroppedZProfile.png"))
+    
+    #%% PLOT MAXIMUM INTENSIFICATION PLANE
+        
+    if make_plots and pm.assign(0): 
+        
+        fig = plt.figure()
         ax = plt.subplot()
         ax.set_aspect("equal")
         plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
-        ax.pcolormesh(Y, Z, results_plane[:,:,resonance_max_index[-2]].T, 
-                      cmap='bwr', shading='gouraud', vmin=lims[0], vmax=lims[1])
-        draw_pml_box()
-        plt.show()
+        lims = (np.min(results_plane[...,field_peaks_single_index]), 
+                np.max(results_plane[...,field_peaks_single_index]))
+        lims = max([abs(l) for l in lims])
+        lims = [-lims, lims]
+                
+        ims = ax.imshow(results_plane[...,field_peaks_single_index].T,
+                        cmap='RdBu', #interpolation='spline36', 
+                        vmin=lims[0], vmax=lims[1],
+                        extent=[min(y_plane), max(y_plane),
+                                min(z_plane), max(z_plane)])
+        plt.axhline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
+        plt.axhline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
+        plt.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
+        plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
+
+        cax = ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
+                            transform=ax.transAxes)
+        cbar = fig.colorbar(ims, ax=ax, cax=cax)
+        cbar.set_label(trs.choose("Normalized electric field $E_z$",
+                                  "Campo eléctrico normalizado $E_z$"))
+            
         plt.xlabel(trs.choose("Distance Y [Mp.u.]", "Distancia Y [u.Mp.]"))
         plt.ylabel(trs.choose("Distance Z [Mp.u.]", "Distancia Z [u.Mp.]"))
         
-        plt.savefig(sa.file("Resonance.png"))
+        plt.savefig(sa.file("YZPlane.png"))
+        
+        fig = plt.figure()
+        ax = plt.subplot()
+        ax.set_aspect("equal")
+        plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
+                             'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
+                             ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
+        lims = (np.min(field_peaks_plane), np.max(field_peaks_plane))
+        lims = max([abs(l) for l in lims])
+        lims = [-lims, lims]
+                
+        ims = ax.imshow(field_peaks_plane,
+                        cmap='RdBu', #interpolation='spline36', 
+                        vmin=lims[0], vmax=lims[1],
+                        extent=[min(y_plane_cropped) * from_um_factor * 1e3,
+                                max(y_plane_cropped) * from_um_factor * 1e3,
+                                min(z_plane_cropped) * from_um_factor * 1e3,
+                                max(z_plane_cropped) * from_um_factor * 1e3])
+
+        cax = ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
+                            transform=ax.transAxes)
+        cbar = fig.colorbar(ims, ax=ax, cax=cax)
+        cbar.set_label(trs.choose("Normalized electric field $E_z$",
+                                  "Campo eléctrico normalizado $E_z$"))
+            
+        # plt.show()
+        plt.xlabel(trs.choose("Distance Y [nm]", "Distancia Y [nm]"))
+        plt.ylabel(trs.choose("Distance Z [nm]", "Distancia Z [nm]"))
+        
+        plt.savefig(sa.file("CroppedYZPlane.png"))
     
     #%% MAKE PLANE GIF
     
@@ -354,44 +408,40 @@ def plots_np_monoch_field(series, folder, hfield=False,
         call_series = lambda i : results_plane[:,:,i]
         label_function = lambda i : trs.choose('Tiempo: {:.1f} u.Mp.',
                                                'Time: {:.1f} Mp.u.').format(i*period_plane)
-        Y, Z = np.meshgrid(y_plane, z_plane)
         
         # Animation base
         fig = plt.figure()
         ax = plt.subplot()
         ax.set_aspect('equal')
         lims = (np.min(results_plane), np.max(results_plane))
+        lims = max([abs(l) for l in lims])
+        lims = [-lims, lims]
         
-        def draw_pml_box():
-            plt.hlines(-cell_width/2 + pml_width, 
-                       -cell_width/2 + pml_width, 
-                       cell_width/2 - pml_width,
-                       linestyle=":", color='k')
-            plt.hlines(cell_width/2 - pml_width, 
-                       -cell_width/2 + pml_width, 
-                       cell_width/2 - pml_width,
-                       linestyle=":", color='k')
-            plt.vlines(-cell_width/2 + pml_width, 
-                       -cell_width/2 + pml_width, 
-                       cell_width/2 - pml_width,
-                       linestyle=":", color='k')
-            plt.vlines(cell_width/2 - pml_width, 
-                       -cell_width/2 + pml_width, 
-                       cell_width/2 - pml_width,
-                       linestyle=":", color='k')
-        
-        def make_pic_plane(i):
+        def make_pic_plane(k):
             ax.clear()
-            ax.pcolormesh(Y, Z, call_series(i).T, cmap='bwr', shading='gouraud',
-                          vmin=lims[0], vmax=lims[1])
-            ax.text(-.1, -.105, label_function(i), transform=ax.transAxes)
-            draw_pml_box()
+            ims = ax.imshow(results_plane[...,k].T,
+                            cmap='RdBu', #interpolation='spline36', 
+                            vmin=lims[0], vmax=lims[1],
+                            extent=[min(y_plane), max(y_plane),
+                                    min(z_plane), max(z_plane)])
+            plt.axhline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
+            plt.axhline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
+            plt.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
+            plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
+            
+            ax.text(-.1, -.105, label_function(k), transform=ax.transAxes)
             plt.show()
             plt.xlabel(trs.choose("Distance Y [Mp.u.]", "Distancia Y [u.Mp.]"))
             plt.ylabel(trs.choose("Distance Z [Mp.u.]", "Distancia Z [u.Mp.]"))
             plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                                     f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
-                         (5, 5), xycoords='figure points')
+                         (300, 11), xycoords='figure points')
+            
+            cax = ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
+                                transform=ax.transAxes)
+            cbar = fig.colorbar(ims, ax=ax, cax=cax)
+            cbar.set_label(trs.choose("Normalized electric field $E_z$",
+                                      "Campo eléctrico normalizado $E_z$"))
             return ax
         
         def make_gif_plane(gif_filename):
@@ -414,10 +464,9 @@ def plots_np_monoch_field(series, folder, hfield=False,
     if make_gifs and pm.assign(0):
         
         # What should be parameters
-        nframes = min(maxnframes, zprofile_results.shape[-1])
-        nframes_step = int(zprofile_results.shape[-1] / nframes)
-        # nframes = int(zprofile_results.shape[-1]/nframes_step)
-        call_series = lambda i : zprofile_results[:, i]
+        nframes = min(maxnframes, results_plane.shape[-1])
+        nframes_step = int(results_plane.shape[-1] / nframes)
+        call_series = lambda i : results_plane[:,:,i]
         label_function = lambda i : trs.choose('Tiempo: {:.1f} u.Mp.',
                                                'Time: {:.1f} Mp.u.').format(i*period_plane)
         
@@ -425,26 +474,25 @@ def plots_np_monoch_field(series, folder, hfield=False,
         fig = plt.figure()
         ax = plt.subplot()
         lims = (np.min(zprofile_results), np.max(zprofile_results))
-        shape = call_series(0).shape[0]
         
-        def draw_pml_box():
-            plt.vlines(-cell_width/2 + pml_width, *lims,
-                        linestyle=":", color='k')
-            plt.vlines(cell_width/2 - pml_width, *lims,
-                        linestyle=":", color='k')
-            plt.hlines(0, min(z_plane), max(z_plane),
-                       color='k', linewidth=1)
-        
-        def make_pic_line(i):
+        def make_pic_line(k):
             ax.clear()
-            plt.plot(z_plane, call_series(i))
-            ax.set_ylim(*lims)
-            ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
-            draw_pml_box()
-            plt.xlabel(trs.choose("Distance Z [Mp.u.]", "Distancia Z (u.Mp.)"))
-            plt.ylabel(trs.choose(r"Electric Field Profile $E_z|_{z=0}$ [a.u.]",
-                                  r"Perfil del campo eléctrico $E_z|_{z=0}$ [u.a.]"))
-            plt.xlim(min(z_plane), max(z_plane))
+            
+            ax.plot(z_plane, zprofile_results[...,k])
+            plt.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
+            plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
+            plt.axvline(source_center, color="r", linestyle="dashed")
+            plt.axhline(0, color="k", linewidth=1)
+        
+            ax.text(-.1, -.105, label_function(k), transform=ax.transAxes)
+            plt.xlabel(trs.choose("Position Z [Mp.u.]", "Position Z [u.Mp.]"))
+            plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(x=y=0)$",
+                                  r"Campo eléctrico normalizado $E_z(x=y=0)$"))
+            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                         (300, 11), xycoords='figure points')
+            plt.ylim(*lims)
+            
             plt.show()
             return ax
         
@@ -459,7 +507,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
             os.remove('temp_pic.png')
             print('Saved gif')
         
-        make_gif_line(sa.file("AxisZ"))
+        make_gif_line(sa.file("AxisZ=0"))
         plt.close(fig)
         # del fig, ax, lims, nframes_step, nframes, call_series, label_function
         
@@ -468,36 +516,34 @@ def plots_np_monoch_field(series, folder, hfield=False,
     if make_gifs and pm.assign(1):
         
         # What should be parameters
-        nframes = min(maxnframes, results_line.shape[-1])
-        nframes_step = int(results_line.shape[-1] / nframes)
-        call_series = lambda i : results_line[:,i]
+        nframes = min(maxnframes, results_plane.shape[-1])
+        nframes_step = int(results_plane.shape[-1] / nframes)
+        call_series = lambda i : results_plane[:,:,i]
         label_function = lambda i : trs.choose('Tiempo: {:.1f} u.Mp.',
                                                'Time: {:.1f} Mp.u.').format(i*period_plane)
-                
+        
         # Animation base
         fig = plt.figure()
         ax = plt.subplot()
         lims = (np.min(results_line), np.max(results_line))
-        shape = call_series(0).shape[0]
         
-        def draw_pml_box():
-            plt.vlines(-cell_width/2 + pml_width, *lims,
-                        linestyle=":", color='k')
-            plt.vlines(cell_width/2 - pml_width, *lims,
-                        linestyle=":", color='k')
-            plt.hlines(0, min(x_line), max(x_line),
-                       color='k', linewidth=1)
-        
-        def make_pic_line(i):
+        def make_pic_line(k):
             ax.clear()
-            plt.plot(x_line, call_series(i))
-            ax.set_ylim(*lims)
-            ax.text(-.12, -.1, label_function(i), transform=ax.transAxes)
-            draw_pml_box()
-            plt.xlabel(trs.choose("Distance X [Mp.u.]", "Distancia X (u.Mp.)"))
-            plt.ylabel(trs.choose(r"Electric Field Profile $E_z|_{x=0}$ [a.u.]",
-                                  r"Perfil del campo eléctrico $E_z|_{x=0}$ [u.a.]"))
-            plt.xlim(min(x_line), max(x_line))
+            
+            ax.plot(x_line, results_line[...,k])
+            plt.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
+            plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
+            plt.axhline(0, color="k", linewidth=1)
+        
+            ax.text(-.1, -.105, label_function(k), transform=ax.transAxes)
+            plt.xlabel(trs.choose("Position X [Mp.u.]", "Position X [u.Mp.]"))
+            plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
+                                  r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                         (300, 11), xycoords='figure points')
+            plt.ylim(*lims)
+            
             plt.show()
             return ax
         
@@ -512,7 +558,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
             os.remove('temp_pic.png')
             print('Saved gif')
         
-        make_gif_line(sa.file("AxisX"))
+        make_gif_line(sa.file("AxisX=0"))
         plt.close(fig)
         # del fig, ax, lims, nframes_step, nframes, call_series, label_function
     
@@ -520,3 +566,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
     
     f.close()
     g.close()
+    try:
+        h.close()
+    except:
+        pass
