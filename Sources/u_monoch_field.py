@@ -24,9 +24,8 @@ import matplotlib.pyplot as plt
 import meep as mp
 import numpy as np
 import os
-from v_materials import import_medium
 import v_meep as vm
-import v_save as vs
+import v_meep_analysis as vma
 import v_utilities as vu
 from monoch_field_plot import plots_monoch_field
 
@@ -63,6 +62,8 @@ rm.measure_ram()
 @cli.option("--pml-wlen-factor", "-pml", "pml_wlen_factor", 
             type=float, default=0.38,
             help="PML layer width expressed in multiples of wavelength")
+@cli.option("--centered-source", "-cs", "centered_source", type=bool, default=True,
+            help="Whether to place the source at the center of the cell or not")
 @cli.option("--time-period-factor", "-tpfc", "time_period_factor", 
             type=float, default=10,
             help="Simulation total time expressed as multiples of periods")
@@ -87,7 +88,7 @@ rm.measure_ram()
             help="Whether to make gifs while running or not.")
 def main(from_um_factor, resolution, resolution_wlen, courant,
          submerged_index, surface_index,
-         empty_wlen_factor, pml_wlen_factor, 
+         empty_wlen_factor, pml_wlen_factor, centered_source,
          wlen, time_period_factor,
          series, folder,
          n_cores, n_nodes, split_chunks_evenly,
@@ -202,7 +203,10 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     pml_width = vu.round_to_multiple(pml_width, 1/resolution)
     cell_width = vu.round_to_multiple(cell_width/2, 1/resolution)*2
     empty_width = cell_width/2 - pml_width
-    source_center = -0.5*cell_width + pml_width
+    if centered_source: 
+        source_center = 0
+    else:
+        source_center = -0.5*cell_width + pml_width
     
     until_time = vu.round_to_multiple(until_time, courant/resolution, round_up=True)
     period_line = vu.round_to_multiple(period_line, courant/resolution, round_down=True)
@@ -409,7 +413,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     os.chdir(syshome)
     sim.filename_prefix = filename_prefix
     
-    #%% SAVE METADATA
+    #%% NORMALIZE AND SAVE METADATA
     
     for p in params_list: params[p] = eval(p)
     
@@ -421,6 +425,21 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     del x, y, z, more
     del volumes, vol
     
+    f = pm.hdf_file(sa.file("Field-Lines.h5"), "r")
+    
+    results_line = f["Ez"]
+    t_line = np.arange(0, f["Ez"].shape[-1] * period_line, period_line)
+    x_line = dimensions[0][0]
+    
+    x_line_index = vma.def_index_function(x_line)
+    
+    source_results = vma.get_source_from_line(results_line, x_line_index, source_center)
+    norm_period = vma.get_period_from_source(source_results, t_line)
+    norm_amplitude = vma.get_amplitude_from_source(source_results)
+    
+    params["norm_period"] = norm_period
+    params["norm_amplitude"] = norm_amplitude
+    
     if pm.assign(0):
         
         files = ["Field-Lines", "Field-Planes"]
@@ -431,7 +450,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
             keys = [vu.camel(k) for k in f.keys()]
             for oldk, newk in zip(list(f.keys()), keys):
                 try:
-                    f[newk] = f[oldk]
+                    f[newk] = np.asarray(f[oldk]) / norm_amplitude
                     del f[oldk]
                 except:
                     pass
