@@ -26,7 +26,6 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 from matplotlib.ticker import AutoMinorLocator
 import os
-from scipy.signal import find_peaks
 import v_materials as vmt
 import v_meep as vm
 import v_meep_analysis as vma
@@ -70,39 +69,41 @@ plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/
 
 #%% LOAD DATA
 
-path = []
-file = []
+def file_definer(path):
+    return lambda s, n : os.path.join(path, s, n)
+
+path = [os.path.join(home, fold) for fold in folder]
+file = [file_definer(pa) for pa in path]
+
 series = []
 files_line = []
 files_plane = []
-files_line_norm = []
 results_line = []
 results_plane = []
-results_line_norm = []
 t_line = []
 x_line = []
 t_plane = []
 y_plane = []
 z_plane = []
-t_line_norm = []
-x_line_norm = []
 params = []
 
-for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
+# for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
+for i in range(len(folder)):
 
-    path.append( os.path.join(home, f) )
-    file.append( lambda f, s : os.path.join(path[-1], f, s) )
+    # path.append( os.path.join(home, f) )
+    # file.append( lambda f, s : os.path.join(path[-1], f, s) )
     
-    series.append( os.listdir(path[-1]) )
-    series[-1] = vu.filter_by_string_must(series[-1], sm)
-    if smn!="": series[-1] = vu.filter_by_string_must(series[-1], smn, False)
-    series[-1] = sf(series[-1])
+    series.append( os.listdir(path[i]) )
+    series[-1] = vu.filter_by_string_must(series[-1], series_must[i])
+    if series_mustnt[i]!="": 
+        series[-1] = vu.filter_by_string_must(series[-1], series_mustnt[i], False)
+    series[-1] = sorting_function[i](series[-1])
     
     files_line.append( [] )
     files_plane.append( [] )
     for s in series[-1]:
-        files_line[-1].append( h5.File(file[-1](s, "Field-Lines.h5"), "r") )
-        files_plane[-1].append( h5.File(file[-1](s, "Field-Planes.h5"), "r") )
+        files_line[-1].append( h5.File(file[i](s, "Field-Lines.h5"), "r") )
+        files_plane[-1].append( h5.File(file[i](s, "Field-Planes.h5"), "r") )
     del s
     
     results_line.append( [fi["Ez"] for fi in files_line[-1]] )
@@ -129,33 +130,7 @@ for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
             p["elapsed_time"] = p["elapsed"]
             del p["elapsed"]
     # del s, p
-    
-    try:
-        files_line_norm.append( [] )
-        try:
-            for s in series[-1]:
-                files_line_norm[-1].append( h5.File(file[-1](s, "Field-Lines-Norm.h5"), "r") )
-            del s
-            
-            results_line_norm.append( [fi["Ez"] for fi in files_line_norm[-1]] )
-            
-            t_line_norm.append( [np.asarray(fi["T"]) for fi in files_line_norm[-1]] )
-            x_line_norm.append( [np.asarray(fi["X"]) for fi in files_line_norm[-1]] )
-        except:            
-            for s, p in zip(series[-1], params[-1]):
-                files_line_norm[-1].append( h5.File(os.path.join(p["norm_path"], 
-                                                                 "Field-Lines-Norm.h5"), "r") )
-            del s
-            
-            results_line_norm.append( [fi["Ez"] for fi in files_line_norm[-1]] )
-            
-            t_line_norm.append( [np.asarray(fi["T"]) for fi in files_line_norm[-1]] )
-            x_line_norm.append( [np.asarray(fi["X"]) for fi in files_line_norm[-1]] )
-        available_normfield = True
-    except:
-        available_normfield = False
-
-del f, sf, sm, smn
+del i
             
 from_um_factor = []
 resolution = []
@@ -202,6 +177,47 @@ for p in params:
     sysname.append( [pi["sysname"] for pi in p] )
 del p
 
+#%%
+
+files_line_norm = []
+
+for i in range(len(series)):
+    
+    files_line_norm.append([])
+    
+    for j in range(len(series[i])):
+            
+        try:
+            
+            try:
+                files_line_norm[-1].append( h5.File(file[i](series[i][j], "Field-Lines-Norm.h5"), "r") )
+                
+            except:
+                files_line_norm[-1].append( h5.File(os.path.join(norm_path[i][j], "Field-Lines-Norm.h5"), "r") )
+                
+            print(f"Loading available normfield for {i},{j}")
+        
+        except:
+            norm_path_ij = vm.check_normfield(params[i][j])
+            
+            try:
+                files_line_norm[-1].append( h5.File(os.path.join(norm_path_ij[0], "Field-Lines-Norm.h5"), "r") )
+                print(f"Loading compatible normfield for {i},{j}")
+                norm_path[i][j] = norm_path_ij
+            
+            except:
+                files_line_norm[-1].append( files_line[i][j] )
+                print(f"Using NP data for {i},{j} normalization.",
+                      "This is by all means not ideal!!",
+                      "If possible, run again these simulations.")
+
+del i, j
+                
+results_line_norm = [[ files_line_norm[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
+
+t_line_norm = [[ np.asarray(files_line_norm[i][j]["T"]) for j in range(len(series[i]))] for i in range(len(series))]
+x_line_norm = [[ np.asarray(files_line_norm[i][j]["X"]) for j in range(len(series[i]))] for i in range(len(series))]
+
 if test_param_in_params:
     test_param = [[p[test_param_string] for p in par] for par in params]
 else:
@@ -233,9 +249,8 @@ t_plane_index = [[vma.def_index_function(t_plane[i][j]) for j in range(len(serie
 y_plane_index = [[vma.def_index_function(y_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 z_plane_index = [[vma.def_index_function(z_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-if available_normfield:
-    t_line_norm_index = [[vma.def_index_function(t_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-    x_line_norm_index = [[vma.def_index_function(x_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+t_line_norm_index = [[vma.def_index_function(t_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+x_line_norm_index = [[vma.def_index_function(x_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 x_line_cropped = [[x_line[i][j][:x_line_index[i][j](cell_width[i][j]/2 - pml_width[i][j])+1] for j in range(len(series[i]))] for i in range(len(series))]
 x_line_cropped = [[x_line_cropped[i][j][x_line_index[i][j](-cell_width[i][j]/2 + pml_width[i][j]):] for j in range(len(series[i]))] for i in range(len(series))]
@@ -248,87 +263,21 @@ z_plane_cropped = [[z_plane_cropped[i][j][z_plane_index[i][j](-cell_width[i][j]/
 
 #%% DATA EXTRACTION
 
-if available_normfield:
+source_results = [[vma.get_source_from_line(results_line_norm[i][j], x_line_norm_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+
+if not requires_normalization:
     
-    source_results = [[vma.get_source_from_line(results_line_norm[i][j], x_line_norm_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
     period_results, amplitude_results = norm_period, norm_amplitude
     
 else:
-
-    try:
-
-        files_line_norm = [[h5.File(os.path.join( norm_path[i][j], "Field-Lines-Norm.h5" )) for j in range(len(series[i]))] for i in range(len(series))]
-        results_line_norm = [[files_line_norm[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
-        t_line_norm = [[files_line_norm[i][j]["T"] for j in range(len(series[i]))] for i in range(len(series))]
-        x_line_norm = [[files_line_norm[i][j]["X"] for j in range(len(series[i]))] for i in range(len(series))]
-        t_line_norm_index = [[vma.def_index_function(t_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-        x_line_norm_index = [[vma.def_index_function(x_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-        source_results = [[vma.get_source_from_line(results_line_norm[i][j], x_line_norm_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-                
-        print("Found normalization data")
     
-    except FileNotFoundError:
-        
-        norm_path = [[]]
-        results_line_norm = [[]]
-        t_line_norm = [[]]
-        x_line_norm = [[]]
-        t_line_norm_index = [[]]
-        x_line_norm_index = [[]]
-        source_results = [[]]
-        
-        for i in range(len(series)):
-            
-            norm_path.append([])
-            results_line_norm.append([])
-            t_line_norm.append([])
-            x_line_norm.append([])
-            t_line_norm_index.append([])
-            x_line_norm_index.append([])
-            source_results.append([])
-            
-            for j in range(len(series[i])):
-                norm_path_ij = vm.check_normfield[i][j]
-                                
-            try:
-                
-                files_line_norm_ij = h5.File(os.path.join( norm_path_ij, "Field-Lines-Norm.h5" ))
-                results_line_norm_ij = files_line_norm_ij["Ez"]
-                t_line_norm_ij = files_line_norm_ij["T"]
-                x_line_norm_ij = files_line_norm_ij["X"]
-                t_line_norm_index_ij = vma.def_index_function(t_line_norm_ij)
-                x_line_norm_index_ij = vma.def_index_function(x_line_norm_ij)
-                source_results_ij = vma.get_source_from_line(results_line_norm_ij, 
-                                                             x_line_norm_index_ij, 
-                                                             source_center[i][j])
-                
-                print(f"Found some data that could be used for ({i},{j}) normalization at {norm_path[i][j]}")
-                
-                norm_path[-1].append(files_line_norm_ij)
-                results_line_norm[-1].append(results_line_norm_ij)
-                t_line_norm[-1].append(t_line_norm_ij)
-                x_line_norm[-1].append(x_line_norm_ij)
-                t_line_norm_index[-1].append(t_line_norm_index_ij)
-                x_line_norm_index[-1].append(x_line_norm_index_ij)
-                source_results[-1].append(source_results_ij)
-
-            except:
-        
-                source_results_ij = vma.get_source_from_line(results_line[i][j], x_line_index[i][j], source_center[i][j])
-        
-                print(f"Using NP data for ({i},{j}) normalization.",
-                      "This is by all means not ideal!!",
-                      "If possible, run again these simulations.")
-                
-                source_results[-1].append(source_results_ij)
-    
-    period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j], peaks_sensitivity=.15) for j in range(len(series[i]))] for i in range(len(series))]
-    amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j], peaks_sensitivity=.15) for j in range(len(series[i]))] for i in range(len(series))]
-    
-if requires_normalization:
+    period_results = [[vma.get_period_from_source(source_results[i][j], t_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+    amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
     
     results_plane = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
-    results_line = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+    results_line = [[np.asarray(results_line[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+
+sim_source_results = [[vma.get_source_from_line(results_line[i][j], x_line_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 zprofile_results = [[vma.get_zprofile_from_plane(results_plane[i][j], y_plane_index[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
@@ -336,7 +285,7 @@ zprofile_integral = [[vma.integrate_field_zprofile(zprofile_results[i][j], z_pla
                                                    cell_width[i][j], pml_width[i][j], period_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 zprofile_max = [[vma.find_zpeaks_zprofile(zprofile_results[i][j], z_plane_index[i][j],
-                                               cell_width[i][j], pml_width[i][j])[1] for j in range(len(series[i]))] for i in range(len(series))]
+                                          cell_width[i][j], pml_width[i][j])[1] for j in range(len(series[i]))] for i in range(len(series))]
 
 field_peaks_all_index = []
 field_peaks_single_index = []
@@ -361,7 +310,7 @@ for i in range(len(series)):
         field_peaks_plane[-1].append(plan)
 del i, j, ind, mxs, zprof, plan
 
-#%% SHOW SOURCE AND FOURIER
+#%% SHOW SOURCE AND FOURIER USED FOR NORMALIZATION
 
 # colors = [["C0"], ["C4"], ["C3"]]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
@@ -374,16 +323,10 @@ plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre
 lines = []
 for i in range(len(series)):
     for j in range(len(series[i])):
-        if available_normfield:
-            l, = plt.plot(t_line_norm[i][j]/period_results[i][j], 
-                          source_results[i][j] / amplitude_results[i][j],
-                          label=series_label[i](series[i][j]),
-                          color=colors[i][j])
-        else:
-            l, = plt.plot(t_line_norm[i][j]/period_results[i][j], 
-                          source_results[i][j],
-                          label=series_label[i](series[i][j]),
-                          color=colors[i][j])            
+        l, = plt.plot(t_line_norm[i][j] / period_results[i][j], 
+                      source_results[i][j] / amplitude_results[i][j],
+                      label=series_label[i](series[i][j]),
+                      color=colors[i][j])            
         lines.append(l)
 plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
 plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
@@ -392,7 +335,7 @@ plt.legend(ncol=2)
 
 plt.savefig(plot_file("Source.png"))
         
-fourier = [[np.abs(np.fft.rfft(source_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
+fourier = [[np.abs(np.fft.rfft(source_results[i][j] / amplitude_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
 fourier_freq = [[np.fft.rfftfreq(len(source_results[i][j]), d=period_line[i][j])  for j in range(len(series[i]))] for i in range(len(series))]
 fourier_wlen = [[from_um_factor[i][j] * 1e3 / fourier_freq[i][j]  for j in range(len(series[i]))] for i in range(len(series))]
 # fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
@@ -421,7 +364,61 @@ plt.xlim([350, 850])
         
 plt.savefig(plot_file("SourceFFTZoom.png"))
 
-#%% SHOW RESONANCE OSCILLATIONS
+#%% SHOW SOURCE AND FOURIER DURING SIMULATION
+
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+
+lines = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l, = plt.plot(t_line[i][j]/period_results[i][j], 
+                      sim_source_results[i][j],
+                      label=series_label[i](series[i][j]),
+                      color=colors[i][j])            
+        lines.append(l)
+plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
+plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
+                      r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+plt.legend(ncol=2)
+
+plt.savefig(plot_file("SimSource.png"))
+        
+fourier = [[np.abs(np.fft.rfft(sim_source_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
+fourier_freq = [[np.fft.rfftfreq(len(sim_source_results[i][j]), d=period_line[i][j])  for j in range(len(series[i]))] for i in range(len(series))]
+fourier_wlen = [[from_um_factor[i][j] * 1e3 / fourier_freq[i][j]  for j in range(len(series[i]))] for i in range(len(series))]
+# fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
+
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+lines = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        plt.plot(fourier_wlen[i][j], fourier[i][j],
+                 label=series_label[i](series[i][j]),
+                 color=colors[i][j])
+plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
+                      r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
+plt.legend(ncol=2)
+
+# plt.annotate(trs.choose(f"Maximum at {fourier_max_wlen:.2f} nm",
+#                         f"Máximo en {fourier_max_wlen:.2f} nm"),
+#              (5, 5), xycoords='figure points')
+
+plt.savefig(plot_file("SimSourceFFT.png"))
+
+plt.xlim([350, 850])
+        
+plt.savefig(plot_file("SimSourceFFTZoom.png"))
+
+#%% SHOW FIELD PEAKS INTENSIFICATION OSCILLATIONS
 
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
@@ -564,7 +561,8 @@ plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre
              plot_title_ending)
 for i in range(len(series)):
     for j in range(len(series[i])):
-        plt.plot(z_plane_cropped[i][j], field_peaks_zprofile[i][j],
+        plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
+                 field_peaks_zprofile[i][j],
                  label=series_label[i](series[i][j]),
                  color=colors[i][j])
 plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
