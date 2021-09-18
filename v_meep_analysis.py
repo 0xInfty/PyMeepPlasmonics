@@ -104,6 +104,35 @@ def crop_single_field_zprofile(single_zprofile, z_plane_index,
     
     return cropped
 
+def crop_single_field_xprofile(single_xprofile, x_line_index,
+                               cell_width, pml_width):
+    """Croppes a single Z line field array, dropping the outsides of the cell.
+    
+    Parameters
+    ----------
+    single_xprofile : np.array with dimension 1
+        One-dimensional field array of shape (N,) where n stands for positions 
+        in the X axis.
+    x_line_index : function
+        Function of a single argument that takes in an X position and returns 
+        the index of the closest value.
+    cell_width : int, float
+        Cubic cell side's total length, generally expressed in Meep units to 
+        be in the same units as the `y_plane` metadata array.
+    pml_width : int, float
+        Cell's isotropic PML's width, generally expressed in Meep units to be 
+        in the same units as the `y_plane` metadata array.
+    
+    Returns
+    -------
+    cropped : np.array
+        One-dimensional field cropped array of shape (n,) where n<N stands for 
+        positions in the X axis.
+    """
+    
+    return crop_single_field_zprofile(single_xprofile, x_line_index, 
+                                      cell_width, pml_width)
+
 def crop_field_yzplane(yzplane_field, y_plane_index, z_plane_index,
                        cell_width, pml_width):
     """Croppes full YZ planes field array, dropping the outsides of the cell.
@@ -172,6 +201,35 @@ def crop_field_zprofile(zprofile_field, z_plane_index,
     cropped = cropped[z_plane_index(-cell_width/2 + pml_width) :, :]
     
     return cropped
+
+def crop_field_xprofile(xprofile_field, x_line_index,
+                        cell_width, pml_width):
+    """Croppes full X lines field array, dropping the outsides of the cell.
+    
+    Parameters
+    ----------
+    xprofile_field : np.array with dimension 2
+        Bidimensional field array of shape (N,K) where N stands for positions 
+        in the X axis and K stands for different time instants.
+    x_plane_index : function
+        Function of a single argument that takes in an X position and returns 
+        the index of the closest value.
+    cell_width : int, float
+        Cubic cell side's total length, generally expressed in Meep units to 
+        be in the same units as the `y_plane` metadata array.
+    pml_width : int, float
+        Cell's isotropic PML's width, generally expressed in Meep units to be 
+        in the same units as the `y_plane` metadata array.
+    
+    Returns
+    -------
+    cropped : np.array
+        Bidimensional field cropped array of shape (n,K) where n<N stands for 
+        positions in the X axis and K stands for different time instants.
+    """
+    
+    return crop_field_zprofile(xprofile_field, x_line_index,
+                               cell_width, pml_width)
 
 #%% FIELD ANALYSIS: SOURCE FROM X LINE FIELD
 
