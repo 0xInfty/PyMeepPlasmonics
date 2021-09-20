@@ -1,0 +1,116 @@
+no change     /nfs/home/vpais/miniconda/condabin/conda
+no change     /nfs/home/vpais/miniconda/bin/conda
+no change     /nfs/home/vpais/miniconda/bin/conda-env
+no change     /nfs/home/vpais/miniconda/bin/activate
+no change     /nfs/home/vpais/miniconda/bin/deactivate
+no change     /nfs/home/vpais/miniconda/etc/profile.d/conda.sh
+no change     /nfs/home/vpais/miniconda/etc/fish/conf.d/conda.fish
+no change     /nfs/home/vpais/miniconda/shell/condabin/Conda.psm1
+no change     /nfs/home/vpais/miniconda/shell/condabin/conda-hook.ps1
+no change     /nfs/home/vpais/miniconda/lib/python3.9/site-packages/xontrib/conda.xsh
+no change     /nfs/home/vpais/miniconda/etc/profile.d/conda.csh
+no change     /nfs/home/vpais/.bashrc
+No action taken.
+Using MPI version 3.1, 64 processes
+Medium should be stable according to frequency and resolution criteria.
+All resonant frequencies are small enough for this resolution.
+Medium could be unstable according to dimensions and index criteria.
+Maximum Courant factor should be 0.20893145279749673
+As a whole, the simulation could not be stable
+Recommended maximum courant factor is 0.20893145279749673
+-----------
+Initializing structure...
+Splitting into 64 chunks by voxels
+time for choose_chunkdivision = 0.00555587 s
+Working in 3D dimensions.
+Computational cell is 60 x 60 x 60 with resolution 2
+time for set_epsilon = 0.162365 s
+-----------
+Meep progress: 0.25/1224.0 = 0.0% done in 75.2s, 368027.9s to go
+on time step 1 (time=0.25), 75.1843 s/step
+Meep progress: 28.75/1224.0 = 2.3% done in 79.2s, 3292.1s to go
+on time step 115 (time=28.75), 0.0350907 s/step
+Meep progress: 57.0/1224.0 = 4.7% done in 83.2s, 1703.3s to go
+on time step 228 (time=57), 0.0354825 s/step
+Meep progress: 86.25/1224.0 = 7.0% done in 87.2s, 1150.7s to go
+on time step 345 (time=86.25), 0.0344715 s/step
+Meep progress: 115.25/1224.0 = 9.4% done in 91.2s, 877.7s to go
+on time step 462 (time=115.5), 0.0344827 s/step
+Meep progress: 144.5/1224.0 = 11.8% done in 95.3s, 711.7s to go
+on time step 579 (time=144.75), 0.0344752 s/step
+Meep progress: 173.5/1224.0 = 14.2% done in 99.3s, 601.2s to go
+on time step 695 (time=173.75), 0.034687 s/step
+Meep progress: 202.5/1224.0 = 16.5% done in 103.3s, 521.1s to go
+on time step 811 (time=202.75), 0.0345817 s/step
+Meep progress: 231.75/1224.0 = 18.9% done in 107.3s, 459.6s to go
+on time step 928 (time=232), 0.0344624 s/step
+Meep progress: 260.5/1224.0 = 21.3% done in 111.4s, 411.9s to go
+on time step 1043 (time=260.75), 0.0349847 s/step
+Meep progress: 289.5/1224.0 = 23.7% done in 115.4s, 372.4s to go
+on time step 1159 (time=289.75), 0.0344983 s/step
+Meep progress: 318.5/1224.0 = 26.0% done in 119.4s, 339.4s to go
+on time step 1275 (time=318.75), 0.0345959 s/step
+Meep progress: 347.5/1224.0 = 28.4% done in 123.4s, 311.2s to go
+on time step 1391 (time=347.75), 0.0344865 s/step
+Meep progress: 376.75/1224.0 = 30.8% done in 127.4s, 286.5s to go
+on time step 1508 (time=377), 0.0344419 s/step
+Meep progress: 405.75/1224.0 = 33.1% done in 131.4s, 265.0s to go
+on time step 1624 (time=406), 0.034653 s/step
+Meep progress: 434.75/1224.0 = 35.5% done in 135.4s, 245.9s to go
+on time step 1740 (time=435), 0.0345055 s/step
+Meep progress: 462.0/1224.0 = 37.7% done in 139.4s, 230.0s to go
+on time step 1849 (time=462.25), 0.0368014 s/step
+Meep progress: 491.0/1224.0 = 40.1% done in 143.4s, 214.1s to go
+on time step 1965 (time=491.25), 0.0345087 s/step
+Meep progress: 520.0/1224.0 = 42.5% done in 147.4s, 199.6s to go
+on time step 2081 (time=520.25), 0.0344967 s/step
+Meep progress: 549.0/1224.0 = 44.9% done in 151.5s, 186.2s to go
+on time step 2197 (time=549.25), 0.0346402 s/step
+Meep progress: 578.25/1224.0 = 47.2% done in 155.5s, 173.6s to go
+on time step 2314 (time=578.5), 0.034441 s/step
+Meep progress: 607.25/1224.0 = 49.6% done in 159.5s, 162.0s to go
+on time step 2430 (time=607.5), 0.0345932 s/step
+Meep progress: 636.25/1224.0 = 52.0% done in 163.5s, 151.1s to go
+on time step 2546 (time=636.5), 0.0346496 s/step
+Meep progress: 665.25/1224.0 = 54.4% done in 167.5s, 140.7s to go
+on time step 2662 (time=665.5), 0.0345018 s/step
+Meep progress: 694.25/1224.0 = 56.7% done in 171.6s, 130.9s to go
+on time step 2778 (time=694.5), 0.0347672 s/step
+Meep progress: 723.5/1224.0 = 59.1% done in 175.6s, 121.5s to go
+on time step 2895 (time=723.75), 0.0343761 s/step
+Meep progress: 752.5/1224.0 = 61.5% done in 179.6s, 112.5s to go
+on time step 3011 (time=752.75), 0.0345557 s/step
+Meep progress: 781.5/1224.0 = 63.8% done in 183.6s, 104.0s to go
+on time step 3127 (time=781.75), 0.0345321 s/step
+Meep progress: 810.5/1224.0 = 66.2% done in 187.6s, 95.7s to go
+on time step 3244 (time=811), 0.0344797 s/step
+Meep progress: 839.5/1224.0 = 68.6% done in 191.6s, 87.8s to go
+on time step 3360 (time=840), 0.0346199 s/step
+Meep progress: 868.5/1224.0 = 71.0% done in 195.6s, 80.1s to go
+on time step 3476 (time=869), 0.0345127 s/step
+Meep progress: 896.0/1224.0 = 73.2% done in 199.7s, 73.1s to go
+on time step 3585 (time=896.25), 0.0368703 s/step
+Meep progress: 924.75/1224.0 = 75.6% done in 203.7s, 65.9s to go
+on time step 3701 (time=925.25), 0.0346911 s/step
+Meep progress: 954.0/1224.0 = 77.9% done in 207.7s, 58.8s to go
+on time step 3818 (time=954.5), 0.0343879 s/step
+Meep progress: 981.5/1224.0 = 80.2% done in 211.7s, 52.3s to go
+on time step 3928 (time=982), 0.0366354 s/step
+Meep progress: 1010.75/1224.0 = 82.6% done in 215.8s, 45.5s to go
+on time step 4045 (time=1011.25), 0.0344564 s/step
+Meep progress: 1039.75/1224.0 = 84.9% done in 219.8s, 38.9s to go
+on time step 4161 (time=1040.25), 0.0346126 s/step
+Meep progress: 1068.75/1224.0 = 87.3% done in 223.8s, 32.5s to go
+on time step 4277 (time=1069.25), 0.0345199 s/step
+Meep progress: 1098.0/1224.0 = 89.7% done in 227.8s, 26.1s to go
+on time step 4394 (time=1098.5), 0.0344456 s/step
+Meep progress: 1126.75/1224.0 = 92.1% done in 231.8s, 20.0s to go
+on time step 4509 (time=1127.25), 0.0350094 s/step
+Meep progress: 1155.75/1224.0 = 94.4% done in 235.8s, 13.9s to go
+on time step 4625 (time=1156.25), 0.0345344 s/step
+Meep progress: 1184.25/1224.0 = 96.8% done in 239.9s, 8.1s to go
+on time step 4739 (time=1184.75), 0.0353422 s/step
+Meep progress: 1213.25/1224.0 = 99.1% done in 243.9s, 2.2s to go
+on time step 4855 (time=1213.75), 0.0344887 s/step
+run 0 finished at t = 1224.0 (4896 timesteps)
+creating output file "./MidFlux-X1.h5"...

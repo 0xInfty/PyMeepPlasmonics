@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# SLURM script to test parallel Meep with Slurm solving fields for a straight waveguide as in Meep's Tutorial.
+
+#SBATCH --ntasks=8                # Total number of cores
+
+#SBATCH --nodes=1                 # Total number of nodes
+
+#SBATCH -p free-rider             # Partition
+
+#SBATCH -t 10                     # Maximum time reserved for execution, expressed in minutes
+
+#SBATCH --job-name=simple-h5                  # Task name
+
+#SBATCH --output="ErrorLogs/simple-h5-%j.out" # Output file
+
+#SBATCH --error="ErrorLogs/simple-h5-%j.err"  # Error file
+
+# #SBATCH --test-only   # Check if legible and return posible start time
+
+# ## Environment!
+export PATH=/nfs/home/vpais/miniconda/bin:$PATH
+export HDF5_USE_FILE_LOCKING='FALSE'
+conda init bash
+source ~/.bash_profile
+source ~/.bashrc
+conda activate pmp
+cd /nfs/home/vpais/ThesisPython
+
+# ## Run!
+srun -n $SLURM_NTASKS --mpi=pmi2 python -m mpi4py simple.py
+
