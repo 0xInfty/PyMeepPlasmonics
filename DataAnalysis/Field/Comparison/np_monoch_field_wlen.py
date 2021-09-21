@@ -212,8 +212,8 @@ try:
     width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in params] 
     effective_width_points = [[(p["cell_width"] - 2 * params["pml_width"]) * p["resolution"] for p in par] for par in params]
 except:
-    width_points = [[2*int(p["pml_width"] + p["empty_width"] + p["r"]) * p["resolution"] for p in par] for par in params] 
-    effective_width_points = [[2*int(p["empty_width"] + p["r"]) * p["resolution"] for p in par] for par in params]
+    width_points = [[2*int((p["pml_width"] + p["empty_width"] + p["r"]) * p["resolution"]) for p in par] for par in params] 
+    effective_width_points = [[2*int((p["empty_width"] + p["r"]) * p["resolution"]) for p in par] for par in params]
 grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
 memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
 
