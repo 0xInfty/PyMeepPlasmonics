@@ -427,8 +427,8 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     f = pm.hdf_file(sa.file("Field-Lines.h5"), "r")
     
-    results_line = f["Ez"]
-    t_line = np.arange(0, f["Ez"].shape[-1] * period_line, period_line)
+    results_line = f["ez"]
+    t_line = np.arange(0, f["ez"].shape[-1] * period_line, period_line)
     x_line = dimensions[0][0]
     
     x_line_index = vma.def_index_function(x_line)
@@ -439,6 +439,8 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     params["norm_period"] = norm_period
     params["norm_amplitude"] = norm_amplitude
+    
+    f.close()
     
     if pm.assign(0):
         
