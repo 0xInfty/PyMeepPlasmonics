@@ -417,7 +417,7 @@ def main(from_um_factor, resolution, courant,
     if load_flux:
         try:
             flux_path = vm.check_midflux(params)[-1]
-            if load_resources:
+            if load_resources and sysname != "TC":
                 if os.path.isfile( os.path.join(flux_path, "Resources.h5") ):
                     flux_needed = False
                     pm.log("Found resources")
@@ -469,7 +469,8 @@ def main(from_um_factor, resolution, courant,
         del sim
         
     if not flux_needed:
-        rm.load( os.path.join(flux_path, "Resources.h5") )
+        if sysname != "TC":
+            rm.load( os.path.join(flux_path, "Resources.h5") )
     else:
         
         #% FIRST RUN: SET UP
@@ -600,8 +601,9 @@ def main(from_um_factor, resolution, courant,
         if not split_chunks_evenly:
             vm.save_chunks(sim, params, path)
             
-        rm.save(os.path.join(flux_path, "Resources.h5"), params)
-        rm.save(sa.file("Resources.h5"), params)
+        if sysname != "TC":
+            rm.save(os.path.join(flux_path, "Resources.h5"), params)
+            rm.save(sa.file("Resources.h5"), params)
 
         #% PLOT FLUX FOURIER MID DATA
         
@@ -907,7 +909,8 @@ def main(from_um_factor, resolution, courant,
     if not split_chunks_evenly:
         vm.save_chunks(sim, params, path)
         
-    rm.save(sa.file("Resources.h5"), params)
+    if sysname != "TC":
+        rm.save(sa.file("Resources.h5"), params)
     
     #%% PLOT ALL TOGETHER
     

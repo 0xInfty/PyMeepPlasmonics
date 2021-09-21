@@ -37,6 +37,8 @@ sysname = vs.get_sys_name()
 syshome = vs.get_sys_home()
 home = vs.get_home()
 
+tupachome = "/scratch/"
+
 midflux_key_params = ["from_um_factor", "resolution", "courant",
                       "wlen_range", "cutoff", "nfreq",
                       "submerged_index", "surface_index", "overlap",
@@ -681,7 +683,10 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2,
 
     filename_prefix = sim.filename_prefix
     sim.filename_prefix = "MidFlux"
-    os.chdir(new_flux_path)
+    if sysname != "TC":
+        os.chdir(new_flux_path)
+    else:
+        os.chdir(tupachome)
     sim.save_flux("X1", box_x1)
     sim.save_flux("X2", box_x2)
     sim.save_flux("Y1", box_y1)
@@ -710,6 +715,11 @@ def save_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2,
 
     if parallel_assign(0):
         vs.savetxt(dir_file, np.array([]), footer=database, overwrite=True)
+        if sysname == "TC":
+            for field in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+                copy(os.path.join(tupachome, f"Midfield-{field}.h5"), 
+                     os.path.join(new_flux_path, f"Midfield-{field}.h5"))
+                os.remove(os.path.join(tupachome, f"Midfield-{field}.h5"))
 
     return new_flux_path
 
