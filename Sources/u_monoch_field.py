@@ -99,9 +99,9 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     if any('SPYDER' in name for name in os.environ):
     
         # Sim configuration
-        units = False
+        units = True
         resolution_wlen = 10
-        resolution = 2
+        resolution = 5
         from_um_factor = 10e-3
         courant = 0.5
         
@@ -110,7 +110,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         surface_index = None # 1.54 for glass
         
         # Source configuration
-        wlen = 532
+        wlen = 405
         
         # Box spatial dimensions
         pml_wlen_factor = 0.38
@@ -159,7 +159,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     # Frequency and wavelength
     if units:
         wlen = wlen / ( from_um_factor * 1e3 ) # Wavelength from nm to Meep units
-        resolution_wlen = wlen / resolution
+        resolution_wlen = wlen * resolution
         pm.log(f"Running with units: {resolution:.0f} points in a Meep Unit of " + 
                f"{from_um_factor*1e3:.0f} nm with {wlen * from_um_factor * 1e3} nm wavelength")
     else:
