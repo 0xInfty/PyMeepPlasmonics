@@ -41,8 +41,10 @@ trs = vu.BilingualManager(english=english)
 #%% PARAMETERS
 
 # Saving directories
-folder = ["Field/NPMonoch/AuSphere/VacWatField/Vacuum", 
-          "Field/NPMonoch/AuSphere/VacWatField/Water"]
+# folder = ["Field/NPMonoch/AuSphere/VacWatField/Vacuum", 
+#           "Field/NPMonoch/AuSphere/VacWatField/Water"]
+folder = ["Field/NPMonoch/AuSphere/VacWatTest/TestEmpty/Vacuum", 
+          "Field/NPMonoch/AuSphere/VacWatTest/TestEmpty/Water"]
 home = vs.get_home()
 
 # Parameter for the test
@@ -57,7 +59,7 @@ series_label = [lambda s : trs.choose(r"Vacuum", r"Vacío") +
                 rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm",
                 lambda s : trs.choose("Water", "Agua") + 
                 rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm"]
-series_must = ["Res3"]*2 # leave "" per default
+series_must = ["Res5"]*2 # leave "" per default
 series_mustnt = ["Old"]*2 # leave "" per default
 
 # Scattering plot options
@@ -66,7 +68,7 @@ series_legend = ["Vacuum", "Water"]
 series_colors = [plab.cm.Reds, plab.cm.Blues]
 series_linestyles = ["solid"]*2
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/WLen/WLen" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/WLen/WLenRes5EF2.0" + n)
 
 #%% LOAD DATA
 
@@ -327,6 +329,7 @@ else:
     
 if requires_normalization:
     
+    # source_results = [[source_results[i][j] / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
     results_plane = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
     results_line = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
 
@@ -395,7 +398,7 @@ plt.savefig(plot_file("Source.png"))
 fourier = [[np.abs(np.fft.rfft(source_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
 fourier_freq = [[np.fft.rfftfreq(len(source_results[i][j]), d=period_line[i][j])  for j in range(len(series[i]))] for i in range(len(series))]
 fourier_wlen = [[from_um_factor[i][j] * 1e3 / fourier_freq[i][j]  for j in range(len(series[i]))] for i in range(len(series))]
-# fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
+fourier_best = [[wlen[i][j] * from_um_factor[i][j] * 1e3 for j in range(len(series[i]))] for i in range(len(series))]
 
 plt.figure()
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
@@ -411,15 +414,45 @@ plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
                       r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
 plt.legend(ncol=2)
 
-# plt.annotate(trs.choose(f"Maximum at {fourier_max_wlen:.2f} nm",
-#                         f"Máximo en {fourier_max_wlen:.2f} nm"),
-#              (5, 5), xycoords='figure points')
-
 plt.savefig(plot_file("SourceFFT.png"))
 
 plt.xlim([350, 850])
         
 plt.savefig(plot_file("SourceFFTZoom.png"))
+
+#%% BEST MATCH WAVELENGTH ANALYSIS
+
+fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
+fourier_max_best = [[fourier_wlen[i][j][ np.argmin(np.abs(fourier_wlen[i][j] - fourier_best[i][j])) ]  for j in range(len(series[i]))] for i in range(len(series))]
+
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
+
+if len(series)>1:
+    colors = [*["red", "blue"]*2]
+else:
+    colors = ["k"]
+
+markers = ["o", "o"]
+markers_alpha = [0.4, 0.4]
+
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source wavelength on ', 
+                        'Longitud de onda de fuente monocromática sobre ') + 
+             plot_title_ending)
+for i in range(len(series)):
+    plt.plot(test_param[i], 
+             100 * ( np.array(fourier_max_wlen[i]) - np.array(fourier_max_best[i]) ) / np.array(fourier_max_best[i]), 
+             color=colors[i], marker=markers[i], alpha=markers_alpha[i],
+             markersize=8, linestyle="", markeredgewidth=0)
+plt.grid(True)
+plt.legend(series_legend)
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Maximum Wavelength Percentual Variation", 
+                      "Variación porcentual de la longitud de onda máxima\n") + 
+           r"$\lambda_{max} = \argmax [\mathcal{F}\;(E_z)]$ [%]")
+plt.tight_layout()
+vs.saveplot(plot_file("LambdaVariation.png"), overwrite=True)
 
 #%% SHOW RESONANCE OSCILLATIONS
 
@@ -674,6 +707,7 @@ for i in range(len(series)):
 
 plt.savefig(plot_file("FieldProfileAllSubplots.png"))
 
+
 #%% PLOT MAXIMUM INTENSIFICATION FIELD (SUBPLOTS)
 
 n = len(series)
@@ -732,6 +766,17 @@ if n*m <= 6:
     subfig_size = 4.5
 else:
     subfig_size = 3.5
+    
+empty_proportion = [[2*params[i][j]["empty_width"]/(params[i][j]["cell_width"]-2*params[i][j]["pml_width"]) for j in range(len(series[i]))] for i in range(len(series))]
+if (np.array(empty_proportion) > 0.6).any():
+    field_area = [0.5 - 0.30/2, 0.72 - 0.30/2, 0.30, 0.30]
+    legend_area = (3.5, -2.5)
+elif (np.array(empty_proportion) > 0.4).any():
+    field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
+    legend_area = (3.1, -1.9)
+else:
+    field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
+    legend_area = (2.6, -1.3)
 
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
 axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
@@ -793,8 +838,7 @@ for i in range(len(series)):
         else:
             axes[i][j].set_title(series_label[i](series[i][j]), y = -.25)
         
-        ax_field = vp.add_subplot_axes(axes[i][j], 
-                                       [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45])
+        ax_field = vp.add_subplot_axes(axes[i][j], field_area)
         axes_field[-1].append(ax_field)
         
         ims = ax_field.imshow(field_peaks_plane[i][j].T,
@@ -818,11 +862,132 @@ for i in range(len(series)):
 leg = plt.legend(
     [l_meep[-1][-1], l_cmos[-1][-1], l_kuwa[-1][-1]],
     trs.choose(["MEEP Data", "CM Theory", "Ku Theory"], ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-    bbox_to_anchor=(2.6, -1.45), #(2.5, 1.4), 
+    bbox_to_anchor=legend_area, #(2.5, 1.4), 
     loc="center right", frameon=False)
 
 fig.set_size_inches([13.5,  7.9]) # ([17.5,  7.9])
 plt.savefig(plot_file("AllSubplots.png"))
+
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (DATA) [ABSOLUTE VALUE]
+
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        plt.plot(z_plane_cropped[i][j], np.abs(field_peaks_zprofile[i][j]),
+                 label=series_label[i](series[i][j]),
+                 color=colors[i][j])
+plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
+plt.ylabel(trs.choose(r"Normalized Electric Field $|E_z|(y=z=0)$",
+                      r"Campo eléctrico normalizado $|E_z|(y=z=0)$"))
+plt.legend()
+
+plt.savefig(plot_file("AbsFieldProfileData.png"))
+
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (ALL) [ABSOLUTE VALUE]
+
+# colors = [["C0"], ["C4"], ["C3"]]
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+l_origin = []
+l_series = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l_mp, = plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
+                         np.abs(field_peaks_zprofile[i][j]),
+                         label=series_label[i](series[i][j]),
+                         color=colors[i][j])
+        l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
+                         np.abs(zprofile_cm_theory[i][j]),
+                         color=colors[i][j], linestyle="dashed")
+        l_ku, = plt.plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
+                         np.abs(zprofile_ku_theory[i][j]),
+                         color=colors[i][j], linestyle="dotted")
+        l_series.append(l_mp)
+        if i == 0 and j == len(series[i])-1:
+            l_origin = [l_mp, l_cm, l_ku]
+plt.xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+plt.ylabel(trs.choose(r"Normalized Electric Field $|E_z|(y=z=0)$",
+                      r"Campo eléctrico normalizado $|E_z|(y=z=0)$"))
+
+plt.legend(ncol=2)
+
+first_legend = plt.legend(l_origin, trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
+                                               ["Data MEEP", "Teoría CM", "Teoría Ku"]),
+                          loc="lower right")
+second_legend = plt.legend(
+    l_series, 
+    [l.get_label() for l in l_series],
+    loc="upper center")
+plt.gca().add_artist(first_legend)
+
+plt.savefig(plot_file("AbsFieldProfileAll.png"))
+
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (SUBPLOTS) [ABSOLUTE VALUE]
+
+n = len(series)
+m = max([len(s) for s in series])
+
+if n*m <= 3:
+    subfig_size = 6.5
+if n*m <= 6:
+    subfig_size = 4.5
+else:
+    subfig_size = 3.5
+
+fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
+axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, gridspec_kw={"wspace":0})
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+        
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        axes[i][j].axvline(r[i][j] * from_um_factor[i][j] * 1e3, 
+                           color="k", linestyle="dotted")
+        axes[i][j].axvline(-r[i][j] * from_um_factor[i][j] * 1e3, 
+                           color="k", linestyle="dotted")
+        l_mp, = axes[i][j].plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
+                                np.abs(field_peaks_zprofile[i][j]),
+                                label=series_label[i](series[i][j]),
+                                color=colors[i][j])
+        l_cm, = axes[i][j].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
+                                np.abs(zprofile_cm_theory[i][j]),
+                                color=colors[i][j], linestyle="dashed")
+        l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
+                                np.abs(zprofile_ku_theory[i][j]),
+                                color=colors[i][j], linestyle="dotted")
+        xlims = axes[i][j].get_xlim()
+        axes[i][j].axhline(0, color="k", linewidth=.5)
+        axes[i][j].axvline(0, color="k", linewidth=.5)
+        axes[i][j].set_xlim(xlims)
+        axes[i][j].set_title(series_label[i](series[i][j]))
+        if i==len(series)-1:
+            axes[i][j].set_xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+        if j==0:
+            axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field $|E_z|(y=z=0)$",
+                                              r"Campo eléctrico normalizado $|E_z|(y=z=0)$"))
+        if i==len(series)-1 and j==len(series[i])-1:
+            axes[i][j].legend([l_mp, l_cm, l_ku], 
+                              trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
+                                         ["Data MEEP", "Teoría CM", "Teoría Ku"]),
+                              loc="upper center")
+        
+        axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
+        axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
+        # axes[i][j].grid(True, axis="y", which="major")
+        axes[i][j].grid(True, axis="y", which="both", alpha=.3)
+        axes[i][j].set_title(series_label[i](series[i][j]))
+
+plt.savefig(plot_file("AbsFieldProfileAllSubplots.png"))
 
 #%% PLOT PROFILE AND PLANE (SUBPLOTS) [ABSOLUTE VALUE]
 
@@ -835,7 +1000,18 @@ if n*m <= 6:
     subfig_size = 4.5
 else:
     subfig_size = 3.5
-
+    
+empty_proportion = [[2*params[i][j]["empty_width"]/(params[i][j]["cell_width"]-2*params[i][j]["pml_width"]) for j in range(len(series[i]))] for i in range(len(series))]
+if (np.array(empty_proportion) > 0.6).any():
+    field_area = [0.5 - 0.30/2, 0.72 - 0.30/2, 0.30, 0.30]
+    legend_area = (3.5, -2.5)
+elif (np.array(empty_proportion) > 0.4).any():
+    field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
+    legend_area = (3.1, -1.9)
+else:
+    field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
+    legend_area = (2.6, -1.3)
+    
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
 axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
                     gridspec_kw={"wspace":0, "hspace":0})
@@ -898,8 +1074,7 @@ for i in range(len(series)):
         else:
             axes[i][j].set_title(series_label[i](series[i][j]), y = -.25)
         
-        ax_field = vp.add_subplot_axes(axes[i][j], 
-                                       [0.5 - 0.45/2, 0.65 - 0.45/2, 0.45, 0.45])
+        ax_field = vp.add_subplot_axes(axes[i][j], field_area)
         axes_field[-1].append(ax_field)
         
         ims = ax_field.imshow(np.abs(field_peaks_plane[i][j]).T, #np.power(np.abs(field_peaks_plane[i][j]),2).T
@@ -923,7 +1098,7 @@ for i in range(len(series)):
 leg = plt.legend(
     [l_meep[-1][-1], l_cmos[-1][-1], l_kuwa[-1][-1]],
     trs.choose(["MEEP Data", "CM Theory", "Ku Theory"], ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-    bbox_to_anchor=(2.6, -1.3), #(2.5, 1.4), 
+    bbox_to_anchor=legend_area, 
     loc="center right", frameon=False)
 
 fig.set_size_inches([13.5,  7.9]) # [17.5,  7.9]
@@ -1366,12 +1541,22 @@ if n*m <= 6:
 else:
     subfig_size = 3.5
 
+empty_proportion = [[2*params[i][j]["empty_width"]/(params[i][j]["cell_width"]-2*params[i][j]["pml_width"]) for j in range(len(series[i]))] for i in range(len(series))]
+if (np.array(empty_proportion) > 0.6).any():
+    field_area = [0.5 - 0.30/2, 0.72 - 0.30/2, 0.30, 0.30]
+    legend_area = (3.5, -2.5)
+elif (np.array(empty_proportion) > 0.4).any():
+    field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
+    legend_area = (3.1, -1.9)
+else:
+    field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
+    legend_area = (2.6, -1.3)
+
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
 fig.set_size_inches([13.5,  7.9])
 axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
                     gridspec_kw={"wspace":0, "hspace":0})
-axes_field = [[vp.add_subplot_axes(axes[i][j], 
-                                   [0.5 - 0.35/2, 0.8 - 0.35/2, 0.35, 0.35])
+axes_field = [[vp.add_subplot_axes(axes[i][j], field_area)
                for j in range(len(series[i]))] for i in range(len(series))]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
@@ -1479,7 +1664,7 @@ def make_pic_line(k):
     leg = plt.legend(
         [l_mp, l_cm, l_ku],
         trs.choose(["MEEP Data", "CM Theory", "Ku Theory"], ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-        bbox_to_anchor=(2.85, -1.8), #(2.5, 1.4), 
+        bbox_to_anchor=legend_area, #(2.5, 1.4), 
         loc="center right", frameon=False)
     
     return axes
