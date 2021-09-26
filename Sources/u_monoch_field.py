@@ -62,7 +62,11 @@ rm.measure_ram()
 @cli.option("--pml-wlen-factor", "-pml", "pml_wlen_factor", 
             type=float, default=0.38,
             help="PML layer width expressed in multiples of wavelength")
-@cli.option("--centered-source", "-cs", "centered_source", type=bool, default=True,
+@cli.option("--wlen-in-vacuum", "-wlenvac", "wlen_in_vacuum", 
+            type=bool, default=True,
+            help="Whether to consider wavelength in vacuum or in medium" + 
+                 " for PML, resolution and empty width calculation")
+@cli.option("--centered-source", "-cs", "centered_source", type=bool, default=False,
             help="Whether to place the source at the center of the cell or not")
 @cli.option("--time-period-factor", "-tpfc", "time_period_factor", 
             type=float, default=10,
@@ -88,7 +92,7 @@ rm.measure_ram()
             help="Whether to make gifs while running or not.")
 def main(from_um_factor, resolution, resolution_wlen, courant,
          submerged_index, surface_index,
-         empty_wlen_factor, pml_wlen_factor, centered_source,
+         empty_wlen_factor, pml_wlen_factor, wlen_in_vacuum, centered_source,
          wlen, time_period_factor,
          series, folder,
          n_cores, n_nodes, split_chunks_evenly,
@@ -113,6 +117,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         wlen = 405
         
         # Box spatial dimensions
+        wlen_in_vacuum = True
         pml_wlen_factor = 0.38
         empty_wlen_factor = 0.25
         
@@ -159,19 +164,29 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     # Frequency and wavelength
     if units:
         wlen = wlen / ( from_um_factor * 1e3 ) # Wavelength from nm to Meep units
-        resolution_wlen = wlen * resolution
+        if wlen_in_vacuum:
+            resolution_wlen = wlen * resolution
+        else:
+            resolution_wlen = wlen * resolution / submerged_index
         pm.log(f"Running with units: {resolution:.0f} points in a Meep Unit of " + 
                f"{from_um_factor*1e3:.0f} nm with {wlen * from_um_factor * 1e3} nm wavelength")
     else:
         wlen = 1 # Wavelength is 1 Meep Unit, to make it simple
         resolution = resolution_wlen
         from_um_factor = 1
-        pm.log(f"Running without units: {resolution:.0f} points in a wavelength")
+        if wlen_in_vacuum:
+            log_text = "vacuum"
+        else:
+            log_text = "medium"
+        pm.log(f"Running without units: {resolution:.0f} points in a {log_text} wavelength")
     period = submerged_index * wlen
     
     # Space configuration
-    pml_width = pml_wlen_factor * wlen # 0.5 * wlen
-    empty_width = empty_wlen_factor * wlen # 0.5 * max(wlen_range)
+    if wlen_in_vacuum:
+        pml_width = pml_wlen_factor * wlen # Multiples of wavelength in vacuum
+    else:
+        pml_width = pml_wlen_factor * wlen / submerged_index # Multiples of wavelength in medium
+    empty_width = empty_wlen_factor * wlen / submerged_index # Multiples of wavelength in medium
     cell_width = 2 * (pml_width + empty_width)
     
     # Time configuration
@@ -189,7 +204,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     params_list = ["from_um_factor", "resolution", "resolution_wlen", "courant",
                    "submerged_index", "wlen", "surface_index",
-                   "cell_width", "pml_width", "empty_width", "source_center",
+                   "cell_width", "pml_width", "empty_width", "source_center", "wlen_in_vacuum", 
                    "until_time", "time_period_factor", 
                    "n_period_line", "n_period_plane", "period_line", "period_plane",
                    "parallel", "n_processes", "n_cores", "n_nodes",
