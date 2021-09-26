@@ -190,8 +190,8 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     cell_width = 2 * (pml_width + empty_width)
     
     # Time configuration
-    until_time = time_period_factor * wlen # Should multiply and divide by submerged_index
-    period_line = wlen / n_period_line
+    until_time = time_period_factor * wlen # I want a certain number of periods in the source
+    period_line = wlen / n_period_line # Now I want a certain number of instants in the period of the source
     period_plane = wlen / n_period_plane # If I use period instead of wlen, the discretization will be different
     
     # Saving directories
