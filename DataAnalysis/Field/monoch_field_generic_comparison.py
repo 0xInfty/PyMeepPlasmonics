@@ -352,28 +352,28 @@ peaks_heights = [[source_results[i][j][peaks_index[i][j]] for j in range(len(ser
 peaks_times = [[t_line[i][j][peaks_index[i][j]] for j in range(len(series[i]))] for i in range(len(series))]
 peaks_periods = [[np.diff(peaks_times[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+# colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+#           for sc, s in zip(series_colors, series)]
 
-plt.figure()
-plt.suptitle(plot_title_base)
+# plt.figure()
+# plt.suptitle(plot_title_base)
 
-lines = []
-for i in range(len(series)):
-    for j in range(len(series[i])):
-        l, = plt.plot(t_line[i][j] / period_results[i][j], 
-                      source_results[i][j],
-                      label=series_label[i](series[i][j]),
-                      color=colors[i][j])            
-        l, = plt.plot(t_line[i][j][peaks_index[i][j]] / period_results[i][j], 
-                      source_results[i][j][peaks_index[i][j]], "o",
-                      label=series_label[i](series[i][j]),
-                      color=colors[i][j])       
-        lines.append(l)
-plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
-plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                      r"Campo eléctrico normalizado $E_z(y=z=0)$"))
-plt.legend(ncol=2)
+# lines = []
+# for i in range(len(series)):
+#     for j in range(len(series[i])):
+#         l, = plt.plot(t_line[i][j] / period_results[i][j], 
+#                       source_results[i][j],
+#                       label=series_label[i](series[i][j]),
+#                       color=colors[i][j])            
+#         l, = plt.plot(t_line[i][j][peaks_index[i][j]] / period_results[i][j], 
+#                       source_results[i][j][peaks_index[i][j]], "o",
+#                       label=series_label[i](series[i][j]),
+#                       color=colors[i][j])       
+#         lines.append(l)
+# plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
+# plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
+#                       r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+# plt.legend(ncol=2)
 
 #%%
 
@@ -429,13 +429,79 @@ plt.ylabel(trs.choose("Maximum percentual variation in period ",
            # r"$\frac{\max T_i - \min T_i}{\min T_i}$")
 vs.saveplot(plot_file("PerVariation.png"), overwrite=True)
 
-#%% ANALYSE X AXIS FOR DIFFERENT POSITIONS
+#%% ANALYSE X AXIS FOR DIFFERENT POSITIONS VIA FOURIER
 
-n_x_probe = 3
+n_probe = 3
+
+x_probe_position = [[ [-cell_width[i][j]/2 + pml_width[i][j] + k * (cell_width[i][j] - 2*pml_width[i][j]) / (n_probe-1) 
+                       for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+x_probe_position_factor = [[ [x_probe_position[i][j][k] / (cell_width[i][j] - 2*pml_width[i][j])
+                              for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 
 x_probe_field = [[ [results_line[i][j][
-                        x_line_index[i][j](-cell_width[i][j]/2 + pml_width[i][j] + k * (cell_width[i][j] - 2*pml_width[i][j]) / (n_x_probe-1)), :
-                   ] for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+                        x_line_index[i][j](-cell_width[i][j]/2 + pml_width[i][j] + k * (cell_width[i][j] - 2*pml_width[i][j]) / (n_probe-1)), :
+                    ] for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+
+cropping_index = [[ [np.where(np.abs(x_probe_field[i][j][k]) > 0.05)[0][0] for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+
+x_probe_field = [[ [x_probe_field[i][j][k][ cropping_index[i][j][k] : ]  for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+x_probe_time = [[ [t_line[i][j][ cropping_index[i][j][k] : ]  for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+
+#%%
+
+x_probe_fourier = [[ [np.abs(np.fft.rfft(x_probe_field[i][j][k], norm="ortho")) for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+x_probe_freqs = [[ [np.fft.rfftfreq(len(x_probe_field[i][j][k]), d=period_line[i][j]) for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+if use_units:
+    x_probe_wlen = [[ [from_um_factor[i][j] * 1e3 / x_probe_freqs[i][j][k] for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+else:
+    x_probe_wlen = [[ [1 / x_probe_freqs[i][j][k] for k in range(n_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+
+#%%
+
+def see_x_probe_fourier(i,j):
+    
+    colors = plab.cm.winter(np.linspace(0,1,n_probe))
+    
+    plt.figure()
+    
+    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
+    for k in range(n_probe):
+        plt.plot( x_probe_time[i][j][k],
+                  x_probe_field[i][j][k], 
+                  label=f"x = {x_probe_position[i][j][k]:.2f} " + trs.choose("cell", "celda"), 
+                  color=colors[k])
+    plt.legend()
+
+    plt.xlabel(trs.choose("Time T [Mp.u]", "Tiempo T [u.Mp.]"))
+    plt.ylabel(trs.choose("Normalized Electric Field\n" + r"$E_z(y=z=0)$",
+                          "Campo eléctrico normalizado\n" + r"$E_z(y=z=0)$"))
+        
+    plt.figure()
+    
+    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
+    for k in range(n_probe):
+        plt.plot( x_probe_wlen[i][j][k], 
+                  x_probe_fourier[i][j][k], 
+                  label=f"x = {x_probe_position[i][j][k]:.2f} " + trs.choose("cell", "celda"), 
+                  color=colors[k])
+    plt.xlim(0,5)
+    plt.legend()
+    
+    plt.xlabel(trs.choose("Frequency f [Mp.u]", "Frecuencia f [u.Mp.]"))
+    plt.ylabel(trs.choose("Normalized Electric Field\n" + r"$E_z(y=z=0)$",
+                          "Campo eléctrico normalizado\n" + r"$E_z(y=z=0)$"))
+    
+#%% ANALYSE X AXIS FOR DIFFERENT POSITIONS VIA FIT AND RESIDUA
+
+n_x_probe = 10
+
+x_probe_position = [[ [-cell_width[i][j]/2 + pml_width[i][j] + k * (cell_width[i][j] - 2*pml_width[i][j]) / (n_x_probe-1) 
+                       for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+x_probe_position_factor = [[ [x_probe_position[i][j][k] / (cell_width[i][j] - 2*pml_width[i][j])
+                              for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+                       
+x_probe_field = [[ [results_line[i][j][x_line_index[i][j](x_probe_position[i][j][k]), :]
+                    for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 
 cropping_index = [[ [np.where(np.abs(x_probe_field[i][j][k]) > 0.05)[0][0] for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 
@@ -444,37 +510,161 @@ x_probe_time = [[ [t_line[i][j][ cropping_index[i][j][k] : ]  for k in range(n_x
 
 #%%
 
-x_probe_fourier = [[ [np.abs(np.fft.rfft(x_probe_field[i][j][k], norm="ortho")) for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
-x_probe_freqs = [[ [np.fft.rfftfreq(len(x_probe_field[i][j][k]), d=period_line[i][j]) for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
-if use_units:
-    x_probe_wlen = [[ [from_um_factor[i][j] * 1e3 / x_probe_freqs[i][j][k] for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
-else:
-    x_probe_wlen = [[ [1 / x_probe_freqs[i][j][k] for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+def fit_function_generator(norm_period):
+    
+    def fit_function(time, amplitude, phase, offset):
+        
+        omega = 2 * np.pi / norm_period
+        
+        return amplitude * np.cos( omega * time + phase ) + offset
+    
+    return fit_function
+
+x_probe_fit_functions = [[fit_function_generator(norm_period[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+
+x_probe_fit_amplitude = []
+x_probe_fit_phase = []
+x_probe_fit_offset = []
+x_probe_fit_residua = []
+for i in range(len(series)):
+    x_probe_fit_amplitude.append([])
+    x_probe_fit_phase.append([])
+    x_probe_fit_offset.append([])
+    x_probe_fit_residua.append([])
+    for j in range(len(series[i])):
+        x_probe_fit_amplitude[-1].append([])
+        x_probe_fit_phase[-1].append([])
+        x_probe_fit_offset[-1].append([])
+        x_probe_fit_residua[-1].append([])
+        for k in range(n_x_probe):
+            rsq, params = va.nonlinear_fit(x_probe_time[i][j][k],
+                                           x_probe_field[i][j][k],
+                                           x_probe_fit_functions[i][j],
+                                           initial_guess=(1, 0, 0),
+                                           showplot=False)
+            amplitude, phase, offset = params[0][0], params[1][0], params[2][0]
+            x_probe_fit_amplitude[-1][-1].append( amplitude )
+            x_probe_fit_phase[-1][-1].append( phase )
+            x_probe_fit_offset[-1][-1].append( offset )
+            
+            residua = np.array(x_probe_field[i][j][k]) - x_probe_fit_functions[i][j]( x_probe_time[i][j][k], amplitude, phase, offset)
+            
+            x_probe_fit_residua[-1][-1].append( residua )
+
+x_probe_fit_res_std = [[ [np.std(x_probe_fit_residua[i][j][k][x_probe_time[i][j][k]>2]) for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
+x_probe_fit_res_max = [[ [np.max(x_probe_fit_residua[i][j][k][x_probe_time[i][j][k]>2]) - np.min(x_probe_fit_residua[i][j][k][x_probe_time[i][j][k]>2]) for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 
 #%%
 
-def see_x_probe_fourier(i,j):
+def see_x_probe(i,j):
     
-    plt.figure()
+    colors = plab.cm.jet(np.linspace(0,1,n_x_probe))
     
-    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
+    fig = plt.figure()
+    
+    plot_grid = gridspec.GridSpec(ncols=1, nrows=5, hspace=0, figure=fig)
+    main_ax = fig.add_subplot(plot_grid[:3,:])
+    res_ax = fig.add_subplot(plot_grid[-2:,:])
+    
+    plt.suptitle(f"{series_legend[i]} {series_label[1](series[i][j])}")
     for k in range(n_x_probe):
-        plt.plot(x_probe_time[i][j][k],
-                 x_probe_field[i][j][k], 
-                 label=k)
-    plt.legend()
+        main_ax.plot(x_probe_time[i][j][k],
+                     x_probe_field[i][j][k], 
+                     color=colors[k],
+                     label=f"x = {x_probe_position_factor[i][j][k]:.2f} " + trs.choose("cell", "celda"))    
+        main_ax.plot(x_probe_time[i][j][k],
+                     x_probe_fit_functions[i][j]( x_probe_time[i][j][k],
+                                                  x_probe_fit_amplitude[i][j][k],
+                                                  x_probe_fit_phase[i][j][k],
+                                                  x_probe_fit_offset[i][j][k] ),
+                     linestyle="dashed", color="k", alpha=0.5)
+    
+    for k in range(n_x_probe):
+        res_ax.plot(x_probe_time[i][j][k],
+                    x_probe_fit_residua[i][j][k],
+                    ".", color=colors[k], markeredgewidth=0)
+    res_ax.axhline(0, color="k", linewidth=0.5)
+    
+    main_ax.legend()
+    
+    res_ax.set_xlabel(trs.choose("Time T [Mp.u]", "Tiempo T [u.Mp.]"))
+    res_ax.set_ylabel(trs.choose("Normalized Electric Field\n" + r"$E_z(y=z=0)$",
+                                 "Campo eléctrico normalizado\n" + r"$E_z(y=z=0)$"))
+    main_ax.set_ylabel(trs.choose("Normalized Electric Field\n" + r"$E_z(y=z=0)$",
+                                  "Campo eléctrico normalizado\n" + r"$E_z(y=z=0)$"))
         
-    plt.figure()
-    
-    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
-    for k in range(n_x_probe):
-        plt.plot(x_probe_wlen[i][j][k], 
-                 x_probe_fourier[i][j][k], 
-                 label=k)
-    plt.xlim(0,5)
-    plt.legend()
+#%%
 
-#%% ANALYSE X AXIS FOR DIFFERENT TIMES
+fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True, 
+                         gridspec_kw={"hspace":0})
+
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.suptitle(plot_title_base + trs.choose(r": Residua $\sigma$", ": $\sigma$ residuos"))
+
+lines = [[]]*len(series)
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l, = axes[i].plot(x_probe_position_factor[i][j], 
+                          x_probe_fit_res_std[i][j], 
+                          "o-", alpha=0.7, color=colors[i][j], markeredgewidth=0)
+                          # label=series_label[1](series[i][j]))
+        lines[i].append(l)
+        axes[i].set_ylabel(trs.choose("Normalized Electric\n Field " + r"$E_z(y=z=0)$",
+                                      "Campo eléctrico \n normalizado " + r"$E_z(y=z=0)$"))
+
+fig.set_size_inches([10.28,  4.8 ])
+
+for ax in axes:
+    box = ax.get_position()
+    box.x1 = box.x1 - .2 * (box.x1 - box.x0)
+    ax.set_position(box)
+axes[-1].set_xlabel(trs.choose("Position X [Cell]", "Posición X [Celda]"))
+
+
+plt.legend([*lines[0], *lines[1]], 
+           [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],
+    columnspacing=-0.5, ncol=2, bbox_to_anchor=(1.35, 1), loc="center right", frameon=False)
+
+vs.saveplot(plot_file("StdResiduaVsX.png"), overwrite=True)
+
+#%%
+
+fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True, 
+                         gridspec_kw={"hspace":0})
+
+colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+          for sc, s in zip(series_colors, series)]
+
+plt.suptitle(plot_title_base + trs.choose(": Maximum Residua Width", ": máximo ancho de residuos"))
+
+lines = [[]]*len(series)
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l, = axes[i].plot(x_probe_position_factor[i][j], 
+                          x_probe_fit_res_max[i][j], 
+                          "D-", alpha=0.7, color=colors[i][j], markeredgewidth=0)
+                          # label=series_label[1](series[i][j]))
+        lines[i].append(l)
+        axes[i].set_ylabel(trs.choose("Normalized Electric\n Field " + r"$E_z(y=z=0)$",
+                                      "Campo eléctrico \n normalizado " + r"$E_z(y=z=0)$"))
+
+fig.set_size_inches([10.28,  4.8 ])
+
+for ax in axes:
+    box = ax.get_position()
+    box.x1 = box.x1 - .2 * (box.x1 - box.x0)
+    ax.set_position(box)
+axes[-1].set_xlabel(trs.choose("Position X [Cell]", "Posición X [Celda]"))
+
+plt.legend([*lines[0], *lines[1]], 
+           [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],
+    columnspacing=-0.5, ncol=2, bbox_to_anchor=(1.35, 1), loc="center right", frameon=False)
+
+vs.saveplot(plot_file("MaxWidthResiduaVsX.png"), overwrite=True)
+
+#%% ANALYSE X AXIS FOR DIFFERENT TIMES VIA FIT AND RESIDUA
 
 n_t_probe = 10
 
@@ -539,7 +729,7 @@ t_probe_fit_res_max = [[ [np.max(t_probe_fit_residua[i][j][k]) - np.min(t_probe_
 
 #%%
 
-def see_t_probe_fourier(i,j):
+def see_t_probe(i,j):
     
     colors = plab.cm.jet(np.linspace(0,1,n_t_probe))
     
@@ -551,29 +741,21 @@ def see_t_probe_fourier(i,j):
     
     plt.suptitle(f"{series_legend[i]} {series_label[1](series[i][j])}")
     for k in range(n_t_probe):
-        if use_units:
-            main_ax.plot(x_line_cropped[i][j] * from_um_factor[i][j] * 1e3,
-                         t_probe_field[i][j][k], 
-                         color=colors[k],
-                         label=f"t = {t_probe_time[i][j][k] / norm_period[i][j]:.2f} T")
-        else:
-            main_ax.plot(x_line_cropped[i][j],
-                         t_probe_field[i][j][k], 
-                         color=colors[k],
-                         label=f"t = {t_probe_time[i][j][k] / norm_period[i][j]:.2f} T")            
-        main_ax.plot(x_line_cropped[i][j],
+        main_ax.plot(x_line_cropped[i][j] / (cell_width[i][j] - 2*pml_width[i][j]),
+                     t_probe_field[i][j][k], 
+                     color=colors[k],
+                     label=f"t = {t_probe_time[i][j][k] / norm_period[i][j]:.2f} T")      
+        main_ax.plot(x_line_cropped[i][j] / (cell_width[i][j] - 2*pml_width[i][j]),
                     t_probe_fit_functions[i][j]( x_line_cropped[i][j],
                                                 t_probe_fit_amplitude[i][j][k],
                                                 t_probe_fit_phase[i][j][k],
                                                 t_probe_fit_offset[i][j][k] ),
                     linestyle="dashed", color="k", alpha=0.5)
-    if use_units:
-        res_ax.set_xlabel(trs.choose("Position X [nm]", "Posición X [nm]"))
-    else:
-        res_ax.set_xlabel(trs.choose("Position X [Mp.u.]", "Posición X [u.Mp.]"))
+    
+    res_ax.set_xlabel(trs.choose("Position X [cell]", "Posición X [celda]"))
     
     for k in range(n_t_probe):
-        res_ax.plot(x_line_cropped[i][j],
+        res_ax.plot(x_line_cropped[i][j] / (cell_width[i][j] - 2*pml_width[i][j]),
                     t_probe_fit_residua[i][j][k],
                     ".", color=colors[k], markeredgewidth=0)
     res_ax.axhline(0, color="k", linewidth=0.5)
@@ -597,7 +779,7 @@ fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True,
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
 
-plt.suptitle(plot_title_base + trs.choose(r" Residua $\sigma$", " $\sigma$ Residuos"))
+plt.suptitle(plot_title_base + trs.choose(r" Residua $\sigma$", " $\sigma$ residuos"))
 
 lines = [[]]*len(series)
 for i in range(len(series)):
@@ -605,6 +787,8 @@ for i in range(len(series)):
         l, = axes[i].plot(t_probe_time[i][j] / norm_period[i][j], 
                           t_probe_fit_res_std[i][j], 
                           "o-", alpha=0.7, color=colors[i][j], markeredgewidth=0)
+        axes[i].set_ylabel(trs.choose("Normalized Electric\n Field " + r"$E_z(y=z=0)$",
+                                      "Campo eléctrico \n normalizado " + r"$E_z(y=z=0)$"))
                           # label=series_label[1](series[i][j]))
         lines[i].append(l)
 
@@ -614,11 +798,15 @@ for ax in axes:
     box = ax.get_position()
     box.x1 = box.x1 - .2 * (box.x1 - box.x0)
     ax.set_position(box)
+axes[-1].set_xlabel(trs.choose("Time T [Mp.u.]", "Tiempo T [u.Mp.]"))
 
 plt.legend([*lines[0], *lines[1]], 
            [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],
     columnspacing=-0.5, ncol=2, bbox_to_anchor=(1.35, 1), loc="center right", frameon=False)
 
+vs.saveplot(plot_file("StdResiduaVsT.png"), overwrite=True)
+
+#%%
 
 fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True, 
                          gridspec_kw={"hspace":0})
@@ -626,7 +814,7 @@ fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True,
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colors, series)]
 
-plt.suptitle(plot_title_base + trs.choose(" Max Residua Width", " Máx Ancho Residuos"))
+plt.suptitle(plot_title_base + trs.choose(" Max Residua Width", " máximo ancho de residuos"))
 
 lines = [[]]*len(series)
 for i in range(len(series)):
@@ -635,6 +823,8 @@ for i in range(len(series)):
                           t_probe_fit_res_max[i][j], 
                           "D-", alpha=0.7, color=colors[i][j], markeredgewidth=0)
                           # label=series_label[1](series[i][j]))
+        axes[i].set_ylabel(trs.choose("Normalized Electric\n Field " + r"$E_z(y=z=0)$",
+                                      "Campo eléctrico \n normalizado " + r"$E_z(y=z=0)$"))
         lines[i].append(l)
 
 fig.set_size_inches([10.28,  4.8 ])
@@ -643,8 +833,10 @@ for ax in axes:
     box = ax.get_position()
     box.x1 = box.x1 - .2 * (box.x1 - box.x0)
     ax.set_position(box)
+axes[-1].set_xlabel(trs.choose("Time T [Mp.u.]", "Tiempo T [u.Mp.]"))
 
 plt.legend([*lines[0], *lines[1]], 
            [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],
     columnspacing=-0.5, ncol=2, bbox_to_anchor=(1.35, 1), loc="center right", frameon=False)
 
+vs.saveplot(plot_file("MaxWidthResiduaVsT.png"), overwrite=True)
