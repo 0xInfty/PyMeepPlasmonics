@@ -173,7 +173,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     else:
         wlen = 1 # Wavelength is 1 Meep Unit, to make it simple
         resolution = resolution_wlen
-        from_um_factor = 1
+        from_um_factor = 1e3
         if wlen_in_vacuum:
             log_text = "vacuum"
         else:
