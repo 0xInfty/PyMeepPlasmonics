@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import AutoMinorLocator
+from matplotlib.colors import colorConverter
 import os
 import v_analysis as va
 import v_materials as vmt
@@ -43,7 +44,8 @@ trs = vu.BilingualManager(english=english)
 
 # Saving directories
 folder = ["Field/Sources/MonochPlanewave/TestRes/Not Centered/Vacuum",
-          "Field/Sources/MonochPlanewave/TestRes/Not Centered/Water"]
+          "Field/Sources/MonochPlanewave/TestRes/Not Centered/Water",
+          "Field/Sources/MonochPlanewave/TestRes/WLenInMedium"]
 home = vs.get_home()
 
 # Parameter for the test
@@ -55,85 +57,80 @@ test_param_label = trs.choose(r"Resolution [points/$\lambda$]",
                               r"Resolución [points/$\lambda$]")
 
 # Sorting and labelling data series
-sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
+sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*3
 series_label = [lambda s : " ",
+                lambda s : " ",
                 lambda s : trs.choose("Resolution ", "Resolución ") + rf"{vu.find_numbers(s)[test_param_position]:.0f}"]
-series_must = [""]*2 # leave "" per default
-series_mustnt = ["Weird"]*2 # leave "" per default
+series_must = [""]*3 # leave "" per default
+series_mustnt = [*["Nop"]*2, "Weird"] # leave "" per default
 
 # Scattering plot options
 plot_title_base = trs.choose('Dimnesionless monochromatic wave', 
                              "Onda monocromática adimensional")
-series_legend = trs.choose(["Vacuum", "Water"], ["Vacío", "Agua"])
-series_colors = [plab.cm.Reds, plab.cm.Blues]
-series_linestyles = ["solid", "solid"]
+series_legend = trs.choose(["Vacuum", r"Water $\lambda_{ref}$ in Vacuum", "Water $\lambda_{ref}$ in Medium"], 
+                           ["Vacío", r"Agua $\lambda_{ref}$ en vacío", "Agua $\lambda_{ref}$ en medio"])
+series_colormaps = [plab.cm.Reds, plab.cm.Blues, plab.cm.YlGn]
+series_colors = ["red", "blue", "limegreen"]
+series_markers = ["o", "o", "o"]
+series_linestyles = ["solid"]*3
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/Sources/MonochPlanewave/TestRes/TestRes" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/Sources/MonochPlanewave/TestRes/WLenInMedium/TestResIM" + n)
 
 #%% LOAD DATA
 
-def file_definer(path):
-    return lambda s, n : os.path.join(path, s, n)
+def file_definer(path): return lambda s, n : os.path.join(path, s, n)
 
 path = [os.path.join(home, fold) for fold in folder]
 file = [file_definer(pa) for pa in path]
 
-series = []
-files_line = []
-files_plane = []
-results_line = []
-results_plane = []
-t_line = []
-x_line = []
-t_plane = []
-y_plane = []
-z_plane = []
-params = []
-
-# for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
-for i in range(len(folder)):
-
-    # path.append( os.path.join(home, f) )
-    # file.append( lambda f, s : os.path.join(path[-1], f, s) )
-    
-    series.append( os.listdir(path[i]) )
-    series[-1] = vu.filter_by_string_must(series[-1], series_must[i])
+series = [[]] * len(path)
+for i in range(len(folder)):    
+    series[i] = os.listdir(path[i])
+    series[i] = vu.filter_by_string_must(series[i], series_must[i])
     if series_mustnt[i]!="": 
-        series[-1] = vu.filter_by_string_must(series[-1], series_mustnt[i], False)
-    series[-1] = sorting_function[i](series[-1])
-    
-    files_line.append( [] )
-    files_plane.append( [] )
-    for s in series[-1]:
-        files_line[-1].append( h5.File(file[i](s, "Field-Lines.h5"), "r") )
-        files_plane[-1].append( h5.File(file[i](s, "Field-Planes.h5"), "r") )
-    del s
-    
-    results_line.append( [fi["Ez"] for fi in files_line[-1]] )
-    results_plane.append( [fi["Ez"] for fi in files_plane[-1]] )
-    params.append( [dict(fi["Ez"].attrs) for fi in files_line[-1]] )
-    
-    t_line.append( [np.asarray(fi["T"]) for fi in files_line[-1]] )
-    x_line.append( [np.asarray(fi["X"]) for fi in files_line[-1]] )
-    
-    t_plane.append( [np.asarray(fi["T"]) for fi in files_plane[-1]] )
-    y_plane.append( [np.asarray(fi["Y"]) for fi in files_plane[-1]] )
-    z_plane.append( [np.asarray(fi["Z"]) for fi in files_plane[-1]] )
-    
-    for s, p in zip(series[-1], params[-1]):
-        try:
-            f = h5.File(file[-1](s, "Resources.h5"))
-            p["used_ram"] = np.array(f["RAM"])
-            p["used_swap"] = np.array(f["SWAP"])
-            p["elapsed_time"] = np.array(f["ElapsedTime"])
-        except FileNotFoundError:
-            f = h5.File(file[-1](s, "RAM.h5"))
-            p["used_ram"] = np.array(f["RAM"])
-            p["used_swap"] = np.array(f["SWAP"])
-            p["elapsed_time"] = p["elapsed"]
-            del p["elapsed"]
-    # del s, p
+        series[i] = vu.filter_by_string_must(series[i], series_mustnt[i], False)
+    series[i] = sorting_function[i](series[i])
 del i
+    
+files_line = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
+               for j in range(len(series[i]))] for i in range(len(series))]
+files_plane = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
+                for j in range(len(series[i]))] for i in range(len(series))]
+
+results_line = [[files_line[i][j]["Ez"] 
+                 for j in range(len(series[i]))] for i in range(len(series))]
+results_plane = [[files_plane[i][j]["Ez"] 
+                  for j in range(len(series[i]))] for i in range(len(series))]
+
+params = [[dict(files_line[i][j]["Ez"].attrs)
+           for j in range(len(series[i]))] for i in range(len(series))]
+
+t_line = [[np.asarray(files_line[i][j]["T"])
+           for j in range(len(series[i]))] for i in range(len(series))]
+x_line = [[np.asarray(files_line[i][j]["X"])
+           for j in range(len(series[i]))] for i in range(len(series))]
+
+t_plane = [[np.asarray(files_plane[i][j]["T"])
+            for j in range(len(series[i]))] for i in range(len(series))]
+y_plane = [[np.asarray(files_plane[i][j]["Y"])
+            for j in range(len(series[i]))] for i in range(len(series))]
+z_plane = [[np.asarray(files_plane[i][j]["Z"])
+            for j in range(len(series[i]))] for i in range(len(series))]
+
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        try:
+            f = h5.File(file[i](series[i][j], "Resources.h5"))
+            params[i][j]["used_ram"] = np.array(f["RAM"])
+            params[i][j]["used_swap"] = np.array(f["SWAP"])
+            params[i][j]["elapsed_time"] = np.array(f["ElapsedTime"])
+        except FileNotFoundError:
+            f = h5.File(file[i](series[i][j], "RAM.h5"))
+            params[i][j]["used_ram"] = np.array(f["RAM"])
+            params[i][j]["used_swap"] = np.array(f["SWAP"])
+            params[i][j]["elapsed_time"] = params["elapsed"]
+            params.pop("elapsed")
+del i, j
             
 requires_normalization = False
 from_um_factor = []
@@ -183,7 +180,7 @@ if test_param_in_params:
 else:
     test_param = [[vu.find_numbers(s)[test_param_position] for s in ser] for ser in series]
     
-use_units = np.array(units).any()
+use_units = True in [True in units[i] for i in range(len(series))]
 
 minor_division = [[fum * 1e3 / res for fum, res in zip(frum, reso)] for frum, reso in zip(from_um_factor, resolution)]
 try:
@@ -222,7 +219,8 @@ z_plane_cropped = [[z_plane_cropped[i][j][z_plane_index[i][j](-cell_width[i][j]/
 
 #%% DATA EXTRACTION
 
-source_results = [[vma.get_source_from_line(results_line[i][j], x_line_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+source_results = [[vma.get_source_from_line(results_line[i][j], x_line_index[i][j], source_center[i][j]) 
+                   for j in range(len(series[i]))] for i in range(len(series))]
 
 if not requires_normalization:
     
@@ -231,21 +229,86 @@ if not requires_normalization:
 else:
     
     period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j],
-                                                  periods_sensitivity=0.06) for j in range(len(series[i]))] for i in range(len(series))]
+                                                  periods_sensitivity=0.06) 
+                       for j in range(len(series[i]))] for i in range(len(series))]
     amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j],
-                                                        amplitude_sensitivity=0.05) for j in range(len(series[i]))] for i in range(len(series))]
+                                                        amplitude_sensitivity=0.05) 
+                          for j in range(len(series[i]))] for i in range(len(series))]
     
-    source_results = [[source_results[i][j] / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
-    results_plane = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
-    results_line = [[np.asarray(results_line[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+    source_results = [[source_results[i][j] / amplitude_results[i][j] 
+                       for j in range(len(series[i]))] for i in range(len(series))]
+    results_plane = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] 
+                      for j in range(len(series[i]))] for i in range(len(series))]
+    results_line = [[np.asarray(results_line[i][j]) / amplitude_results[i][j] 
+                     for j in range(len(series[i]))] for i in range(len(series))]
     
     norm_period, norm_amplitude = period_results, amplitude_results
+
+#%%
+
+plt.figure()
+for i in range(len(series)):        
+    plt.plot(test_param[i],
+             [results_line[i][j].shape[0] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Number of points in whole cell", "Número de puntos en la celda completa"))
+plt.grid()
+plt.legend(series_legend)
+
+plt.savefig(plot_file("Points.png"))
+
+cropped_line = [[vma.crop_field_xprofile(results_line[i][j], x_line_index[i][j], 
+                                         cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+
+plt.figure()
+for i in range(len(series)):        
+    plt.plot(test_param[i],
+             [cropped_line[i][j].shape[0] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Number of points in real cell", "Número de puntos en la celda real"))
+plt.grid()
+plt.legend(series_legend)
+
+plt.savefig(plot_file("InnerPoints.png"))
+
+plt.figure()
+for i in range(len(series)):
+    plt.plot(test_param[i],
+             [results_line[i][j].shape[-1] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
+plt.grid()
+plt.legend(series_legend)
+
+plt.savefig(plot_file("TimePoints.png"))
+
+#%%
+
+plt.figure()
+for i in range(len(series)):
+    plt.plot(test_param[i],
+             [params[i][j]["courant"]/params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Time Minimum Division [Mp.u.]", "Mínima división del tiempo [u.Mp.]"))
+plt.grid()
+plt.legend(series_legend)
+
+#%%
+
+plt.figure()
+for i in range(len(series)):
+    plt.plot(test_param[i],
+             [params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+plt.xlabel(test_param_label)
+# plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
+plt.grid()
+plt.legend(series_legend)
 
 #%% SHOW SOURCE AND FOURIER USED FOR NORMALIZATION
 
 # colors = [["r"], ["maroon"], ["b"], ["navy"]]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
 fig = plt.figure()
 plt.title(plot_title_base)
@@ -266,15 +329,15 @@ plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
 box = fig.axes[0].get_position()
 box.x1 = box.x1 - .3 * (box.x1 - box.x0)
 fig.axes[0].set_position(box)
-leg = plt.legend(ncol=2, columnspacing=-0.5, 
+leg = plt.legend(ncol=len(series), columnspacing=-0.5, 
                  bbox_to_anchor=(1.6, .5), loc="center right", frameon=False)
 
 plt.savefig(plot_file("Source.png"))
         
 fourier = [[np.abs(np.fft.rfft(source_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
-fourier_freq = [[np.fft.rfftfreq(len(source_results[i][j]), d=period_line[i][j])  for j in range(len(series[i]))] for i in range(len(series))]
+fourier_freq = [[np.fft.rfftfreq(len(source_results[i][j]), d=period_line[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 if use_units:
-    fourier_wlen = [[from_um_factor[i][j] * 1e3 / fourier_freq[i][j]  for j in range(len(series[i]))] for i in range(len(series))]
+    fourier_wlen = [[from_um_factor[i][j] * 1e3 / fourier_freq[i][j] for j in range(len(series[i]))] for i in range(len(series))]
     fourier_best = [[wlen[i][j] * from_um_factor[i][j] * 1e3 for j in range(len(series[i]))] for i in range(len(series))]
 else:
     fourier_wlen = [[1 / fourier_freq[i][j]  for j in range(len(series[i]))] for i in range(len(series))]
@@ -302,7 +365,7 @@ box.x1 = box.x1 - .3 * (box.x1 - box.x0)
 fig.axes[0].set_position(box)
 
 first_legend = plt.legend(series_lines, series_legend)
-second_legend = plt.legend(ncol=2, columnspacing=-0.5, bbox_to_anchor=(1.6, .5), 
+second_legend = plt.legend(ncol=len(series), columnspacing=-0.5, bbox_to_anchor=(1.6, .5), 
                            loc="center right", frameon=False)
 plt.gca().add_artist(first_legend)
 
@@ -319,22 +382,14 @@ fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in ra
 fourier_max_best = [[fourier_wlen[i][j][ np.argmin(np.abs(fourier_wlen[i][j] - fourier_best[i][j])) ]  for j in range(len(series[i]))] for i in range(len(series))]
 
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
-
-if len(series)>1:
-    colors = [*["red", "blue"]*2]
-else:
-    colors = ["k"]
-
-markers = ["o", "o"]
-markers_alpha = [0.4, 0.4]
+          for sc, s in zip(series_colormaps, series)]
 
 plt.figure()
 plt.title(plot_title_base)
 for i in range(len(series)):
     plt.plot(test_param[i], 
              100 * ( np.array(fourier_max_wlen[i]) - np.array(fourier_max_best[i]) ) / np.array(fourier_max_best[i]), 
-             color=colors[i], marker=markers[i], alpha=markers_alpha[i],
+             color=series_colors[i], marker=series_markers[i], alpha=0.4,
              markersize=8, linestyle="", markeredgewidth=0)
 plt.grid(True)
 plt.legend(series_legend)
@@ -353,7 +408,7 @@ peaks_times = [[t_line[i][j][peaks_index[i][j]] for j in range(len(series[i]))] 
 peaks_periods = [[np.diff(peaks_times[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 # colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-#           for sc, s in zip(series_colors, series)]
+#           for sc, s in zip(series_colormaps, series)]
 
 # plt.figure()
 # plt.suptitle(plot_title_base)
@@ -379,19 +434,11 @@ peaks_periods = [[np.diff(peaks_times[i][j]) for j in range(len(series[i]))] for
 
 peaks_height_variation = [[100 * ( max(peaks_heights[i][j]) - min(peaks_heights[i][j]) ) / min(peaks_heights[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-if len(series)>1:
-    colors = [*["red", "blue"]*2]
-else:
-    colors = ["k"]
-
-markers = ["o", "o"]
-markers_alpha = [0.4, 0.4]
-
 plt.figure()
 plt.title(plot_title_base)
 for i in range(len(series)):
     plt.plot(test_param[i], peaks_height_variation[i], 
-             color=colors[i], marker=markers[i], alpha=markers_alpha[i],
+             color=series_colors[i], marker=series_markers[i], alpha=0.4,
              markersize=8, linestyle="", markeredgewidth=0)
 plt.grid(True)
 plt.legend(series_legend)
@@ -406,20 +453,12 @@ vs.saveplot(plot_file("AmpVariation.png"), overwrite=True)
 
 peaks_period_variation = [[100 * ( max(peaks_periods[i][j]) - min(peaks_periods[i][j]) ) / min(peaks_periods[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-if len(series)>1:
-    colors = [*["red", "blue"]*2]
-else:
-    colors = ["k"]
-
-markers = ["o", "o"]
-markers_alpha = [0.4, 0.4]
-
 plt.figure()
 plt.title(plot_title_base)
 for i in range(len(series)):
     plt.plot(test_param[i], peaks_period_variation[i], 
-             color=colors[i], marker=markers[i], markersize=8, 
-             alpha=markers_alpha[i], linestyle="", markeredgewidth=0)
+             color=series_colors[i], marker=series_markers[i], markersize=8, 
+             alpha=0.4, linestyle="", markeredgewidth=0)
 plt.grid(True)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
@@ -552,7 +591,6 @@ for i in range(len(series)):
             x_probe_fit_residua[-1][-1].append( residua )
 
 x_probe_fit_res_std = [[ [np.std(x_probe_fit_residua[i][j][k][x_probe_time[i][j][k]>2]) for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
-x_probe_fit_res_max = [[ [np.max(x_probe_fit_residua[i][j][k][x_probe_time[i][j][k]>2]) - np.min(x_probe_fit_residua[i][j][k][x_probe_time[i][j][k]>2]) for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 
 #%%
 
@@ -599,20 +637,20 @@ fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True,
                          gridspec_kw={"hspace":0})
 
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
 plt.suptitle(plot_title_base + trs.choose(r": Residua $\sigma$", ": $\sigma$ residuos"))
 
-lines = [[]]*len(series)
+lines = []
 for i in range(len(series)):
     for j in range(len(series[i])):
         l, = axes[i].plot(x_probe_position_factor[i][j], 
                           x_probe_fit_res_std[i][j], 
                           "o-", alpha=0.7, color=colors[i][j], markeredgewidth=0)
                           # label=series_label[1](series[i][j]))
-        lines[i].append(l)
-        axes[i].set_ylabel(trs.choose("Normalized Electric\n Field " + r"$E_z(y=z=0)$",
-                                      "Campo eléctrico \n normalizado " + r"$E_z(y=z=0)$"))
+        lines.append(l)
+axes[-1].set_ylabel(trs.choose("Normalized Electric\n Field " + r"$E_z(y=z=0)$",
+                               "Campo eléctrico \n normalizado " + r"$E_z(y=z=0)$"))
 
 fig.set_size_inches([10.28,  4.8 ])
 
@@ -622,47 +660,75 @@ for ax in axes:
     ax.set_position(box)
 axes[-1].set_xlabel(trs.choose("Position X [Cell]", "Posición X [Celda]"))
 
+legend_labels = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        if i!=len(series)-1:
+            legend_labels.append(" ")
+        else:
+            legend_labels.append(series_label[i](series[i][j]))
 
-plt.legend([*lines[0], *lines[1]], 
-           [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],
-    columnspacing=-0.5, ncol=2, bbox_to_anchor=(1.35, 1), loc="center right", frameon=False)
+plt.legend(lines, legend_labels,
+           columnspacing=-0.5, ncol=len(series), bbox_to_anchor=(1.35, 1.5), 
+           loc="center right", frameon=False)
 
-vs.saveplot(plot_file("StdResiduaVsX.png"), overwrite=True)
+vs.saveplot(plot_file("NoiseVsX.png"), overwrite=True)
 
 #%%
 
-fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True, 
-                         gridspec_kw={"hspace":0})
+plt.figure()
 
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+plt.title(plot_title_base + trs.choose(r": Residua $\sigma$", ": $\sigma$ residuos"))
 
-plt.suptitle(plot_title_base + trs.choose(": Maximum Residua Width", ": máximo ancho de residuos"))
-
-lines = [[]]*len(series)
 for i in range(len(series)):
-    for j in range(len(series[i])):
-        l, = axes[i].plot(x_probe_position_factor[i][j], 
-                          x_probe_fit_res_max[i][j], 
-                          "D-", alpha=0.7, color=colors[i][j], markeredgewidth=0)
-                          # label=series_label[1](series[i][j]))
-        lines[i].append(l)
-        axes[i].set_ylabel(trs.choose("Normalized Electric\n Field " + r"$E_z(y=z=0)$",
-                                      "Campo eléctrico \n normalizado " + r"$E_z(y=z=0)$"))
+    plt.plot(test_param[i], 
+              [x_probe_fit_res_std[i][j][0] for j in range(len(series[i]))],
+              "o", color=colorConverter.to_rgba(series_colors[i], alpha=0.7), 
+              fillstyle="none", markersize=8, markeredgewidth=1.5,
+              label=f"{series_legend[i]} x = {x_probe_position_factor[i][j][0]} " + trs.choose("cell", "celda"))
+    plt.plot(test_param[i], 
+             [x_probe_fit_res_std[i][j][-1] for j in range(len(series[i]))],
+             "o", color=series_colors[i], 
+             alpha=0.4, markeredgewidth=0, markersize=8,
+             label=f"{series_legend[i]} x = {x_probe_position_factor[i][j][-1]} " + trs.choose("cell", "celda"))
 
-fig.set_size_inches([10.28,  4.8 ])
+plt.legend()
 
-for ax in axes:
-    box = ax.get_position()
-    box.x1 = box.x1 - .2 * (box.x1 - box.x0)
-    ax.set_position(box)
-axes[-1].set_xlabel(trs.choose("Position X [Cell]", "Posición X [Celda]"))
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Normalized Electric Field Noise Amplitude\n", 
+                      "Amplitud de ruido en campo eléctrico normalizado\n") + 
+           trs.choose(r"${E_z}^{noise}(y=z=0)$", r"${E_z}^{ruido}(y=z=0)$") )
+plt.tight_layout()
 
-plt.legend([*lines[0], *lines[1]], 
-           [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],
-    columnspacing=-0.5, ncol=2, bbox_to_anchor=(1.35, 1), loc="center right", frameon=False)
+vs.saveplot(plot_file("NoiseVsXVsResolution.png"), overwrite=True)
 
-vs.saveplot(plot_file("MaxWidthResiduaVsX.png"), overwrite=True)
+#%%
+
+plt.figure()
+
+plt.title(plot_title_base + trs.choose(r": Residua $\sigma$", ": $\sigma$ residuos"))
+
+for i in range(len(series)):
+    plt.plot(test_param[i], 
+             [np.mean([x_probe_fit_res_std[i][j][-1] - x_probe_fit_res_std[i][j][0],
+                       x_probe_fit_res_std[i][j][-1] - x_probe_fit_res_std[i][j][1],
+                       x_probe_fit_res_std[i][j][-2] - x_probe_fit_res_std[i][j][1],
+                       x_probe_fit_res_std[i][j][-2] - x_probe_fit_res_std[i][j][0]])
+              for j in range(len(series[i]))],
+             "o", color=series_colors[i], 
+             alpha=0.4, markeredgewidth=0, markersize=8,
+             label=series_legend[i])
+
+plt.legend()
+
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Normalized Electric Field Noise Difference\n", 
+                      "Diferencia de ruido en campo eléctrico normalizado\n") + 
+           trs.choose(r"${E_z}^{noise}(x=\Delta X/2) - {E_z}^{noise}(x=-\Delta X/2)$",
+                      r"${E_z}^{ruido}(x=\Delta X/2) - {E_z}^{ruido}(x=-\Delta X/2)$") )
+plt.tight_layout()
+
+vs.saveplot(plot_file("NoiseDifVsXVsResolution.png"), overwrite=True)
 
 #%% ANALYSE X AXIS FOR DIFFERENT TIMES VIA FIT AND RESIDUA
 
@@ -725,7 +791,6 @@ for i in range(len(series)):
             t_probe_fit_residua[-1][-1].append( residua )
 
 t_probe_fit_res_std = [[ [np.std(t_probe_fit_residua[i][j][k]) for k in range(n_t_probe)] for j in range(len(series[i]))] for i in range(len(series))]
-t_probe_fit_res_max = [[ [np.max(t_probe_fit_residua[i][j][k]) - np.min(t_probe_fit_residua[i][j][k]) for k in range(n_t_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 
 #%%
 
@@ -762,24 +827,15 @@ def see_t_probe(i,j):
     
     main_ax.legend()
     
-    plt.figure()
-            
-    plt.plot(t_probe_time[i][j] / norm_period[i][j], 
-             t_probe_fit_res_std[i][j], 
-             "o-", markeredgewidth=0)
-    plt.plot(t_probe_time[i][j] / norm_period[i][j], 
-             t_probe_fit_res_max[i][j], 
-             "D-", markersize=6, markeredgewidth=0)
-    
 #%%
 
 fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True, 
                          gridspec_kw={"hspace":0})
 
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
-plt.suptitle(plot_title_base + trs.choose(r" Residua $\sigma$", " $\sigma$ residuos"))
+plt.suptitle(plot_title_base + trs.choose(r": Residua $\sigma$", ": $\sigma$ residuos"))
 
 lines = [[]]*len(series)
 for i in range(len(series)):
@@ -804,39 +860,33 @@ plt.legend([*lines[0], *lines[1]],
            [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],
     columnspacing=-0.5, ncol=2, bbox_to_anchor=(1.35, 1), loc="center right", frameon=False)
 
-vs.saveplot(plot_file("StdResiduaVsT.png"), overwrite=True)
+vs.saveplot(plot_file("NoiseVsT.png"), overwrite=True)
+
 
 #%%
 
-fig, axes = plt.subplots(nrows=len(series), sharex=True, sharey=True, 
-                         gridspec_kw={"hspace":0})
+plt.figure()
 
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+plt.title(plot_title_base + trs.choose(r": Residua $\sigma$", ": $\sigma$ residuos"))
 
-plt.suptitle(plot_title_base + trs.choose(" Max Residua Width", " máximo ancho de residuos"))
-
-lines = [[]]*len(series)
 for i in range(len(series)):
-    for j in range(len(series[i])):
-        l, = axes[i].plot(t_probe_time[i][j] / norm_period[i][j], 
-                          t_probe_fit_res_max[i][j], 
-                          "D-", alpha=0.7, color=colors[i][j], markeredgewidth=0)
-                          # label=series_label[1](series[i][j]))
-        axes[i].set_ylabel(trs.choose("Normalized Electric\n Field " + r"$E_z(y=z=0)$",
-                                      "Campo eléctrico \n normalizado " + r"$E_z(y=z=0)$"))
-        lines[i].append(l)
+    plt.plot(test_param[i], 
+              [t_probe_fit_res_std[i][j][0] for j in range(len(series[i]))],
+              "o", color=colorConverter.to_rgba(series_colors[i], alpha=0.7), 
+              fillstyle="none", markersize=8, markeredgewidth=1.5,
+              label=f"{series_legend[i]} t = {t_probe_time[i][j][0] / norm_period[i][j] :.2f} T")
+    plt.plot(test_param[i], 
+             [t_probe_fit_res_std[i][j][-1] for j in range(len(series[i]))],
+             "o", color=series_colors[i], 
+             alpha=0.4, markeredgewidth=0, markersize=8,
+             label=f"{series_legend[i]} t = {t_probe_time[i][j][-1] / norm_period[i][j] :.2f} T")
 
-fig.set_size_inches([10.28,  4.8 ])
+plt.legend()
 
-for ax in axes:
-    box = ax.get_position()
-    box.x1 = box.x1 - .2 * (box.x1 - box.x0)
-    ax.set_position(box)
-axes[-1].set_xlabel(trs.choose("Time T [Mp.u.]", "Tiempo T [u.Mp.]"))
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Normalized Electric Field Noise Amplitude\n", 
+                      "Amplitud de ruido en campo eléctrico normalizado\n") + 
+           trs.choose(r"${E_z}^{noise}(y=z=0)$", r"${E_z}^{ruido}(y=z=0)$") )
+plt.tight_layout()
 
-plt.legend([*lines[0], *lines[1]], 
-           [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],
-    columnspacing=-0.5, ncol=2, bbox_to_anchor=(1.35, 1), loc="center right", frameon=False)
-
-vs.saveplot(plot_file("MaxWidthResiduaVsT.png"), overwrite=True)
+vs.saveplot(plot_file("NoiseVsTVsResolution.png"), overwrite=True)

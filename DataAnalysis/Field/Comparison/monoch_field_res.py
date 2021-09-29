@@ -43,23 +43,24 @@ trs = vu.BilingualManager(english=english)
 #%% PARAMETERS
 
 # Saving directories
-folder = ["Field/Sources/MonochPlanewave/TestPMLwlen/Not Centered/Vacuum",
-          "Field/Sources/MonochPlanewave/TestPMLwlen/Not Centered/Water"]
+folder = ["Field/Sources/MonochPlanewave/TestRes/Not Centered/Vacuum",
+          "Field/Sources/MonochPlanewave/TestRes/Not Centered/Water"]
 home = vs.get_home()
 
 # Parameter for the test
-test_param_string = "pml_wlen_factor"
+test_param_string = "resolution_wlen"
 test_param_in_series = True
-test_param_in_params = False
+test_param_in_params = True
 test_param_position = 0
-test_param_label = trs.choose(r"PML $\lambda$ Factor", "Factor PML $\lambda$")
+test_param_label = trs.choose(r"Resolution [points/$\lambda$]", 
+                              r"Resolución [points/$\lambda$]")
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = [lambda s : r" ",
-                lambda s : rf"PML {vu.find_numbers(s)[test_param_position]:.2f} $\lambda$"]
+series_label = [lambda s : " ",
+                lambda s : trs.choose("Resolution ", "Resolución ") + rf"{vu.find_numbers(s)[test_param_position]:.0f}"]
 series_must = [""]*2 # leave "" per default
-series_mustnt = ["Fail"]*2 # leave "" per default
+series_mustnt = ["Weird"]*2 # leave "" per default
 
 # Scattering plot options
 plot_title_base = trs.choose('Dimnesionless monochromatic wave', 
@@ -68,7 +69,7 @@ series_legend = trs.choose(["Vacuum", "Water"], ["Vacío", "Agua"])
 series_colors = [plab.cm.Reds, plab.cm.Blues]
 series_linestyles = ["solid", "solid"]
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/Sources/MonochPlanewave/TestPMLwlen/TestPMLwlen" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/Sources/MonochPlanewave/TestRes/TestRes" + n)
 
 #%% LOAD DATA
 
@@ -231,7 +232,7 @@ if not requires_normalization:
 else:
     
     period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j],
-                                                  periods_sensitivity=0.05) for j in range(len(series[i]))] for i in range(len(series))]
+                                                  periods_sensitivity=0.06) for j in range(len(series[i]))] for i in range(len(series))]
     amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j],
                                                         amplitude_sensitivity=0.05) for j in range(len(series[i]))] for i in range(len(series))]
     
@@ -248,7 +249,7 @@ colors = [sc(np.linspace(0,1,len(s)+2))[2:]
           for sc, s in zip(series_colors, series)]
 
 fig = plt.figure()
-plt.suptitle(plot_title_base)
+plt.title(plot_title_base)
 
 series_lines = []
 for i in range(len(series)):
@@ -281,7 +282,7 @@ else:
     fourier_best = [[wlen[i][j] for j in range(len(series[i]))] for i in range(len(series))]
 
 fig = plt.figure()
-plt.suptitle(plot_title_base)
+plt.title(plot_title_base)
 
 series_lines = []
 for i in range(len(series)):
@@ -315,32 +316,6 @@ plt.savefig(plot_file("SourceFFTZoom.png"))
 
 #%%
 
-# colors = [plab.cm.spring(np.linspace(0,1,5+2))[2:] ,
-#           plab.cm.winter(np.linspace(0,1,5+2))[2:]]
-
-# lines = []
-# for i in range(len(series)):
-#     for j in range(5):
-#         plt.plot(fourier_wlen[i][j], fourier[i][j],
-#                  label=series_label[i](series[i][j]),
-#                  color=colors[i][j])
-# if use_units:
-#     plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
-# else:
-#     plt.xlabel(trs.choose("Wavelength [Mp.u.]", "Longitud de onda [u.Mp.]"))
-# plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
-#                       r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
-# plt.legend(ncol=2)
-
-# plt.savefig(plot_file("SourceLowRes.png"))
-
-# if use_units: plt.xlim([350, 850])
-# else: plt.xlim([0, 2])
-        
-# plt.savefig(plot_file("SourceLowResZoom.png"))
-
-#%%
-
 fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
 fourier_max_best = [[fourier_wlen[i][j][ np.argmin(np.abs(fourier_wlen[i][j] - fourier_best[i][j])) ]  for j in range(len(series[i]))] for i in range(len(series))]
 
@@ -356,7 +331,7 @@ markers = ["o", "o"]
 markers_alpha = [0.4, 0.4]
 
 plt.figure()
-plt.suptitle(plot_title_base)
+plt.title(plot_title_base)
 for i in range(len(series)):
     plt.plot(test_param[i], 
              100 * ( np.array(fourier_max_wlen[i]) - np.array(fourier_max_best[i]) ) / np.array(fourier_max_best[i]), 
@@ -378,8 +353,8 @@ peaks_heights = [[source_results[i][j][peaks_index[i][j]] for j in range(len(ser
 peaks_times = [[t_line[i][j][peaks_index[i][j]] for j in range(len(series[i]))] for i in range(len(series))]
 peaks_periods = [[np.diff(peaks_times[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+# colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
+#           for sc, s in zip(series_colors, series)]
 
 # plt.figure()
 # plt.suptitle(plot_title_base)
@@ -414,7 +389,7 @@ markers = ["o", "o"]
 markers_alpha = [0.4, 0.4]
 
 plt.figure()
-plt.suptitle(plot_title_base)
+plt.title(plot_title_base)
 for i in range(len(series)):
     plt.plot(test_param[i], peaks_height_variation[i], 
              color=colors[i], marker=markers[i], alpha=markers_alpha[i],
@@ -441,7 +416,7 @@ markers = ["o", "o"]
 markers_alpha = [0.4, 0.4]
 
 plt.figure()
-plt.suptitle(plot_title_base)
+plt.title(plot_title_base)
 for i in range(len(series)):
     plt.plot(test_param[i], peaks_period_variation[i], 
              color=colors[i], marker=markers[i], markersize=8, 
@@ -688,7 +663,7 @@ plt.ylabel(trs.choose("Normalized Electric Field Noise Amplitude\n",
            trs.choose(r"${E_z}^{noise}(y=z=0)$", r"${E_z}^{ruido}(y=z=0)$") )
 plt.tight_layout()
 
-vs.saveplot(plot_file("NoiseVsXVsPML.png"), overwrite=True)
+vs.saveplot(plot_file("NoiseVsXVsResolution.png"), overwrite=True)
 
 #%%
 
@@ -724,7 +699,7 @@ plt.ylabel(trs.choose("Normalized Electric Field Noise Difference\n",
                       r"${E_z}^{ruido}(x=\Delta X/2) - {E_z}^{ruido}(x=-\Delta X/2)$") )
 plt.tight_layout()
 
-vs.saveplot(plot_file("NoiseDifVsXVsPML.png"), overwrite=True)
+vs.saveplot(plot_file("NoiseDifVsXVsResolution.png"), overwrite=True)
 
 #%% ANALYSE X AXIS FOR DIFFERENT TIMES VIA FIT AND RESIDUA
 
@@ -893,4 +868,4 @@ plt.ylabel(trs.choose("Normalized Electric Field Noise Amplitude\n",
            trs.choose(r"${E_z}^{noise}(y=z=0)$", r"${E_z}^{ruido}(y=z=0)$") )
 plt.tight_layout()
 
-vs.saveplot(plot_file("NoiseVsTVsPML.png"), overwrite=True)
+vs.saveplot(plot_file("NoiseVsTVsResolution.png"), overwrite=True)
