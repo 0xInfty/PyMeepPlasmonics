@@ -215,17 +215,17 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     ### ROUND UP ACCORDING TO GRID DISCRETIZATION
         
-    pml_width = vu.round_to_multiple(pml_width, 1/resolution)
-    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution)*2
-    empty_width = cell_width/2 - pml_width
+    # pml_width = vu.round_to_multiple(pml_width, 1/resolution)
+    # cell_width = vu.round_to_multiple(cell_width/2, 1/resolution)*2
+    # empty_width = cell_width/2 - pml_width
     if centered_source: 
         source_center = 0
     else:
         source_center = -0.5*cell_width + pml_width
     
-    until_time = vu.round_to_multiple(until_time, courant/resolution, round_up=True)
-    period_line = vu.round_to_multiple(period_line, courant/resolution, round_down=True)
-    period_plane = vu.round_to_multiple(period_plane, courant/resolution, round_down=True)
+    # until_time = vu.round_to_multiple(until_time, courant/resolution, round_up=True)
+    # period_line = vu.round_to_multiple(period_line, courant/resolution, round_down=True)
+    # period_plane = vu.round_to_multiple(period_plane, courant/resolution, round_down=True)
     
     ### DEFINE OBJETS
     
