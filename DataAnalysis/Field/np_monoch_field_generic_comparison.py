@@ -58,7 +58,7 @@ series_label = [lambda s : trs.choose(r"Vacuum", r"Vacío") +
                 rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm",
                 lambda s : trs.choose("Water", "Agua") + 
                 rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm"]
-series_must = ["Res3"]*2 # leave "" per default
+series_must = ["Res3ERF2.0"]*2 # leave "" per default
 series_mustnt = ["Old"]*2 # leave "" per default
 
 # Scattering plot options
@@ -67,19 +67,18 @@ series_legend = ["Vacuum", "Water"]
 series_colors = [plab.cm.Reds, plab.cm.Blues]
 series_linestyles = ["solid"]*2
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/WLen/WLen" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/WLen/WLenEmpty" + n)
 
 #%% LOAD DATA
 
-#%% LOAD DATA
-
+# First some useful definitions regarding directories
 def file_definer(path): return lambda s, n : os.path.join(path, s, n)
-
 path = [os.path.join(home, fold) for fold in folder]
 file = [file_definer(pa) for pa in path]
 
+# Now look for the series of data inside of each folder
 series = [[]] * len(path)
-for i in range(len(folder)):    
+for i in range(len(folder)):
     series[i] = os.listdir(path[i])
     series[i] = vu.filter_by_string_must(series[i], series_must[i])
     if series_mustnt[i]!="": 
@@ -87,31 +86,81 @@ for i in range(len(folder)):
     series[i] = sorting_function[i](series[i])
 del i
     
-files_line = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
-               for j in range(len(series[i]))] for i in range(len(series))]
-files_plane = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
-                for j in range(len(series[i]))] for i in range(len(series))]
+# Get the corresponding data files
+files_line = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") for j in range(len(series[i]))] for i in range(len(series))]
+files_plane = [[h5.File(file[i](series[i][j], "Field-Planes.h5"), "r") for j in range(len(series[i]))] for i in range(len(series))]
 
-results_line = [[files_line[i][j]["Ez"] 
-                 for j in range(len(series[i]))] for i in range(len(series))]
-results_plane = [[files_plane[i][j]["Ez"] 
-                  for j in range(len(series[i]))] for i in range(len(series))]
+# Get the corresponding field data
+results_line = [[files_line[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
+results_plane = [[files_plane[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
 
-params = [[dict(files_line[i][j]["Ez"].attrs)
-           for j in range(len(series[i]))] for i in range(len(series))]
+# Get the time and spatial dimensions data
+t_line = [[np.asarray(files_line[i][j]["T"]) for j in range(len(series[i]))] for i in range(len(series))]
+x_line = [[np.asarray(files_line[i][j]["X"]) for j in range(len(series[i]))] for i in range(len(series))]
 
-t_line = [[np.asarray(files_line[i][j]["T"])
-           for j in range(len(series[i]))] for i in range(len(series))]
-x_line = [[np.asarray(files_line[i][j]["X"])
-           for j in range(len(series[i]))] for i in range(len(series))]
+t_plane = [[np.asarray(files_plane[i][j]["T"]) for j in range(len(series[i]))] for i in range(len(series))]
+y_plane = [[np.asarray(files_plane[i][j]["Y"]) for j in range(len(series[i]))] for i in range(len(series))]
+z_plane = [[np.asarray(files_plane[i][j]["Z"]) for j in range(len(series[i]))] for i in range(len(series))]
 
-t_plane = [[np.asarray(files_plane[i][j]["T"])
-            for j in range(len(series[i]))] for i in range(len(series))]
-y_plane = [[np.asarray(files_plane[i][j]["Y"])
-            for j in range(len(series[i]))] for i in range(len(series))]
-z_plane = [[np.asarray(files_plane[i][j]["Z"])
-            for j in range(len(series[i]))] for i in range(len(series))]
+# Get the parameters of the simulations
+params = [[dict(files_line[i][j]["Ez"].attrs) for j in range(len(series[i]))] for i in range(len(series))]
 
+# Get the test parameter
+if test_param_in_params:
+    test_param = [[params[i][j][test_param_string] for j in range(len(series[i]))] for i in range(len(series))]
+else:
+    test_param = [[vu.find_numbers(series[i][j])[test_param_position] for j in range(len(series[i]))] for i in range(len(series))]
+
+#%%
+
+# Extract some normalization parameters, if possible, and check if it's needed
+requires_normalization = False
+norm_amplitude = [[]] * len(series)
+norm_period = [[]] * len(series)
+norm_path = [[]] * len(series)
+for i in range(len(series)):
+    try:
+        norm_amplitude[i] = [params[i][j]["norm_amplitude"] for j in range(len(series[i]))]
+        norm_period[i] = [params[i][j]["norm_period"] for j in range(len(series[i]))]
+        norm_path[i] = [params[i][j]["norm_path"] for j in range(len(series[i]))]
+    except:
+        requires_normalization = True
+del i
+
+# Now try to get the normalization data files
+files_line_norm = []
+for i in range(len(series)):
+    files_line_norm.append([])
+    for j in range(len(series[i])):
+        try:    
+            try:
+                files_line_norm[i].append( h5.File(file[i](series[i][j], "Field-Lines-Norm.h5"), "r") )
+            except:
+                files_line_norm[i].append( h5.File(os.path.join(norm_path[i][j], "Field-Lines-Norm.h5"), "r") )
+            print(f"Loading available normfield for {i},{j}")
+        except:
+            norm_path_ij = vm.check_normfield(params[i][j])
+            try:
+                files_line_norm[i].append( h5.File(os.path.join(norm_path_ij[0], "Field-Lines-Norm.h5"), "r") )
+                print(f"Loading compatible normfield for {i},{j}")
+                norm_path[i][j] = norm_path_ij
+            except:
+                files_line_norm[i].append( files_line[i][j] )
+                print(f"Using NP data for {i},{j} normalization.",
+                      "This is by all means not ideal!!",
+                      "If possible, run again these simulations.")
+del i, j
+
+# Get the corresponding field data
+results_line_norm = [[ files_line_norm[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
+
+# Get the time and spatial dimensions data
+t_line_norm = [[ np.asarray(files_line_norm[i][j]["T"]) for j in range(len(series[i]))] for i in range(len(series))]
+x_line_norm = [[ np.asarray(files_line_norm[i][j]["X"]) for j in range(len(series[i]))] for i in range(len(series))]
+
+#%%
+
+# Get the RAM and elapsed time data
 for i in range(len(series)):
     for j in range(len(series[i])):
         try:
@@ -126,117 +175,39 @@ for i in range(len(series)):
             params[i][j]["elapsed_time"] = params["elapsed"]
             params.pop("elapsed")
 del i, j
-           
-requires_normalization = False
-from_um_factor = []
-resolution = []
-r = []
-material = []
-paper = []
-index = []
-wlen = []
-cell_width = []
-pml_width = []
-source_center = []
-period_plane = []
-period_line = []
-until_time = []
-time_period_factor = []
-norm_amplitude = []
-norm_period = []
-norm_path = []
-sysname = []
-for p in params:
-    from_um_factor.append( [pi["from_um_factor"] for pi in p] )
-    resolution.append( [pi["resolution"] for pi in p] )
-    r.append( [pi["r"] for pi in p] )
-    material.append( [pi["material"] for pi in p])
-    paper.append( [pi["paper"] for pi in p] )
-    index.append( [pi["submerged_index"] for pi in p] )
-    wlen.append( [pi["wlen"] for pi in p] )
-    cell_width.append( [pi["cell_width"] for pi in p] )
-    pml_width.append( [pi["pml_width"] for pi in p] )
-    source_center.append( [pi["source_center"] for pi in p] )
-    period_plane.append( [pi["period_plane"] for pi in p] )
-    period_line.append( [pi["period_line"] for pi in p] )
-    until_time.append( [pi["until_time"] for pi in p] )
-    time_period_factor.append( [pi["time_period_factor"] for pi in p] )
-    if not requires_normalization:
-        try:
-            norm_amplitude.append( [pi["norm_amplitude"] for pi in p] )    
-            norm_period.append( [pi["norm_period"] for pi in p] )
-            norm_path.append( [pi["norm_path"] for pi in p] )
-            requires_normalization = False
-        except:
-            norm_amplitude = []
-            norm_period = []
-            norm_path = []
-            requires_normalization = True
-    sysname.append( [pi["sysname"] for pi in p] )
-del p
 
-#%%
+# Extract elapsed time data
+elapsed_time = [[params[i][j]["elapsed_time"] for j in range(len(series[i]))] for i in range(len(series))]
+total_elapsed_time = [[sum(params[i][j]["elapsed_time"]) for j in range(len(series[i]))] for i in range(len(series))]
 
-files_line_norm = []
+# Extract RAM Data
+used_ram = [[np.array(params[i][j]["used_ram"])/(1024)**2 for j in range(len(series[i]))] for i in range(len(series))]
+total_used_ram = [[np.sum(used_ram[i][j], axis=1) for j in range(len(series[i]))] for i in range(len(series))]
+used_swap = [[params[i][j]["used_swap"] for j in range(len(series[i]))] for i in range(len(series))]
 
-for i in range(len(series)):
-    
-    files_line_norm.append([])
-    
-    for j in range(len(series[i])):
-            
-        try:
-            
-            try:
-                files_line_norm[-1].append( h5.File(file[i](series[i][j], "Field-Lines-Norm.h5"), "r") )
-                
-            except:
-                files_line_norm[-1].append( h5.File(os.path.join(norm_path[i][j], "Field-Lines-Norm.h5"), "r") )
-                
-            print(f"Loading available normfield for {i},{j}")
-        
-        except:
-            norm_path_ij = vm.check_normfield(params[i][j])
-            
-            try:
-                files_line_norm[-1].append( h5.File(os.path.join(norm_path_ij[0], "Field-Lines-Norm.h5"), "r") )
-                print(f"Loading compatible normfield for {i},{j}")
-                norm_path[i][j] = norm_path_ij
-            
-            except:
-                files_line_norm[-1].append( files_line[i][j] )
-                print(f"Using NP data for {i},{j} normalization.",
-                      "This is by all means not ideal!!",
-                      "If possible, run again these simulations.")
+# Extract some other parameters from the parameters dicts
+from_um_factor = [[params[i][j]["from_um_factor"] for j in range(len(series[i]))] for i in range(len(series))]
+resolution = [[params[i][j]["resolution"] for j in range(len(series[i]))] for i in range(len(series))]
+r = [[params[i][j]["r"] for j in range(len(series[i]))] for i in range(len(series))]
+material = [[params[i][j]["material"] for j in range(len(series[i]))] for i in range(len(series))]
+paper = [[params[i][j]["paper"] for j in range(len(series[i]))] for i in range(len(series))]
+index = [[params[i][j]["submerged_index"] for j in range(len(series[i]))] for i in range(len(series))]
+wlen = [[params[i][j]["wlen"] for j in range(len(series[i]))] for i in range(len(series))]
+cell_width = [[params[i][j]["cell_width"] for j in range(len(series[i]))] for i in range(len(series))]
+pml_width = [[params[i][j]["pml_width"] for j in range(len(series[i]))] for i in range(len(series))]
+source_center = [[params[i][j]["source_center"] for j in range(len(series[i]))] for i in range(len(series))]
+period_plane = [[params[i][j]["period_plane"] for j in range(len(series[i]))] for i in range(len(series))]
+period_line = [[params[i][j]["period_line"] for j in range(len(series[i]))] for i in range(len(series))]
+until_time = [[params[i][j]["until_time"] for j in range(len(series[i]))] for i in range(len(series))]
+time_period_factor = [[params[i][j]["time_period_factor"] for j in range(len(series[i]))] for i in range(len(series))]
+   
 
-del i, j
-                
-results_line_norm = [[ files_line_norm[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
-
-t_line_norm = [[ np.asarray(files_line_norm[i][j]["T"]) for j in range(len(series[i]))] for i in range(len(series))]
-x_line_norm = [[ np.asarray(files_line_norm[i][j]["X"]) for j in range(len(series[i]))] for i in range(len(series))]
-
-if test_param_in_params:
-    test_param = [[p[test_param_string] for p in par] for par in params]
-else:
-    test_param = [[vu.find_numbers(s)[test_param_position] for s in ser] for ser in series]
-
+# Get some more parameters, calculating them from others
 minor_division = [[fum * 1e3 / res for fum, res in zip(frum, reso)] for frum, reso in zip(from_um_factor, resolution)]
-try:
-    width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in params] 
-    effective_width_points = [[(p["cell_width"] - 2 * params["pml_width"]) * p["resolution"] for p in par] for par in params]
-except:
-    width_points = [[2*int((p["pml_width"] + p["empty_width"] + p["r"]) * p["resolution"]) for p in par] for par in params] 
-    effective_width_points = [[2*int((p["empty_width"] + p["r"]) * p["resolution"]) for p in par] for par in params]
+width_points = [[int(cell_width[i][j] * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+inner_width_points = [[int( (cell_width[i][j] - 2*pml_width[i][j]) * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
 memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
-
-elapsed_time = [[p["elapsed_time"] for p in par] for par in params]
-total_elapsed_time = [[sum(p["elapsed_time"]) for p in par] for par in params]
-
-used_ram = [[np.array(p["used_ram"])/(1024)**2 for p in par] for par in params]
-total_used_ram = [[np.sum(used_ram[i][j], axis=1) for j in range(len(series[i]))] for i in range(len(series))]
-used_swap = [[p["used_swap"] for p in par] for par in params]
 
 #%% POSITION RECONSTRUCTION
 
@@ -298,14 +269,14 @@ for i in range(len(series)):
         ind, mxs, zprof, plan = vma.get_all_field_peaks_from_yzplanes(results_plane[i][j],
                                                                     y_plane_index[i][j], z_plane_index[i][j], 
                                                                     cell_width[i][j], pml_width[i][j])
-        field_peaks_all_index[-1].append(ind)
+        field_peaks_all_index[i].append(ind)
         
         ind, mxs, zprof, plan = vma.get_single_field_peak_from_yzplanes(results_plane[i][j],
                                                                        y_plane_index[i][j], z_plane_index[i][j], 
                                                                        cell_width[i][j], pml_width[i][j])
-        field_peaks_single_index[-1].append(ind)
-        field_peaks_zprofile[-1].append(zprof)
-        field_peaks_plane[-1].append(plan)
+        field_peaks_single_index[i].append(ind)
+        field_peaks_zprofile[i].append(zprof)
+        field_peaks_plane[i].append(plan)
 del i, j, ind, mxs, zprof, plan
 
 #%% SHOW SOURCE AND FOURIER USED FOR NORMALIZATION
@@ -505,8 +476,8 @@ for i in range(len(series)):
         theory_ku = np.array([vt.E(epsilon, alpha_ku, E0, 
                                    rv, r[i][j], epsilon_ext=index[i][j]**2) 
                               for rv in rvec[i][j]])[:,-1]
-        zprofile_cm_theory[-1].append(theory_cm)
-        zprofile_ku_theory[-1].append(theory_ku)
+        zprofile_cm_theory[i].append(theory_cm)
+        zprofile_ku_theory[i].append(theory_ku)
         
 #%% PLOT MAXIMUM INTENSIFICATION PROFILE (THEORY)
 
