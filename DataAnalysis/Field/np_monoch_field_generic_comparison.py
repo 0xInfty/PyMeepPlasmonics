@@ -40,8 +40,10 @@ trs = vu.BilingualManager(english=english)
 #%% PARAMETERS
 
 # Saving directories
-folder = ["Field/NPMonoch/AuSphere/VacWatField/Vacuum", 
-          "Field/NPMonoch/AuSphere/VacWatField/Water"]
+# folder = ["Field/NPMonoch/AuSphere/VacWatField/Vacuum", 
+#           "Field/NPMonoch/AuSphere/VacWatField/Water"]
+folder = ["Field/NPMonoch/AuSphere/VacWatTest/TestEmpty/Vacuum", 
+          "Field/NPMonoch/AuSphere/VacWatTest/TestEmpty/Water"]
 home = vs.get_home()
 
 # Parameter for the test
@@ -69,69 +71,63 @@ plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/
 
 #%% LOAD DATA
 
-def file_definer(path):
-    return lambda s, n : os.path.join(path, s, n)
+#%% LOAD DATA
+
+def file_definer(path): return lambda s, n : os.path.join(path, s, n)
 
 path = [os.path.join(home, fold) for fold in folder]
 file = [file_definer(pa) for pa in path]
 
-series = []
-files_line = []
-files_plane = []
-results_line = []
-results_plane = []
-t_line = []
-x_line = []
-t_plane = []
-y_plane = []
-z_plane = []
-params = []
-
-# for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
-for i in range(len(folder)):
-
-    # path.append( os.path.join(home, f) )
-    # file.append( lambda f, s : os.path.join(path[-1], f, s) )
-    
-    series.append( os.listdir(path[i]) )
-    series[-1] = vu.filter_by_string_must(series[-1], series_must[i])
+series = [[]] * len(path)
+for i in range(len(folder)):    
+    series[i] = os.listdir(path[i])
+    series[i] = vu.filter_by_string_must(series[i], series_must[i])
     if series_mustnt[i]!="": 
-        series[-1] = vu.filter_by_string_must(series[-1], series_mustnt[i], False)
-    series[-1] = sorting_function[i](series[-1])
-    
-    files_line.append( [] )
-    files_plane.append( [] )
-    for s in series[-1]:
-        files_line[-1].append( h5.File(file[i](s, "Field-Lines.h5"), "r") )
-        files_plane[-1].append( h5.File(file[i](s, "Field-Planes.h5"), "r") )
-    del s
-    
-    results_line.append( [fi["Ez"] for fi in files_line[-1]] )
-    results_plane.append( [fi["Ez"] for fi in files_plane[-1]] )
-    params.append( [dict(fi["Ez"].attrs) for fi in files_line[-1]] )
-    
-    t_line.append( [np.asarray(fi["T"]) for fi in files_line[-1]] )
-    x_line.append( [np.asarray(fi["X"]) for fi in files_line[-1]] )
-    
-    t_plane.append( [np.asarray(fi["T"]) for fi in files_plane[-1]] )
-    y_plane.append( [np.asarray(fi["Y"]) for fi in files_plane[-1]] )
-    z_plane.append( [np.asarray(fi["Z"]) for fi in files_plane[-1]] )
-    
-    for s, p in zip(series[-1], params[-1]):
-        try:
-            f = h5.File(file[-1](s, "Resources.h5"))
-            p["used_ram"] = np.array(f["RAM"])
-            p["used_swap"] = np.array(f["SWAP"])
-            p["elapsed_time"] = np.array(f["ElapsedTime"])
-        except FileNotFoundError:
-            f = h5.File(file[-1](s, "RAM.h5"))
-            p["used_ram"] = np.array(f["RAM"])
-            p["used_swap"] = np.array(f["SWAP"])
-            p["elapsed_time"] = p["elapsed"]
-            del p["elapsed"]
-    # del s, p
+        series[i] = vu.filter_by_string_must(series[i], series_mustnt[i], False)
+    series[i] = sorting_function[i](series[i])
 del i
-            
+    
+files_line = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
+               for j in range(len(series[i]))] for i in range(len(series))]
+files_plane = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
+                for j in range(len(series[i]))] for i in range(len(series))]
+
+results_line = [[files_line[i][j]["Ez"] 
+                 for j in range(len(series[i]))] for i in range(len(series))]
+results_plane = [[files_plane[i][j]["Ez"] 
+                  for j in range(len(series[i]))] for i in range(len(series))]
+
+params = [[dict(files_line[i][j]["Ez"].attrs)
+           for j in range(len(series[i]))] for i in range(len(series))]
+
+t_line = [[np.asarray(files_line[i][j]["T"])
+           for j in range(len(series[i]))] for i in range(len(series))]
+x_line = [[np.asarray(files_line[i][j]["X"])
+           for j in range(len(series[i]))] for i in range(len(series))]
+
+t_plane = [[np.asarray(files_plane[i][j]["T"])
+            for j in range(len(series[i]))] for i in range(len(series))]
+y_plane = [[np.asarray(files_plane[i][j]["Y"])
+            for j in range(len(series[i]))] for i in range(len(series))]
+z_plane = [[np.asarray(files_plane[i][j]["Z"])
+            for j in range(len(series[i]))] for i in range(len(series))]
+
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        try:
+            f = h5.File(file[i](series[i][j], "Resources.h5"))
+            params[i][j]["used_ram"] = np.array(f["RAM"])
+            params[i][j]["used_swap"] = np.array(f["SWAP"])
+            params[i][j]["elapsed_time"] = np.array(f["ElapsedTime"])
+        except FileNotFoundError:
+            f = h5.File(file[i](series[i][j], "RAM.h5"))
+            params[i][j]["used_ram"] = np.array(f["RAM"])
+            params[i][j]["used_swap"] = np.array(f["SWAP"])
+            params[i][j]["elapsed_time"] = params["elapsed"]
+            params.pop("elapsed")
+del i, j
+           
+requires_normalization = False
 from_um_factor = []
 resolution = []
 r = []
@@ -146,7 +142,6 @@ period_plane = []
 period_line = []
 until_time = []
 time_period_factor = []
-norm_until_time = []
 norm_amplitude = []
 norm_period = []
 norm_path = []
@@ -166,14 +161,17 @@ for p in params:
     period_line.append( [pi["period_line"] for pi in p] )
     until_time.append( [pi["until_time"] for pi in p] )
     time_period_factor.append( [pi["time_period_factor"] for pi in p] )
-    try:
-        norm_until_time.append( [pi["norm_until_time"] for pi in p] )
-        norm_amplitude.append( [pi["norm_amplitude"] for pi in p] )    
-        norm_period.append( [pi["norm_period"] for pi in p] )
-        norm_path.append( [pi["norm_path"] for pi in p] )
-        requires_normalization = False
-    except:
-        requires_normalization = True
+    if not requires_normalization:
+        try:
+            norm_amplitude.append( [pi["norm_amplitude"] for pi in p] )    
+            norm_period.append( [pi["norm_period"] for pi in p] )
+            norm_path.append( [pi["norm_path"] for pi in p] )
+            requires_normalization = False
+        except:
+            norm_amplitude = []
+            norm_period = []
+            norm_path = []
+            requires_normalization = True
     sysname.append( [pi["sysname"] for pi in p] )
 del p
 
