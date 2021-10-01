@@ -422,8 +422,8 @@ def main(from_um_factor, resolution, courant,
             ax.set_aspect("equal")
             plt.xlim(-cell_width/2, cell_width/2)
             plt.ylim(-cell_width/2, cell_width/2)
-            plt.xlabel(trs.choose("Position X [Mp.u.]", "Posición X [u.Mp.]"))
-            plt.ylabel(trs.choose("Position Z [Mp.u.]", "Posición Z [u.Mp.]"))
+            plt.xlabel(trs.choose("Position X [MPu]", "Posición X [uMP]"))
+            plt.ylabel(trs.choose("Position Z [MPu]", "Posición Z [uMP]"))
             
             plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                                     f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
@@ -650,8 +650,8 @@ def main(from_um_factor, resolution, courant,
         ax.set_aspect("equal")
         plt.xlim(-cell_width/2, cell_width/2)
         plt.ylim(-cell_width/2, cell_width/2)
-        plt.xlabel(trs.choose("Position X [Mp.u.]", "Posición X [u.Mp.]"))
-        plt.ylabel(trs.choose("Position Z [Mp.u.]", "Posición Z [u.Mp.]"))
+        plt.xlabel(trs.choose("Position X [MPu]", "Posición X [uMP]"))
+        plt.ylabel(trs.choose("Position Z [MPu]", "Posición Z [uMP]"))
         
         plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                                 f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),

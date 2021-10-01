@@ -295,7 +295,7 @@ for i in range(len(series)):
 if use_units:
     plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
 else:
-    plt.xlabel(trs.choose("Wavelength [Mp.u.]", "Longitud de onda [u.Mp.]"))
+    plt.xlabel(trs.choose("Wavelength [MPu]", "Longitud de onda [uMP]"))
 plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
                       r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
 box = fig.axes[0].get_position()
@@ -473,7 +473,7 @@ def see_x_probe_fourier(i,j):
                   color=colors[k])
     plt.legend()
 
-    plt.xlabel(trs.choose("Time T [Mp.u]", "Tiempo T [u.Mp.]"))
+    plt.xlabel(trs.choose("Time T [Mp.u]", "Tiempo T [uMP]"))
     plt.ylabel(trs.choose("Normalized Electric Field\n" + r"$E_z(y=z=0)$",
                           "Campo eléctrico normalizado\n" + r"$E_z(y=z=0)$"))
         
@@ -488,7 +488,7 @@ def see_x_probe_fourier(i,j):
     plt.xlim(0,5)
     plt.legend()
     
-    plt.xlabel(trs.choose("Frequency f [Mp.u]", "Frecuencia f [u.Mp.]"))
+    plt.xlabel(trs.choose("Frequency f [Mp.u]", "Frecuencia f [uMP]"))
     plt.ylabel(trs.choose("Normalized Electric Field\n" + r"$E_z(y=z=0)$",
                           "Campo eléctrico normalizado\n" + r"$E_z(y=z=0)$"))
     
@@ -587,7 +587,7 @@ def see_x_probe(i,j):
     
     main_ax.legend()
     
-    res_ax.set_xlabel(trs.choose("Time T [Mp.u]", "Tiempo T [u.Mp.]"))
+    res_ax.set_xlabel(trs.choose("Time T [Mp.u]", "Tiempo T [uMP]"))
     res_ax.set_ylabel(trs.choose("Normalized Electric Field\n" + r"$E_z(y=z=0)$",
                                  "Campo eléctrico normalizado\n" + r"$E_z(y=z=0)$"))
     main_ax.set_ylabel(trs.choose("Normalized Electric Field\n" + r"$E_z(y=z=0)$",
@@ -825,7 +825,7 @@ for ax in axes:
     box = ax.get_position()
     box.x1 = box.x1 - .2 * (box.x1 - box.x0)
     ax.set_position(box)
-axes[-1].set_xlabel(trs.choose("Time T [Mp.u.]", "Tiempo T [u.Mp.]"))
+axes[-1].set_xlabel(trs.choose("Time T [MPu]", "Tiempo T [uMP]"))
 
 plt.legend([*lines[0], *lines[1]], 
            [*[" "]*len(series[0]), *[series_label[1](series[1][j]) for j in range(len(series[1]))]],

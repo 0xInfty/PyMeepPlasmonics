@@ -201,7 +201,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
         plt.plot(t_line_norm, source_results)
-        plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$ [a.u.]", 
                               r"Campo eléctrico $E_z(y=z=0)$ [u.a.]"))
         
@@ -240,7 +240,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
         plt.plot(t_line, sim_source_results)
-        plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$ [a.u.]", 
                               r"Campo eléctrico $E_z(y=z=0)$ [u.a.]"))
         
@@ -279,7 +279,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
         plt.plot(t_plane, zprofile_integral)
-        plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose(r"Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
                               r"Integral del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
         
@@ -290,7 +290,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
         plt.plot(t_plane, zprofile_max)
-        plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose(r"Normalized Electric Field Maximum $max[ E_z(z) ]$",
                               r"Máximo del campo eléctrico normalizado $max[ E_z(z) ]$"))
         
@@ -309,7 +309,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
         plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
         
         # plt.xlim(min(z_plane), max(z_plane))
-        plt.xlabel(trs.choose("Position Z [Mp.u.]", "Position Z [u.Mp.]"))
+        plt.xlabel(trs.choose("Position Z [MPu]", "Position Z [uMP]"))
         plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
                               r"Campo eléctrico normalizado $E_z(y=z=0)$"))
         
@@ -363,8 +363,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         cbar.set_label(trs.choose("Normalized electric field $E_z$",
                                   "Campo eléctrico normalizado $E_z$"))
             
-        plt.xlabel(trs.choose("Distance Y [Mp.u.]", "Distancia Y [u.Mp.]"))
-        plt.ylabel(trs.choose("Distance Z [Mp.u.]", "Distancia Z [u.Mp.]"))
+        plt.xlabel(trs.choose("Distance Y [MPu]", "Distancia Y [uMP]"))
+        plt.ylabel(trs.choose("Distance Z [MPu]", "Distancia Z [uMP]"))
         
         plt.savefig(sa.file("YZPlane.png"))
         
@@ -406,8 +406,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         nframes = min(maxnframes, results_plane.shape[-1])
         nframes_step = int(results_plane.shape[-1] / nframes)
         call_series = lambda i : results_plane[:,:,i]
-        label_function = lambda i : trs.choose('Tiempo: {:.1f} u.Mp.',
-                                               'Time: {:.1f} Mp.u.').format(i*period_plane)
+        label_function = lambda i : trs.choose('Tiempo: {:.1f} uMP',
+                                               'Time: {:.1f} MPu').format(i*period_plane)
         
         # Animation base
         fig = plt.figure()
@@ -431,8 +431,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
             
             ax.text(-.1, -.105, label_function(k), transform=ax.transAxes)
             plt.show()
-            plt.xlabel(trs.choose("Distance Y [Mp.u.]", "Distancia Y [u.Mp.]"))
-            plt.ylabel(trs.choose("Distance Z [Mp.u.]", "Distancia Z [u.Mp.]"))
+            plt.xlabel(trs.choose("Distance Y [MPu]", "Distancia Y [uMP]"))
+            plt.ylabel(trs.choose("Distance Z [MPu]", "Distancia Z [uMP]"))
             plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                                     f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
                          (300, 11), xycoords='figure points')
@@ -467,8 +467,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         nframes = min(maxnframes, results_plane.shape[-1])
         nframes_step = int(results_plane.shape[-1] / nframes)
         call_series = lambda i : results_plane[:,:,i]
-        label_function = lambda i : trs.choose('Tiempo: {:.1f} u.Mp.',
-                                               'Time: {:.1f} Mp.u.').format(i*period_plane)
+        label_function = lambda i : trs.choose('Tiempo: {:.1f} uMP',
+                                               'Time: {:.1f} MPu').format(i*period_plane)
         
         # Animation base
         fig = plt.figure()
@@ -485,7 +485,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
             plt.axhline(0, color="k", linewidth=1)
         
             ax.text(-.1, -.105, label_function(k), transform=ax.transAxes)
-            plt.xlabel(trs.choose("Position Z [Mp.u.]", "Position Z [u.Mp.]"))
+            plt.xlabel(trs.choose("Position Z [MPu]", "Position Z [uMP]"))
             plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(x=y=0)$",
                                   r"Campo eléctrico normalizado $E_z(x=y=0)$"))
             plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
@@ -519,8 +519,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         nframes = min(maxnframes, results_plane.shape[-1])
         nframes_step = int(results_plane.shape[-1] / nframes)
         call_series = lambda i : results_plane[:,:,i]
-        label_function = lambda i : trs.choose('Tiempo: {:.1f} u.Mp.',
-                                               'Time: {:.1f} Mp.u.').format(i*period_plane)
+        label_function = lambda i : trs.choose('Tiempo: {:.1f} uMP',
+                                               'Time: {:.1f} MPu').format(i*period_plane)
         
         # Animation base
         fig = plt.figure()
@@ -536,7 +536,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
             plt.axhline(0, color="k", linewidth=1)
         
             ax.text(-.1, -.105, label_function(k), transform=ax.transAxes)
-            plt.xlabel(trs.choose("Position X [Mp.u.]", "Position X [u.Mp.]"))
+            plt.xlabel(trs.choose("Position X [MPu]", "Position X [uMP]"))
             plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
                                   r"Campo eléctrico normalizado $E_z(y=z=0)$"))
             plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",

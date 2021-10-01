@@ -137,7 +137,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         plt.figure()        
         plt.title(plot_title_base)
         plt.plot(t_line, source_results)
-        plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$ [a.u.]", 
                               r"Campo eléctrico $E_z(y=z=0)$ [u.a.]"))
         
@@ -157,7 +157,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         if units:
             plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
         else:
-            plt.xlabel(trs.choose("Wavelength [Mp.u.]", "Longitud de onda [u.Mp.]"))
+            plt.xlabel(trs.choose("Wavelength [MPu]", "Longitud de onda [uMP]"))
 
         plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$ [u.a.]",
                               r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$ [u.a.]"))
@@ -188,8 +188,8 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         plt.figure()
         T, X = np.meshgrid(t_line, x_line_cropped)
         plt.contourf(T, X, results_cropped_line, 100, cmap='RdBu')
-        plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
-        plt.ylabel(trs.choose("X Distance [Mp.u.]", "Distancia en X [u.Mp.]"))
+        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
+        plt.ylabel(trs.choose("X Distance [MPu]", "Distancia en X [uMP]"))
         
         plt.savefig(sa.file("CroppedXAxis.png"))
         
@@ -200,8 +200,8 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         plt.hlines(-cell_width/2 + pml_width, *xlims, color="k", linestyle="dashed")
         plt.hlines(cell_width/2 - pml_width, *xlims, color="k", linestyle="dashed")
         plt.xlim(*xlims)
-        plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
-        plt.ylabel(trs.choose("X Distance [Mp.u.]", "Distancia en X [u.Mp.]"))
+        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
+        plt.ylabel(trs.choose("X Distance [MPu]", "Distancia en X [uMP]"))
         
         plt.savefig(sa.file("XAxis.png"))
     
@@ -213,8 +213,8 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         nframes = min(maxnframes, results_plane.shape[-1])
         nframes_step = int(results_plane.shape[-1] / nframes)
         call_series = lambda i : results_plane[:,:,i]
-        label_function = lambda i : trs.choose('Tiempo: {:.1f} u.Mp.',
-                                               'Time: {:.1f} Mp.u.').format(i*period_plane)
+        label_function = lambda i : trs.choose('Tiempo: {:.1f} uMP',
+                                               'Time: {:.1f} MPu').format(i*period_plane)
         
         # Animation base
         fig = plt.figure()
@@ -238,8 +238,8 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
             
             ax.text(-.1, -.105, label_function(k), transform=ax.transAxes)
             plt.show()
-            plt.xlabel(trs.choose("Distance Y [Mp.u.]", "Distancia Y [u.Mp.]"))
-            plt.ylabel(trs.choose("Distance Z [Mp.u.]", "Distancia Z [u.Mp.]"))
+            plt.xlabel(trs.choose("Distance Y [MPu]", "Distancia Y [uMP]"))
+            plt.ylabel(trs.choose("Distance Z [MPu]", "Distancia Z [uMP]"))
             if units:
                 plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                                         f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
@@ -280,8 +280,8 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         nframes = min(maxnframes, results_plane.shape[-1])
         nframes_step = int(results_plane.shape[-1] / nframes)
         call_series = lambda i : results_plane[:,:,i]
-        label_function = lambda i : trs.choose('Tiempo: {:.1f} u.Mp.',
-                                               'Time: {:.1f} Mp.u.').format(i*period_plane)
+        label_function = lambda i : trs.choose('Tiempo: {:.1f} uMP',
+                                               'Time: {:.1f} MPu').format(i*period_plane)
         
         # Animation base
         fig = plt.figure()
@@ -297,7 +297,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
             plt.axhline(0, color="k", linewidth=1)
         
             ax.text(-.1, -.105, label_function(k), transform=ax.transAxes)
-            plt.xlabel(trs.choose("Position X [Mp.u.]", "Position X [u.Mp.]"))
+            plt.xlabel(trs.choose("Position X [MPu]", "Position X [uMP]"))
             plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
                                   r"Campo eléctrico normalizado $E_z(y=z=0)$"))
             if units:

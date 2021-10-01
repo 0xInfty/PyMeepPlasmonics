@@ -280,7 +280,7 @@ for i in range(len(series)):
 if use_units:
     plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
 else:
-    plt.xlabel(trs.choose("Wavelength [Mp.u.]", "Longitud de onda [u.Mp.]"))
+    plt.xlabel(trs.choose("Wavelength [MPu]", "Longitud de onda [uMP]"))
 plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
                       r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
 plt.legend(ncol=2)

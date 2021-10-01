@@ -347,7 +347,7 @@ for i in range(len(series)):
             plt.plot(t_line[i][j]/period_results[i][j], 
                      zprofile_integral[i][j], color=colors[i][j],
                      label=series_label[i](series[i][j]))
-plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
 plt.ylabel(trs.choose(r"Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
                       r"Integral del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
 
@@ -365,7 +365,7 @@ for i in range(len(series)):
                      color=colors[i][j],
                      label=series_label[i](series[i][j]))
 # plt.plot(t_plane, zprofile_max)
-plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
 plt.ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$ [a.u.]",
                       r"Máximo del campo eléctrico $max[ E_z(z) ]$ [u.a.]"))
 

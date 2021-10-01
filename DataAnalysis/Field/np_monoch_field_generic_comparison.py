@@ -382,8 +382,8 @@ for i in range(len(series)):
     lines.append(l)
     lines2.append(l2)
 plt.xlabel(test_param_label)
-ax.set_ylabel(trs.choose("Time Minimum Division [Mp.u.]", "Mínima división del tiempo [u.Mp.]"))
-ax2.set_ylabel(trs.choose("Space Minimum Division [Mp.u.]", "Mínima división del espacio [u.Mp.]"))
+ax.set_ylabel(trs.choose("Time Minimum Division [MPu]", "Mínima división del tiempo [uMP]"))
+ax2.set_ylabel(trs.choose("Space Minimum Division [MPu]", "Mínima división del espacio [uMP]"))
 plt.legend([*lines, *lines2], [*[s + r" $\Delta t$" for s in series_legend], 
                                *[s + r" $\Delta r$" for s in series_legend]],
            ncol=2)
@@ -568,7 +568,7 @@ for i in range(len(series)):
                      zprofile_integral[i][j], color=colors[i][j],
                      label=series_legend[i] + " " + series_label[i](series[i][j]),
                      linestyle=series_linestyles[i])
-plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
 plt.ylabel(trs.choose(r"Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
                       r"Integral del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
 
@@ -591,7 +591,7 @@ for i in range(len(series)):
                      color=colors[i][j],
                      label=series_legend[i] + " " + series_label[i](series[i][j]),
                      linestyle=series_linestyles[i])
-plt.xlabel(trs.choose("Time [Mp.u.]", "Tiempo [u.Mp.]"))
+plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
 plt.ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$",
                       r"Máximo del campo eléctrico $max[ E_z(z) ]$"))
 

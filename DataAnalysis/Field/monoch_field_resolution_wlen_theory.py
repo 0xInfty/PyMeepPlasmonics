@@ -59,7 +59,7 @@ l2, = axes[0].plot(resolution_wlen, round_up_until_time, "oC1", alpha=0.3, marke
 l3, = axes[0].plot(resolution_wlen, round_down_until_time, "oC2", alpha=0.3, markersize=8, label="Round down")
 l4, = axes[0].plot(resolution_wlen[resolution_index], round_up_until_time[resolution_index], "x", color="k", markersize=10, label="Chosen")
 l0, = axes[0].plot(resolution_wlen, until_time, "-k", label="Value")
-axes[0].set_ylabel("Until time [Mp.u.]")
+axes[0].set_ylabel("Until time [MPu]")
 axes[0].grid()
 
 lines = [l0, l1, l2, l3, l4]
@@ -71,7 +71,7 @@ n3, = axes[1].plot(resolution_wlen, round_down_period_line, "oC2", alpha=0.3, ma
 n5, = axes[1].plot(resolution_wlen, minimum_division_time, "k", linestyle="dashed", label=r"Ref. $\Delta t$")
 n4, = axes[1].plot(resolution_wlen[resolution_index], round_down_period_line[resolution_index], "x", color="k", markersize=10, label="Chosen")
 n0, = axes[1].plot(resolution_wlen, period_line, "-k", label="Value")
-axes[1].set_ylabel("Period line [Mp.u.]")
+axes[1].set_ylabel("Period line [MPu]")
 axes[1].grid()
 
 new_lines = [n0, n1, n2, n3, n4, n5]
