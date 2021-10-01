@@ -14,11 +14,13 @@ import os
 import PyMieScatt as ps
 import v_analysis as va
 from v_materials import import_medium
+import v_plot as vp
 import v_save as vs
 import v_utilities as vu
 
 english = False
 trs = vu.BilingualManager(english=english)
+vp.set_style()
 
 #%% PARAMETERS
 
