@@ -723,3 +723,98 @@ def get_single_field_peak_from_yzplanes(yzplane_field,
     
     return [field_peaks_index, field_peaks_amplitude, 
             field_peaks_zprofile, field_peaks_yzplane]
+
+def get_mean_field_peak_from_yzplanes(yzplane_field,
+                                      y_plane_index, z_plane_index, 
+                                      cell_width, pml_width,
+                                      peaks_sep_sensitivity=0.05,
+                                      field_peaks_sensitivity=0.01,
+                                      last_stable_periods=5):
+    """Computes a mean maximum intensification field from a YZ planes field array.
+
+    Parameters
+    ----------
+    yzplane_field : np.array with dimension 3
+        Three-dimensional field array of shape (N,M,K) where N stands for 
+        positions in the Y axis, M stands for positions in the Z axis and K 
+        stands for different time instants.
+    y_plane_index : function
+        Function of a single argument that takes in an Y position and returns 
+        the index of the closest value.
+    z_plane_index : function
+        Function of a single argument that takes in an Z position and returns 
+        the index of the closest value.
+    cell_width : int, float
+        Cubic cell side's total length, generally expressed in Meep units to 
+        be in the same units as the `y_plane` metadata array.
+    pml_width : int, float
+        Cell's isotropic PML's width, generally expressed in Meep units to be 
+        in the same units as the `y_plane` metadata array.
+    peaks_sep_sensitivity=0.1 : float between zero and one, optional
+        A factor representing the allowed variation percentage in consecutive 
+        peaks separation. Any deviated value will be dropped.
+    field_peaks_sensitivity=0.01 : float between zero and one, optional
+        A factor representing the allowed variation percentage in the absolute 
+        amplitude of selected peaks. All values prior to a certain point will 
+        be dropped, keeping only the last values identified to be stable.
+    last_stable_periods=5 : int, optional
+        Number of periods to take as reference of the stable signal, extracted 
+        from the end as the signal is assumed to have both a transcient and a 
+        stationary regimen.
+
+    Returns
+    -------
+    field_peaks_index : int
+        Maximum intensification index k<Kfp where Kfp<K stands for the 
+        maximum intensification time instants.
+    field_peaks_amplitude : float
+        Absolute amplitude of maximum intensification corresponding to time 
+        index k<Kfp where Kfp<K stands for the maximum intensification time 
+        instants.
+    field_peaks_zprofile : np.array
+        Bidimensional cropped field array of shape (n,) where n<N stands for 
+        positions in the Z axis. It also corresponds to time index k<Kfp where 
+        Kfp<K stands for the maximum intensification time 
+        instants.
+    field_peaks_yzplane : np.array
+        Three-dimensional cropped field array of shape (n,m) where n<N 
+        stands for positions in the Y axis and m<M stands for positions in the 
+        Z axis. It also corresponds to time index k<Kfp where Kfp<K stands for 
+        the maximum intensification time 
+        
+    See also
+    --------
+    get_all_field_peaks_from_yzplanes
+    """
+    # zprofile_field has time as the last dimension
+    
+    all_index, all_amplitudes, all_zprofile, all_yzplane = get_all_field_peaks_from_yzplanes(
+        yzplane_field, y_plane_index, z_plane_index, cell_width, pml_width,
+        peaks_sep_sensitivity=peaks_sep_sensitivity, last_stable_periods=last_stable_periods)
+    
+    # Take the last periods as reference and define stability criteria
+    mean_value = np.mean( all_amplitudes[-last_stable_periods:] )
+    def selection_criteria(k):
+        eval_point = np.abs(all_amplitudes[k] - mean_value)
+        return eval_point <= field_peaks_sensitivity * mean_value
+    
+    # Choose only the latter stable periods to search for maximum amplitude
+    keep_periods_from = 0
+    for k in range(len(all_amplitudes)):
+        if not selection_criteria(k):
+            keep_periods_from = max(keep_periods_from, k+1)
+    
+    selected_index = np.arange(keep_periods_from, len(all_amplitudes))
+    
+    # maximum_index = np.argmax( all_amplitudes[keep_periods_from:] ) + keep_periods_from
+    # field_peaks_index = int(all_index[maximum_index])    
+    
+    field_peaks_amplitude = np.mean(all_amplitudes[selected_index])
+    field_peaks_zprofile = np.mean(all_zprofile[..., selected_index], axis=-1)
+    field_peaks_yzplane = np.mean(all_yzplane[..., selected_index], axis=-1)
+    
+    closest_index = np.argmin( np.abs(all_amplitudes[keep_periods_from:] - np.mean(all_amplitudes[keep_periods_from:])) ) + keep_periods_from
+    field_peaks_index = int(all_index[closest_index])
+    
+    return [field_peaks_index, field_peaks_amplitude, 
+            field_peaks_zprofile, field_peaks_yzplane]

@@ -18,6 +18,31 @@ import matplotlib.pyplot as plt
 
 #%% CUSTOMIZATION OPTIONS
 
+def set_style():
+    
+    plt.rcParams.update({'text.usetex': False, 
+                         'font.family':'serif',
+                         'font.sans-serif': ['MS Reference Sans Serif', 'sans-serif'], 
+                         'mathtext.fontset': 'cm', # Computer Modern
+                         'font.weight':500,
+                         'figure.titlesize':12,
+                         'axes.titlesize':12,
+                         'axes.labelsize':11,
+                         'legend.fontsize':11,
+                         'xtick.labelsize':10,
+                         'ytick.labelsize':10,
+                         'xtick.minor.visible':True,
+                         'ytick.minor.visible':True,
+                         'grid.alpha':0.4,
+                         'axes.grid':True,
+                         'xtick.color':'b0b0b0',
+                         'ytick.color':'b0b0b0',
+                         'xtick.labelcolor':'black',
+                         'ytick.labelcolor':'black',
+                         'legend.frameon':False,
+                         'legend.framealpha':0,
+                         })
+
 def add_style(figure_id=None, new_figure=False, **kwargs):
     """Gives a specific style to figure.
     
