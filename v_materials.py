@@ -370,7 +370,7 @@ def import_medium(material, paper="R", from_um_factor=1):
 
 #%%
     
-def recognize_material(material_or_index):
+def recognize_material(material_or_index, english=True):
     
     materials_dict = {"Vacuum": 1,
                       "Water": 1.33,
@@ -378,8 +378,12 @@ def recognize_material(material_or_index):
     materials_short_dict = {"vac": "Vacuum",
                             "wat": "Water",
                             "gl": "Glass"}
+    materials_spanish_dict = {"Vacuum": "Vacío",
+                              "Water": "Agua",
+                              "Glass": "Vidrio"}
     materials_keys = list(materials_dict.keys())
     materials_values = list(materials_dict.values())
+    materials_spanish = list(materials_spanish_dict.values())
     
     if isinstance(material_or_index, str):
         for short_key, material in materials_short_dict.items():
@@ -389,7 +393,10 @@ def recognize_material(material_or_index):
         
     elif isinstance(material_or_index, float) or isinstance(material_or_index, int):
         try:
-            return materials_keys[materials_values.index(material_or_index)]
+            if english:
+                return materials_keys[materials_values.index(material_or_index)]
+            else:
+                return materials_spanish[materials_values.index(material_or_index)]
         except:
             raise ValueError(f"Unrecognized material's index': must be in {materials_values}")
             
