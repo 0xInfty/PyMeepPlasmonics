@@ -25,7 +25,7 @@ def set_style():
                          'font.sans-serif': ['MS Reference Sans Serif', 'sans-serif'], 
                          'mathtext.fontset': 'cm', # Computer Modern
                          'font.weight':500,
-                         'figure.titlesize':12,
+                         'figure.titlesize':13,
                          'axes.titlesize':12,
                          'axes.labelsize':11,
                          'legend.fontsize':11,
