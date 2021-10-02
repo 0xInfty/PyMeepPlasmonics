@@ -457,7 +457,7 @@ for i in range(len(series)):
                  label=series_legend[i] + " " + series_label[i](series[i][j]),
                  color=colors[i][j],
                  linestyle=series_linestyles[i])
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
                       r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
 box = fig.axes[0].get_position()
@@ -548,7 +548,7 @@ for i in range(len(series)):
                  label=series_legend[i] + " " + series_label[i](series[i][j]),
                  linestyle=series_linestyles[i],
                  color=colors[i][j])
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
                       r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
 box = fig.axes[0].get_position()

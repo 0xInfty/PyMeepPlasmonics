@@ -272,7 +272,7 @@ if meep_flux:
     data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
                          box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
     
-    header_mid = ["Longitud de onda [nm]", 
+    header_mid = [r"Longitud de onda $\lambda$ [nm]", 
                   "Flujo X10 [u.a.]",
                   "Flujo X20 [u.a]",
                   "Flujo Y10 [u.a]",
@@ -316,8 +316,8 @@ if meep_flux:
     for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
         a.plot(1e3*from_um_factor/freqs, d)
         a.set_ylim(*ylims)
-    ax[-1,0].set_xlabel("Wavelength [nm]")
-    ax[-1,1].set_xlabel("Wavelength [nm]")
+    ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+    ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
     
     plt.savefig(file("MidFlux.png"))
 
@@ -500,8 +500,8 @@ for d, a in zip(fourier_lines_dots, np.reshape(ax, 6)):
     # a.yaxis.set_visible(False)
 ax[-1,0].xaxis.set_visible(True)
 ax[-1,1].xaxis.set_visible(True)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
+ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
 
 plt.savefig(file("DotsFluxFourier.png"))
 
@@ -549,8 +549,8 @@ for d, a in zip(fourier_planes, np.reshape(ax, 6)):
     # a.yaxis.set_visible(False)
 ax[-1,0].xaxis.set_visible(True)
 ax[-1,1].xaxis.set_visible(True)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
+ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
 
 plt.savefig(file("PlanesFluxFourier.png"))
 
@@ -605,8 +605,8 @@ for zoom in [False, True]:
             # a.yaxis.set_visible(False)
         ax[-1,0].xaxis.set_visible(True)
         ax[-1,1].xaxis.set_visible(True)
-        ax[-1,0].set_xlabel("Wavelength [nm]")
-        ax[-1,1].set_xlabel("Wavelength [nm]")
+        ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+        ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
         ax[0,1].text(-.37, 1.2, label_function(k), transform=ax[0,1].transAxes)
         plt.show()
         

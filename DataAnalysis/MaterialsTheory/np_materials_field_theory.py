@@ -111,7 +111,7 @@ for ax, f, t in zip(axes, functions, titles):
         ax.set_title(t)
         print(l, eps[:2])
         ax.plot(wl, f(eps), label=l, linewidth=2, alpha=tps, color=col, linestyle=lsy)
-        ax.xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+        ax.xaxis.set_label_text(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         if ax == axes[0]:
             ax.yaxis.set_label_text(trs.choose(r"Electric Permitivity $\epsilon$", 
                                                r"Permitividad eléctrica $\epsilon$"))
@@ -166,7 +166,7 @@ for ax, f, t in zip(axes, functions, titles):
         ax.set_title(t)
         print(l, eps[:10])
         ax.plot(wl, f(al), label=l, color=col, linestyle=lsy, alpha=trp, linewidth=2)
-        ax.xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+        ax.xaxis.set_label_text(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         if ax == axes[0]:
             ax.yaxis.set_label_text(trs.choose("Polarizability", "Polarizabilidad") + r" $\alpha$ [nm$^3$]")
         ax.legend()

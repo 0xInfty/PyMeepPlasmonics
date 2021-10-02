@@ -193,7 +193,7 @@ for i in range(len(series)):
                  linestyle=theory_linestyles[i], color=colors[i][j], 
                  label=trs.choose("Mie Theory ", "Teoría Mie ") + series_label[i](series[i][j]))
 
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 plt.ylabel(trs.choose("Normalized Scattering Cross Section",
                       "Sección eficaz de dispersión normalizada"))
 plt.legend(ncol=2)
@@ -222,7 +222,7 @@ for i in range(len(series)):
                  linestyle=theory_linestyles[i], color=colors[i][j], 
                  label=trs.choose("Mie Theory ", "Teoría Mie ") + series_label[i](series[i][j]))
 
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 plt.ylabel(trs.choose("Scattering Efficiency", "Eficacia de Dispersión"))
 plt.legend()
 if plot_make_big:
@@ -249,7 +249,7 @@ for i in range(len(series)):
                  linestyle=theory_linestyles[i], color=colors[i][j], 
                  label=trs.choose("Mie Theory ", "Teoría Mie ") + series_label[i](series[i][j]))
 
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 plt.ylabel(trs.choose("Scattering Cross Section [nm$^2$]",
                       "Sección eficaz de dispersión [nm$^2$]"))
 plt.legend()
@@ -269,7 +269,7 @@ plot_grid = gridspec.GridSpec(ncols=4, nrows=2, hspace=0.4, wspace=0.45, figure=
 
 main_ax = fig.add_subplot(plot_grid[:,0:2])
 main_ax.set_title(trs.choose("All Diameters", "Todos los diámetros"))
-main_ax.xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+main_ax.xaxis.set_label_text(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 main_ax.yaxis.set_label_text(trs.choose("Normalized Scattering Cross Section",
                                         "Sección eficaz de dispersión normalizada"))
         
@@ -321,7 +321,7 @@ for i in range(len(series)):
                 theory[i][j] * np.pi * (r[i][j] * from_um_factor[i][j] * 1e3)**2,
                 linestyle=theory_linestyles[i], color=colors[i][j], 
                 label=series_label[i](series[i][j]))
-        ax.xaxis.set_label_text(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+        ax.xaxis.set_label_text(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         if i == 0 and (j == 0 or j == 2):
             ax.yaxis.set_label_text(trs.choose("Vacuum \n Scattering Cross Section [nm$^2$]",
                                                "Vacío \n Sección eficaz de dispersión [nm$^2$]"))

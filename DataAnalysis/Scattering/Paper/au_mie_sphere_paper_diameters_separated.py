@@ -186,14 +186,14 @@ for ax, s, d, t, p, n, sc, psl, tsl, pc, pls, tls in zip(axes, series,
                 linestyle=tls, color=spc, label=tsl(ss))
         ax.legend()
         ax.grid(True)
-        ax.xaxis.set_label_text("Wavelength [nm]")
+        ax.xaxis.set_label_text(r"Wavelength $\lambda$ [nm]")
         ax.yaxis.set_label_text("Normalized Scattering Cross Section")
         if 1.33 <= nd < 1.34:
             ax.set_facecolor( np.array([230, 241, 255])/255 )
             # frame = leg.get_frame()
             # frame.set_facecolor( np.array([230, 241, 255])/255 )
 
-# plt.xlabel("Wavelength [nm]")
+# plt.xlabel(r"Wavelength $\lambda$ [nm]")
 # plt.ylabel("Normalized Scattering Cross Section")
 if plot_make_big:
     mng = plt.get_current_fig_manager()
@@ -231,14 +231,14 @@ for ax, s, d, t, p, n, sc, psl, tsl, pc, pls, tls in zip(axes, series,
                 linestyle=tls, color=spc, label=tsl(ss))
         ax.legend()
         ax.grid(True)
-        ax.xaxis.set_label_text("Wavelength [nm]")
+        ax.xaxis.set_label_text(r"Wavelength $\lambda$ [nm]")
         ax.yaxis.set_label_text("Scattering Efficiency")
         if 1.33 <= nd < 1.34:
             ax.set_facecolor( np.array([230, 241, 255])/255 )
             # frame = leg.get_frame()
             # frame.set_facecolor( np.array([230, 241, 255])/255 )
 
-# plt.xlabel("Wavelength [nm]")
+# plt.xlabel(r"Wavelength $\lambda$ [nm]")
 # plt.ylabel("Normalized Scattering Cross Section")
 if plot_make_big:
     mng = plt.get_current_fig_manager()
@@ -276,14 +276,14 @@ for ax, s, d, t, p, n, sc, psl, tsl, pc, pls, tls in zip(axes, series,
                 linestyle=tls, color=spc, label=tsl(ss))
         leg = ax.legend()
         ax.grid(True)
-        ax.xaxis.set_label_text("Wavelength [nm]")
+        ax.xaxis.set_label_text(r"Wavelength $\lambda$ [nm]")
         ax.yaxis.set_label_text(r"Scattering Cross Section [nm$^2$]")
         if 1.33 <= nd < 1.34:
             ax.set_facecolor( np.array([230, 241, 255])/255 )
             # frame = leg.get_frame()
             # frame.set_facecolor( np.array([230, 241, 255])/255 )
 
-# plt.xlabel("Wavelength [nm]")
+# plt.xlabel(r"Wavelength $\lambda$ [nm]")
 # plt.ylabel("Normalized Scattering Cross Section")
 if plot_make_big:
     mng = plt.get_current_fig_manager()

@@ -30,7 +30,7 @@ data[:,0] = data[:,0] * 1000 # from um to nm
 
 #%%
 
-header = ["Wavelength [nm]", "n", "k"]
+header = [r"Wavelength $\lambda$ [nm]", "n", "k"]
 
 footer = {"paper": paper,
           "wlen_range": [min(data[:,0]), max(data[:,0])],

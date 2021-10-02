@@ -361,7 +361,7 @@ for i in range(len(series)):
         if j == int( 2 * len(series[i]) / 3 ):
             series_lines.append(l)
 if use_units:
-    plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+    plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 else:
     plt.xlabel(trs.choose("Wavelength [MPu]", "Longitud de onda [uMP]"))
 plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",

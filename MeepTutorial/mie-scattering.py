@@ -147,7 +147,7 @@ params = dict(
 data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
                      box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
 
-header_mid = ["Longitud de onda [nm]", 
+header_mid = [r"Longitud de onda $\lambda$ [nm]", 
               "Flujo X10 [u.a.]",
               "Flujo X20 [u.a]",
               "Flujo Y10 [u.a]",
@@ -263,7 +263,7 @@ data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
 
 params["elapsed"] = elapsed
 
-header = ["Longitud de onda [nm]", 
+header = [r"Longitud de onda $\lambda$ [nm]", 
           "Sección eficaz efectiva (Meep) [u.a.]", 
           "Sección eficaz efectiva (Theory) [u.a.]"]
 
@@ -272,7 +272,7 @@ data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux,
                       box_z1_flux, box_z2_flux, 
                       intensity, scatt_flux, scatt_cross_section]).T
 
-header_base = ["Longitud de onda [nm]", 
+header_base = [r"Longitud de onda $\lambda$ [nm]", 
                "Flujo X10 [u.a.]",
                "Flujo X1 [u.a]",
                "Flujo X2 [u.a]",

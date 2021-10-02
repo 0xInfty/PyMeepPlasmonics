@@ -272,7 +272,7 @@ params = dict(
 data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
                      box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
 
-header_mid = ["Longitud de onda [nm]", 
+header_mid = [r"Longitud de onda $\lambda$ [nm]", 
               "Flujo X10 [u.a.]",
               "Flujo X20 [u.a]",
               "Flujo Y10 [u.a]",
@@ -299,8 +299,8 @@ for a, hm in zip(np.reshape(ax, 6), header_mid[1:]):
 for dm, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
     a.plot(1e3*from_um_factor/freqs, dm)
     a.set_ylim(*ylims)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
+ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
 
 plt.savefig(file("MidFlux.png"))
 
@@ -452,7 +452,7 @@ freqs = np.array(freqs)
 
 data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep]).T
 
-header = ["Longitud de onda [nm]", 
+header = [r"Longitud de onda $\lambda$ [nm]", 
           "Sección eficaz efectiva (Meep) [u.a.]"]
 
 data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux,
@@ -460,7 +460,7 @@ data_base = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x1_flux,
                       box_z1_flux, box_z2_flux, 
                       intensity, scatt_flux, scatt_cross_section]).T
 
-header_base = ["Longitud de onda [nm]", 
+header_base = [r"Longitud de onda $\lambda$ [nm]", 
                "Flujo X10 [u.a.]",
                "Flujo X1 [u.a]",
                "Flujo X2 [u.a]",
@@ -479,7 +479,7 @@ vs.savetxt(file("BaseResults.txt"), data_base, header=header_base, footer=params
 
 plt.figure()
 plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-plt.xlabel('Wavelength [nm]')
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel('Scattering efficiency [σ/πr$^{2}$]')
 plt.legend()
 plt.title(f'Mie Scattering of Au Ellipsoid ({ 1e3*from_um_factor*d }x' +
@@ -491,7 +491,7 @@ plt.savefig(file("ScattSpectra.png"))
 
 plt.figure()
 plt.plot(1e3*from_um_factor/freqs, 1-scatt_eff_meep,'bo-',label='Meep')
-plt.xlabel('Wavelength [nm]')
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel('Absorption efficiency [σ/πr$^{2}$]')
 plt.legend()
 plt.title(f'Absorption of Au Ellipsoid ({ 1e3*from_um_factor*d }x' +
@@ -516,7 +516,7 @@ plt.savefig(file("AbsSpectra.png"))
 # for d, a in zip(data_base[:,2:8].T, np.reshape(ax, 6)):
 #     a.plot(1e3*from_um_factor/freqs, d)
 #     a.set_ylim(*ylims)
-# ax[-1,0].set_xlabel("Wavelength [nm]")
-# ax[-1,1].set_xlabel("Wavelength [nm]")
+# ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+# ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
 
 # plt.savefig(file("FinalFlux.png"))

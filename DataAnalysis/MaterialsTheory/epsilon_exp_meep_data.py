@@ -68,7 +68,7 @@ for ax, f, t, y in zip(axes, functions, titles, ylabels):
     for wl, n, l, lst, col in zip(long_wlen, long_n, labels, linestyles, colors):
         ax.set_title(t)
         ax.plot(wl, f(n), lst, color=col, label=l)
-        ax.xaxis.set_label_text(r"Wavelength [nm]")
+        ax.xaxis.set_label_text(rr"Wavelength $\lambda$ [nm]")
         ax.yaxis.set_label_text(y)
         ax.legend()
         ax.set_xlim(min(wlens) * 1e3 * from_um_factor, 
@@ -117,7 +117,7 @@ for ax, f, t, y in zip(axes, functions, titles, ylabels):
     for wl, eps, l, lst, col in zip(long_wlen, long_epsilon, labels, linestyles, colors):
         ax.set_title(t)
         ax.plot(wl, f(eps), lst, color=col, label=l)
-        ax.xaxis.set_label_text(r"Wavelength [nm]")
+        ax.xaxis.set_label_text(rr"Wavelength $\lambda$ [nm]")
         ax.yaxis.set_label_text(y)
         ax.legend()
         ax.set_xlim(min(wlens) * 1e3 * from_um_factor, 

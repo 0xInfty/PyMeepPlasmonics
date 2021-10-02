@@ -586,7 +586,7 @@ def main(from_um_factor, resolution, courant,
         data_mid = np.array([1e3*from_um_factor/freqs, box_x1_flux0, box_x2_flux0, 
                              box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
         
-        header_mid = ["Longitud de onda [nm]", 
+        header_mid = [r"Longitud de onda $\lambda$ [nm]", 
                       "Flujo X10 [u.a.]",
                       "Flujo X20 [u.a]",
                       "Flujo Y10 [u.a]",
@@ -623,8 +623,8 @@ def main(from_um_factor, resolution, courant,
             for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
                 a.plot(data_mid[:,0], d)
                 a.set_ylim(*ylims)
-            ax[-1,0].set_xlabel("Wavelength [nm]")
-            ax[-1,1].set_xlabel("Wavelength [nm]")
+            ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+            ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
             
             plt.savefig(sa.file("MidFlux.png"))
             del fig, ax, ylims, a, h
@@ -861,7 +861,7 @@ def main(from_um_factor, resolution, courant,
 
     data = np.array([1e3*from_um_factor/freqs, scatt_eff_meep, scatt_eff_theory]).T
     
-    header = ["Longitud de onda [nm]", 
+    header = [r"Longitud de onda $\lambda$ [nm]", 
               "Sección eficaz efectiva (Meep) [u.a.]", 
               "Sección eficaz efectiva (Theory) [u.a.]"]
     
@@ -870,7 +870,7 @@ def main(from_um_factor, resolution, courant,
                           box_z1_flux, box_z2_flux, 
                           intensity, scatt_flux, scatt_cross_section]).T
     
-    header_base = ["Longitud de onda [nm]", 
+    header_base = [r"Longitud de onda $\lambda$ [nm]", 
                     "Flujo X10 [u.a.]",
                     "Flujo X1 [u.a]",
                     "Flujo X2 [u.a]",
@@ -922,7 +922,7 @@ def main(from_um_factor, resolution, courant,
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',
                  label=trs.choose('Theory', 'Teoría'))
-        plt.xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
                               'Eficiencia de scattering [σ/πr$^{2}$]'))
         plt.legend()
@@ -937,7 +937,7 @@ def main(from_um_factor, resolution, courant,
                              'Scattering de esfera de {} con diámetro {:.1f} nm'
                              ).format(material, 2*r*from_um_factor*1e3 ))
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        plt.xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
                               'Eficiencia de scattering [σ/πr$^{2}$]'))
         plt.legend()
@@ -951,7 +951,7 @@ def main(from_um_factor, resolution, courant,
                              ).format(material, 2*r*from_um_factor*1e3 ))
         plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',
                  label=trs.choose('Theory', 'Teoría'))
-        plt.xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
                               'Eficiencia de scattering [σ/πr$^{2}$]'))
         plt.legend()
@@ -973,7 +973,7 @@ def main(from_um_factor, resolution, courant,
         axes[0].legend()
         
         axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
-        axes[1].set_xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        axes[1].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
         axes[0].set_ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
                                       'Eficiencia de scattering [σ/πr$^{2}$]'))
@@ -1003,8 +1003,8 @@ def main(from_um_factor, resolution, courant,
         for d, a in zip(data_base[:,3:9].T, np.reshape(ax, 6)):
             a.plot(1e3*from_um_factor/freqs, d)
             a.set_ylim(*ylims)
-        ax[-1,0].set_xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
-        ax[-1,1].set_xlabel(trs.choose('Wavelength [nm]', 'Longitud de onda [nm]'))
+        ax[-1,0].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+        ax[-1,1].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         
         plt.savefig(sa.file("FinalFlux.png"))
     

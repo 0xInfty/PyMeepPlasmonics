@@ -241,7 +241,7 @@ for i in range(len(data)):
         axes[j].set_title(subtitles_label[i](series[i][j]))
         axes[j].grid(True)
         if j==2 or j==3:
-            axes[j].xaxis.set_label_text("Wavelength [nm]")
+            axes[j].xaxis.set_label_text(r"Wavelength $\lambda$ [nm]")
         if j==0 or j==2:
             axes[j].yaxis.set_label_text("Normalized Scattering")
         axes[j].set_xlim(450, 650)

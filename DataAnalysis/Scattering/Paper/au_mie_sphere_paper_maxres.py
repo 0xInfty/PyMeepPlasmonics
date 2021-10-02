@@ -318,7 +318,7 @@ plt.plot(jc_wlens, jc_theory / max(jc_theory),
 plt.plot(r_wlens, r_theory / max(r_theory), 
           linestyle="dashed", color='k', label="R Mie Theory")
 
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Normalized Scattering Cross Section")
 plt.legend()
 if plot_make_big:
@@ -347,7 +347,7 @@ plt.plot(jc_wlens, jc_theory,
 plt.plot(r_wlens, r_theory, 
           linestyle="dashed", color='k', label="R Mie Theory")
 
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Scattering Effiency")
 plt.legend()
 if plot_make_big:
@@ -376,7 +376,7 @@ plt.plot(jc_wlens, jc_theory  * np.pi * (r[0][0] * from_um_factor[0][0] * 1e3)**
 plt.plot(r_wlens, r_theory  * np.pi * (r[1][0] * from_um_factor[1][0] * 1e3)**2, 
           linestyle="dashed", color='k', label="R Mie Theory")
 
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
 plt.legend()
 if plot_make_big:

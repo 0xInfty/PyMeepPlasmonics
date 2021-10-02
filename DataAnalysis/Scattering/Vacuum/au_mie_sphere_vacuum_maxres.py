@@ -159,7 +159,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
             plt.plot(sd[:,0], sd[:,sc] / max(sd[:,sc]), 
                      linestyle=pls, color=spc, label=psl(ss))
 
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Normalized Scattering Cross Section")
 plt.legend()
 if plot_make_big:
@@ -183,7 +183,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
             plt.plot(sd[:,0], sd[:,sc],# / max(sd[:,sc]), 
                      linestyle=pls, color=spc, label=psl(ss))
             
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Scattering Effiency")
 plt.legend()
 if plot_make_big:
@@ -207,7 +207,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
             plt.plot(sd[:,0], sd[:,sc] * np.pi * (sp['r'] * sp['from_um_factor'] * 1e3)**2,
                      linestyle=pls, color=spc, label=psl(ss))
             
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
 plt.legend()
 if plot_make_big:

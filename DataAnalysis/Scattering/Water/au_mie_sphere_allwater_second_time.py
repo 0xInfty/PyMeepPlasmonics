@@ -58,7 +58,7 @@ for s, d, c, p in zip(series, data, colors, params):
     scatt = d[:,1] * np.pi * (p["r"] * p["from_um_factor"]) **2
     scatt = scatt
     plt.plot(d[:,0], scatt, linestyle='solid', color=c, label=series_label(s))
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Scattering Cross Section [$\mu$m$^2$]")
 plt.legend()
 vs.saveplot(file("", "AllScatt.png"), overwrite=True)

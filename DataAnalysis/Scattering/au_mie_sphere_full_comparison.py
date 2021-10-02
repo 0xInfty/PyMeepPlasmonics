@@ -187,7 +187,7 @@ plt.style.use('default')
 for mdt, d, c in zip(marian_mie_data, diameters, colors):
     plt.plot(mdt[:,0], mdt[:,1] / max(mdt[:,1]), 
              linestyle="dotted", color=c, label=f"Marian Mie {d} nm")
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Normalized Scattering [a.u.]")
 plt.xlim([450, 650])
 plt.legend(ncol=4, framealpha=1)
@@ -215,7 +215,7 @@ plt.plot(marian_exp_data[-1][:,0],
 plt.plot(marian_mie_data[-1][:,0], 
          marian_mie_data[-1][:,1] / max(marian_mie_data[-1][:,1]), 
          linestyle="dotted", color=next(colors), label="Marian Mie Water")
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Normalized Scattering [a.u.]")
 plt.xlim([450, 650])
 plt.legend(framealpha=1)
@@ -233,7 +233,7 @@ scatt = glassnwater_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
 plt.plot(marian_mie_data[-1][:,0], 
          marian_mie_data[-1][:,1] / max(marian_mie_data[-1][:,1]), 
          linestyle="dashed", color='#1f77b4', label="Mie")
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Normalized Scattering Cross Section [a.u.]")
 plt.xlim([500, 650])
 plt.legend(framealpha=1)
@@ -263,7 +263,7 @@ for d in diameters:
     plt.plot(pms_r_mie_data[index][:,0], 
              pms_r_mie_data[index][:,1] / max(pms_r_mie_data[index][:,1]), 
              linestyle="dashed", color='#1f77b4', label="PyMieScatt+Meep's R Mie")
-    plt.xlabel("Wavelength [nm]")
+    plt.xlabel(r"Wavelength $\lambda$ [nm]")
     plt.ylabel("Normalized Scattering Cross Section [a.u.]")
     plt.xlim([400, 800])
     plt.legend(framealpha=1)
@@ -291,7 +291,7 @@ for d in diameters:
     plt.plot(pms_r_mie_data[index][:,0], 
              pms_r_mie_data[index][:,1], 
              linestyle="dashed", color='#1f77b4', label="PyMieScatt+Meep's R Mie")
-    plt.xlabel("Wavelength [nm]")
+    plt.xlabel(r"Wavelength $\lambda$ [nm]")
     plt.ylabel("Scattering Effienciency [a.u.]")
     plt.xlim([400, 800])
     plt.legend(framealpha=1)
@@ -328,7 +328,7 @@ for d, ax in zip(diameters, axes_list):
     ax.plot(pms_r_mie_data[index][:,0], 
              pms_r_mie_data[index][:,1]/max(pms_r_mie_data[index][:,1]), 
              linestyle="dashed", color='#1f77b4', label="PyMieScatt+Meep's R Mie")
-    ax.xaxis.set_label_text("Wavelength [nm]")
+    ax.xaxis.set_label_text(r"Wavelength $\lambda$ [nm]")
     ax.yaxis.set_label_text("Scattering Effienciency [a.u.]")
     ax.set_xlim([400, 800])
     ax.grid()
@@ -363,7 +363,7 @@ for d, ax in zip(diameters, axes_list):
     ax.plot(pms_r_mie_data[i][:,0], 
              pms_r_mie_data[i][:,1], 
              linestyle="dashed", color='#1f77b4', label="PyMieScatt+Meep's R Mie")
-    ax.xaxis.set_label_text("Wavelength [nm]")
+    ax.xaxis.set_label_text(r"Wavelength $\lambda$ [nm]")
     ax.yaxis.set_label_text("Scattering Effienciency [a.u.]")
     ax.set_xlim([400, 800])
     ax.grid()

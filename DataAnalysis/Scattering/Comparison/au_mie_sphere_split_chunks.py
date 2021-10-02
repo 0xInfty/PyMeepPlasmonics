@@ -428,7 +428,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
 #           linestyle="dotted", color='red', label="Mie Theory Vacuum")
 plt.plot(data[-1][-1][:,0], theory[-1][-1] / max(theory[-1][-1]), 
           linestyle="dotted", color='blue', label="Mie Theory Water")
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Normalized Scattering Cross Section")
 box = fig.axes[0].get_position()
 box.x1 = box.x1 - .15 * (box.x1 - box.x0)
@@ -459,7 +459,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
 #           linestyle="dotted", color='red', label="Mie Theory Vacuum")
 plt.plot(data[-1][-1][:,0], theory[-1][-1] * np.pi * (params[-1][-1]["r"] * params[-1][-1]["from_um_factor"] * 1e3)**2,
           linestyle="dotted", color='blue', label="Mie Theory Water")
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
 box = fig.axes[0].get_position()
 box.x1 = box.x1 - .15 * (box.x1 - box.x0)
@@ -482,7 +482,7 @@ for s, d, t, p, sc, psl, pc, pls in zip(series, data, theory, params, series_col
         plt.plot(sd[:,0],  (sd[:,1] - st) * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
                  linestyle=pls, color=spc, label=psl(ss))
             
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel(r"Difference in Scattering Cross Section [nm$^2$]")
 plt.legend()
 if plot_make_big:

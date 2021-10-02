@@ -81,8 +81,8 @@ for s, di, ri, resi, fromi, unti in zip(series, data, r, resolution,
         for d, a in zip(di[:,1:].T, np.reshape(ax, 6)):
             a.plot(1e3*fromi/di[:,0], d * proposed_factor(ns, ri, resi, fromi, unti))
             a.set_ylim(*ylims)
-        ax[-1,0].set_xlabel("Wavelength [nm]")
-        ax[-1,1].set_xlabel("Wavelength [nm]")
+        ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+        ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
         
         plt.savefig(file("MidFlux{}.png".format(ns), s))
         
@@ -107,7 +107,7 @@ for ds, fromi in zip(data, from_um_factor):
     for d, a in zip(ds[:,1:].T, np.reshape(ax, 6)):
         a.plot(1e3*fromi/ds[:,0], d)
         a.set_ylim(*ylims)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
+ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
 
 plt.savefig(file("MidFlux.png"))

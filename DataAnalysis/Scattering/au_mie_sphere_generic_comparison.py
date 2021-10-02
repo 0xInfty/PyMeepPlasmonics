@@ -1121,7 +1121,7 @@ plt.plot(data[0][-1][:,0], theory[0][-1] / max(theory[0][-1]),
 plt.plot(data[-1][-1][:,0], theory[-1][-1] / max(theory[-1][-1]), 
          linestyle="dotted", color='blue', label=trs.choose("Mie Theory Water",
                                                            "Teoría de Mie en agua"))
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de Onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", "Longitud de Onda [nm]"))
 plt.ylabel(trs.choose("Normalized Scattering Cross Section",
                       "Sección eficaz de dispersión normalizada"))
 box = fig.axes[0].get_position()
@@ -1156,7 +1156,7 @@ plt.plot(data[0][-1][:,0], theory[0][-1] * np.pi * (params[0][-1]["r"] * params[
 plt.plot(data[-1][-1][:,0], theory[-1][-1] * np.pi * (params[-1][-1]["r"] * params[-1][-1]["from_um_factor"] * 1e3)**2,
          linestyle="dotted", color='blue', label=trs.choose("Mie Theory Water",
                                                            "Teoría de Mie en agua"))
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de Onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", "Longitud de Onda [nm]"))
 plt.ylabel(trs.choose(r"Scattering Cross Section [nm$^2$]",
                       r"Sección eficaz de dispersión [nm$^2$]"))
 box = fig.axes[0].get_position()
@@ -1181,7 +1181,7 @@ for s, d, t, p, sc, psl, pc, pls in zip(series, data, theory, params, series_col
         plt.plot(sd[:,0],  (sd[:,1] - st) * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
                  linestyle=pls, color=spc, label=psl(ss))
             
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de Onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", "Longitud de Onda [nm]"))
 plt.ylabel(trs.choose(r"Difference in Scattering Cross Section [nm$^2$]",
                       r"Diferencia en sección eficaz de dispersión [nm$^2$]"))
 plt.legend()

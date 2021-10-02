@@ -222,7 +222,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
 
 plt.plot(data[0][-1][:,0], theory[0][-1] / max(theory[0][-1]), 
          linestyle="dashed", color='red', label="Mie Theory")
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel("Normalized Scattering Cross Section")
 plt.legend()
 if plot_make_big:
@@ -248,7 +248,7 @@ for s, d, p, sc, psl, pc, pls in zip(series, data, params, series_column,
             
 plt.plot(data[0][-1][:,0], theory[0][-1] * np.pi * (params[0][-1]["r"] * params[0][-1]["from_um_factor"] * 1e3)**2,
          linestyle="dashed", color='red', label="Mie Theory")
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
 plt.legend()
 if plot_make_big:
@@ -272,7 +272,7 @@ for s, d, t, p, sc, psl, pc, pls in zip(series, data, theory, params, series_col
         plt.plot(sd[:,0],  (sd[:,1] - st) * np.pi * (sp["r"] * sp["from_um_factor"] * 1e3)**2,
                  linestyle=pls, color=spc, label=psl(ss))
             
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel(r"Difference in Scattering Cross Section [nm$^2$]")
 plt.legend()
 if plot_make_big:

@@ -217,7 +217,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
         plt.plot(fourier_wlen, fourier, 'k', linewidth=3)
-        plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+        plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$ [u.a.]",
                               r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$ [u.a.]"))
         
@@ -256,7 +256,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
         plt.plot(fourier_wlen, fourier, 'k', linewidth=3)
-        plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+        plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$ [u.a.]",
                               r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$ [u.a.]"))
         

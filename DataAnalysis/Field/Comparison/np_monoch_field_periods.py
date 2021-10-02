@@ -251,7 +251,7 @@ for i in range(len(series)):
         plt.plot(fourier_wlen[i][j], fourier[i][j],
                  label=series_label[i](series[i][j]),
                  color=colors[i][j])
-plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$ [u.a.]",
                       r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$ [u.a.]"))
 plt.legend(ncol=2)

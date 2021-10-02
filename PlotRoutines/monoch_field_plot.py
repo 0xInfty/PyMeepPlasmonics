@@ -155,7 +155,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         plt.title(plot_title_base)
         plt.plot(fourier_wlen, fourier, 'k')
         if units:
-            plt.xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+            plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         else:
             plt.xlabel(trs.choose("Wavelength [MPu]", "Longitud de onda [uMP]"))
 

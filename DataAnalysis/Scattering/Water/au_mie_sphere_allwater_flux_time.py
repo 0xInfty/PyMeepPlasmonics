@@ -113,8 +113,8 @@ for mflux, frqs, fum, ls in zip(midflux, freqs, from_um_factor, linestyles):
     for mf, a in zip(mflux[:,1:].T, np.reshape(ax, 6)):
         a.plot(1e3*fum/frqs, mf, ls)
         a.set_ylim(*ylims)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
+ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
 
 a.legend(["Old Time", "New Time"])
 
@@ -148,8 +148,8 @@ for eflux, frqs, fum, ls in zip(endflux, freqs, from_um_factor, linestyles):
     for ef, a in zip(eflux[:,2:8].T, np.reshape(ax, 6)):
         a.plot(1e3*fum/frqs, ef, ls)
         a.set_ylim(*ylims)
-ax[-1,0].set_xlabel("Wavelength [nm]")
-ax[-1,1].set_xlabel("Wavelength [nm]")
+ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
+ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
 
 a.legend(["Old Time", "New Time"])
 
@@ -174,7 +174,7 @@ linestyles = ["-c", ":k"]
 plt.figure()
 for wl, d, rd, fum, ls in zip(wlens, data, r, from_um_factor, linestyles):
     plt.plot(wl, d[:,1] * np.pi * (fum * rd * 1e3)**2, ls)
-plt.xlabel("Wavelength [nm]")
+plt.xlabel(r"Wavelength $\lambda$ [nm]")
 plt.ylabel(r"Scattering Cross Section [nm$^2$]")
 plt.ylim(*ylims)
 plt.legend(["Old Time", "New Time"])
