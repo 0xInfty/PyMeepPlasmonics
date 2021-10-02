@@ -278,11 +278,13 @@ zprofile_max = [[vma.find_zpeaks_zprofile(zprofile_results[i][j], z_plane_index[
 
 field_peaks_all_index = []
 field_peaks_single_index = []
+field_peaks_single_amplitude = []
 field_peaks_zprofile = []
 field_peaks_plane = []
 for i in range(len(series)):
     field_peaks_all_index.append([])
     field_peaks_single_index.append([])
+    field_peaks_single_amplitude.append([])
     field_peaks_zprofile.append([])
     field_peaks_plane.append([])
     for j in range(len(series[i])):
@@ -296,6 +298,7 @@ for i in range(len(series)):
                                                                       y_plane_index[i][j], z_plane_index[i][j], 
                                                                       cell_width[i][j], pml_width[i][j])
         field_peaks_single_index[i].append(ind)
+        field_peaks_single_amplitude[i].append(mxs)
         field_peaks_zprofile[i].append(zprof)
         field_peaks_plane[i].append(plan)
 del i, j, ind, mxs, zprof, plan
@@ -370,23 +373,31 @@ plt.savefig(plot_file("TimePoints.png"))
 fig = plt.figure()
 ax = plt.subplot()
 ax2 = plt.twinx()
-lines, lines2 = [], []
+lines, lines2, lines3 = [], [], []
 for i in range(len(series)):
     l, = ax.plot(test_param[i],
                  [params[i][j]["courant"]/resolution[i][j] for j in range(len(series[i]))], 
                  series_markers[i], color=series_colors[i], alpha=0.5,
                  markersize=series_markersizes[i])
+    l3, = ax.plot(test_param[i],
+                 [period_line[i][j] for j in range(len(series[i]))], 
+                 series_markers[i], color=series_colors[i], alpha=0.5,
+                 markersize=series_markersizes[i], fillstyle="top")
     l2, = ax.plot(test_param[i],
                   [1/resolution[i][j] for j in range(len(series[i]))], 
-                  series_markers[i], color=series_colors[i], fillstyle="none")
+                  series_markers[i], color=series_colors[i], fillstyle="none",
+                  markersize=series_markersizes[i])
     lines.append(l)
     lines2.append(l2)
+    lines3.append(l3)
 plt.xlabel(test_param_label)
 ax.set_ylabel(trs.choose("Time Minimum Division [MPu]", "Mínima división del tiempo [uMP]"))
 ax2.set_ylabel(trs.choose("Space Minimum Division [MPu]", "Mínima división del espacio [uMP]"))
-plt.legend([*lines, *lines2], [*[s + r" $\Delta t$" for s in series_legend], 
-                               *[s + r" $\Delta r$" for s in series_legend]],
-           ncol=2)
+plt.legend([*lines, *lines3, *lines2], 
+           [*[s + r" $\Delta t$" for s in series_legend], 
+           *[s + r" $\Delta t_{line}$" for s in series_legend],
+           *[s + r" $\Delta r$" for s in series_legend]],
+           ncol=3)
 plt.savefig(plot_file("MinimumDivision.png"))
 
 fig, [ax, ax2] = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
@@ -602,6 +613,25 @@ leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right
 
 fig.set_size_inches([9.28, 4.8])
 plt.savefig(plot_file("Maximum.png"))
+
+#%%
+
+plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+for i in range(len(series)):
+    plt.plot(test_param[i], 
+             field_peaks_single_amplitude[i], 
+             color=series_colors[i], marker=series_markers[i], alpha=0.4,
+             linestyle="", markeredgewidth=0, markersize=series_markersizes[i])
+plt.axhline(0, color="k", linewidth=0.5, label="")
+plt.legend(series_legend)
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$",
+                      r"Máximo del campo eléctrico $max[ E_z(z) ]$"))
+
+plt.tight_layout()
+vs.saveplot(plot_file("MaximumTestParam.png"), overwrite=True)
 
 #%% GET THEORY (SCATTERING)
 

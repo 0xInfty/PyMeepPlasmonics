@@ -24,7 +24,7 @@ syshome = vs.get_sys_home()
 #%% PARAMETERS
 
 r = 30 # nm
-material = "Ag"
+material = "Au"
 wlen_range = np.array([300, 800])
 wlen_chosen = [405, 532, 642]
 submerged_index = 1.33 # Water
@@ -147,8 +147,8 @@ titles = trs.choose([r"Absolute value |$\alpha$|", r"Real part $\Re$e$(\alpha$)"
                     [r"Valor absoluto |$\alpha$|", r"Parte real $\Re$e$(\alpha)$", r"Parte imaginaria $\Im$m$(\alpha$)"])
 wlen_alpha = [*[wlen]*4]
 alpha = [*alpha_cm, *alpha_k]
-labels = ["Meep: Claussius-Mosotti", "J&C: Claussius-Mosotti", 
-          "Meep: Kuwata", "J&C: Kuwata"]
+labels = ["Meep R: Claussius-Mosotti", "RIinfo J&C: Claussius-Mosotti", 
+          "Meep R: Kuwata", "RIinfo J&C: Kuwata"]
 
 nplots = len(functions)
 fig, axes = plt.subplots(ncols=nplots, sharex=True, sharey=True, 
@@ -207,12 +207,10 @@ for wl in wlen_chosen:
         np.array([vt.E(e_exp_jc_chosen, a_k_exp_jc_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
 
-E_chosen = [E_cm_meep_r_chosen, E_k_meep_r_chosen,
-            E_cm_exp_jc_chosen, E_k_exp_jc_chosen]
-E_labels = ["Meep + Claussius-Mosotti",
-            "Meep + Kuwata",
-            "Johnson + Claussius-Mossetti",
-            "Johnson + Kuwata"]
+E_chosen = [E_cm_meep_r_chosen, E_cm_exp_jc_chosen,
+            E_k_meep_r_chosen, E_k_exp_jc_chosen]
+E_labels = ["Meep R: Claussius-Mosotti", "RIinfo J&C: Claussius-Mosotti", 
+            "Meep R: Kuwata", "RIinfo J&C: Kuwata"]
 # E_plane_cm_meep = np.array([E(epsilon_meep, alpha_cm_meep, E0, rv) for rv in rvec])
 # First index: position
 # Second index: wavelength
@@ -229,19 +227,24 @@ colors = ["C0", "C3"]*2
 linestyles = [*["solid"]*2, *["dotted"]*2]
 transparencies = [*[.5]*2, *[1]*2]
 
+sample_r_factor = 3
+
 plt.suptitle(plot_title)
 for i in range(n):
     axes[i].set_title(f'$\lambda$={wlen_chosen[i]:1.0f} nm')
     for j in range(len(E_labels)):
         axes[i].axvline(-r, color="grey", linestyle="dotted", label="", alpha=0.5)
         axes[i].axvline(r, color="grey", linestyle="dotted", label="", alpha=0.5)
-        axes[i].axvline(-2.5*r, color="grey", linestyle="dotted", label="", alpha=0.5)
-        axes[i].axvline(2.5*r, color="grey", linestyle="dotted", label="", alpha=0.5)
-        # axes[i].axhline(-2.5*r, color="grey", linestyle="dotted", label="", alpha=0.5)
-        # axes[i].axhline(2.5*r, color="grey", linestyle="dotted", label="", alpha=0.5)
+        axes[i].axvline(-sample_r_factor*r, color="grey", linestyle="dotted", label="", alpha=0.5)
+        axes[i].axvline(sample_r_factor*r, color="grey", linestyle="dotted", label="", alpha=0.5)
+        axes[i].axhline(np.abs(E_chosen[j][i][np.argmin(np.abs( rvec[:,2] + sample_r_factor*r ) ),2]), 
+                        color=colors[j], linestyle=linestyles[j], label="", 
+                        alpha=0.2)
+        # axes[i].axhline(np.abs(E_chosen[j][i][np.argmin(np.abs( rvec[:,2] - 2.5*r ) ),2]), 
+        #                 color="grey", linestyle="dotted", label="", alpha=0.5)
         axes[i].plot(rvec[:,2], np.abs(E_chosen[j][i][:,2]),
                      color=colors[j], linestyle=linestyles[j],
-                     alpha=transparencies[j], linewidth=2, label=E_labels[i])
+                     alpha=transparencies[j], linewidth=2, label=E_labels[j])
     axes[i].set_xlabel(trs.choose(r"Position $Z$ [nm]", r"Posición $Z$ [nm]"))
     if i==0:
         axes[i].set_ylabel(trs.choose(r"Electric field $E_z$", "Campo eléctrico $E_z$"))
