@@ -469,14 +469,14 @@ def round_to_multiple(numerator, denominator, round_up=False, round_down=False):
     if sign == -1: result = min(result, -denominator)
     else: result = max(result, denominator)
     
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        try:
-            decimals = int(abs(np.floor(np.log10( abs(denominator - int(denominator)) ))))
-            result = np.round(result, decimals)
-        except:
-            decimals = 0
-            result = int(result)
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter("ignore")
+    #     try:
+    #         decimals = int(abs(np.floor(np.log10( abs(denominator - int(denominator)) ))))
+    #         result = np.round(result, decimals)
+    #     except:
+    #         decimals = 0
+    #         result = int(result)
     
     return result
 
