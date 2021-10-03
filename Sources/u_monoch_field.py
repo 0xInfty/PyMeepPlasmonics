@@ -172,14 +172,18 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
                f"{from_um_factor*1e3:.0f} nm with {wlen * from_um_factor * 1e3} nm wavelength")
     else:
         wlen = 1 # Wavelength is 1 Meep Unit, to make it simple
-        resolution = resolution_wlen
+        if wlen_in_vacuum:
+            resolution = resolution_wlen # Divide wlen in vacuum in resolution_wlen pieces
+        else:
+            resolution = int(round(resolution_wlen * submerged_index / wlen)) # Divide wlen in medium instead
+            resolution_wlen = wlen * resolution / submerged_index
         from_um_factor = 1e3
         if wlen_in_vacuum:
             log_text = "vacuum"
         else:
             log_text = "medium"
-        pm.log(f"Running without units: {resolution:.0f} points in a {log_text} wavelength")
-    period = submerged_index * wlen
+        pm.log(f"Running without units: {resolution_wlen:.1f} points in a {log_text} wavelength")
+    period = wlen
     
     # Space configuration
     if wlen_in_vacuum:
@@ -190,9 +194,9 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     cell_width = 2 * (pml_width + empty_width)
     
     # Time configuration
-    until_time = time_period_factor * wlen # I want a certain number of periods in the source
-    period_line = wlen / n_period_line # Now I want a certain number of instants in the period of the source
-    period_plane = wlen / n_period_plane # If I use period instead of wlen, the discretization will be different
+    until_time = time_period_factor * period # I want a certain number of periods in the source
+    period_line = period / n_period_line # Now I want a certain number of instants in the period of the source
+    period_plane = period / n_period_plane # If I use period instead of wlen, the discretization will be different
     
     # Saving directories
     sa = vm.SavingAssistant(series, folder)
@@ -215,17 +219,17 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     ### ROUND UP ACCORDING TO GRID DISCRETIZATION
         
-    # pml_width = vu.round_to_multiple(pml_width, 1/resolution)
-    # cell_width = vu.round_to_multiple(cell_width/2, 1/resolution)*2
-    # empty_width = cell_width/2 - pml_width
+    pml_width = vu.round_to_multiple(pml_width, 1/resolution)
+    cell_width = vu.round_to_multiple(cell_width/2, 1/resolution)*2
+    empty_width = cell_width/2 - pml_width
     if centered_source: 
         source_center = 0
     else:
         source_center = -0.5*cell_width + pml_width
     
-    # until_time = vu.round_to_multiple(until_time, courant/resolution, round_up=True)
-    # period_line = vu.round_to_multiple(period_line, courant/resolution, round_down=True)
-    # period_plane = vu.round_to_multiple(period_plane, courant/resolution, round_down=True)
+    until_time = vu.round_to_multiple(until_time, courant/resolution, round_up=True)
+    period_line = vu.round_to_multiple(period_line, courant/resolution, round_down=True)
+    period_plane = vu.round_to_multiple(period_plane, courant/resolution, round_down=True)
     
     ### DEFINE OBJETS
     
