@@ -37,7 +37,6 @@ english = False
 trs = vu.BilingualManager(english=english)
 vp.set_style()
 
-
 #%% PARAMETERS
 
 # Saving directories
@@ -54,14 +53,14 @@ test_param_in_series = True
 test_param_in_params = True
 test_param_position = 0
 test_param_label = trs.choose(r"Resolution [points/$\lambda$]", 
-                              r"Resolución [points/$\lambda$]")
+                              r"Resolución [puntos/$\lambda$]")
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*3
 series_label = [*[lambda s : " "]*2,
                 lambda s : trs.choose("Resolution ", "Resolución ") + rf"{vu.find_numbers(s)[test_param_position]:.0f}"]
-series_must = [""]*2 # leave "" per default
-series_mustnt = ["Weird"]*2 # leave "" per default
+series_must = [""]*3 # leave "" per default
+series_mustnt = [""]*3 # leave "" per default
 
 # Scattering plot options
 plot_title_base = trs.choose('Dimnesionless monochromatic wave', 
@@ -73,7 +72,7 @@ series_colors = ["red", "blue", "limegreen"]
 series_markers = ["o", "o", "o"]
 series_linestyles = ["solid"]*3
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/Sources/MonochPlanewave/TestRes/TestRes" + n)
+plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/Sources/MonochPlanewave/TestRes/Saturation/TestRes" + n)
 
 #%% LOAD DATA
 
@@ -250,6 +249,39 @@ colors = [sc(np.linspace(0,1,len(s)+2))[2:]
 
 #%% BASIC CONTROL
 
+fig = plt.figure()
+ax = plt.subplot()
+ax2 = plt.twinx()
+lines, lines2, lines3 = [], [], []
+for i in range(len(series)):
+    l, = ax.plot(test_param[i],
+                 [params[i][j]["courant"]/params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+    l2, = ax.plot(test_param[i],
+                  [1/params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], fillstyle="none")
+    l3, = ax.plot(test_param[i],
+                 [period_line[i][j] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5, fillstyle="top")
+    lines.append(l)
+    lines2.append(l2)
+    lines3.append(l3)
+plt.xlabel(test_param_label)
+ax.set_ylabel(trs.choose("Time Minimum Division [MPu]", "Mínima división del tiempo [uMP]"))
+ax2.set_ylabel(trs.choose("Space Minimum Division [MPu]", "Space división del tiempo [uMP]"))
+plt.legend([*lines, *lines3, *lines2], 
+           [*[s + r" $\Delta t$" for s in series_legend], 
+            *[s + r" $\Delta t_{line}$" for s in series_legend],
+            *[s + r" $\Delta r$" for s in series_legend]])
+plt.savefig(plot_file("MinimumDivision.png"))
+
+plt.figure()
+for i in range(len(series)):
+    plt.plot(test_param[i],
+             [params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Resolution", "Resolución") + r" [points/$\Delta r$]")
+# plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
+plt.legend(series_legend)
+plt.savefig(plot_file("Resolution.png"))
+
 plt.figure()
 for i in range(len(series)):        
     plt.plot(test_param[i],
@@ -273,42 +305,46 @@ plt.legend(series_legend)
 
 plt.savefig(plot_file("InnerPoints.png"))
 
+these_markersize = [6,7,8]
 plt.figure()
-for i in range(len(series)):
-    plt.plot(test_param[i],
-             [results_line[i][j].shape[-1] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
-plt.xlabel(test_param_label)
-plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
-plt.legend(series_legend)
-
-plt.savefig(plot_file("TimePoints.png"))
-
-fig = plt.figure()
-ax = plt.subplot()
-ax2 = plt.twinx()
 lines, lines2 = [], []
 for i in range(len(series)):
-    l, = ax.plot(test_param[i],
-                 [params[i][j]["courant"]/params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
-    l2, = ax.plot(test_param[i],
-                  [1/params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], fillstyle="none")
+    l, = plt.plot(test_param[i],
+                  [until_time[i][j]/period_line[i][j] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5, markersize=these_markersize[i]+1, markeredgewidth=0)
+    l2, = plt.plot(test_param[i],
+                   [results_line[i][j].shape[-1] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=1, fillstyle="none", markersize=these_markersize[i])
     lines.append(l)
     lines2.append(l2)
 plt.xlabel(test_param_label)
-ax.set_ylabel(trs.choose("Time Minimum Division [MPu]", "Mínima división del tiempo [uMP]"))
-ax2.set_ylabel(trs.choose("Space Minimum Division [MPu]", "Space división del tiempo [uMP]"))
-plt.legend([*lines, *lines2], [*[s + r" $\Delta t$" for s in series_legend], 
-                               *[s + r" $\Delta r$" for s in series_legend]])
-plt.savefig(plot_file("MinimumDivision.png"))
+plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
+plt.legend(series_legend)
+plt.legend([*lines, *lines2], 
+           [*[s + trs.choose(" Predicted Points", " predicción") for s in series_legend], 
+            *[s + trs.choose(" Actual Points", " realidad") for s in series_legend]])
+
+plt.savefig(plot_file("TimePoints.png"))
+
+#%% SPECIFIC CONTROL: TIME VARIABLES
 
 plt.figure()
 for i in range(len(series)):
     plt.plot(test_param[i],
-             [params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+             [until_time[i][j] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
 plt.xlabel(test_param_label)
-plt.ylabel(trs.choose("Resolution", "Resolución") + r" [points/$\Delta r$]")
-# plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
+plt.ylabel(trs.choose("Simulation time [MPu]", "Tiempo de simulación [uMP]"))
 plt.legend(series_legend)
+
+plt.savefig(plot_file("UntilTime.png"))
+
+plt.figure()
+for i in range(len(series)):
+    l, = plt.plot(test_param[i],
+                  [period_line[i][j] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Line period [MPu]", "Período de líneas [uMP]"))
+plt.legend(series_legend)
+
+plt.savefig(plot_file("PeriodLine.png"))
 
 #%% SHOW SOURCE AND FOURIER USED FOR NORMALIZATION
 
@@ -437,8 +473,8 @@ for i in range(len(series)):
              markersize=8, linestyle="", markeredgewidth=0)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
-plt.ylabel(trs.choose("Maximum percentual variation in amplitude ", 
-                      "Diferencia porcentual máxima en amplitud ") + 
+plt.ylabel(trs.choose("Maximum percentual variation in amplitude\n", 
+                      "Diferencia porcentual máxima en amplitud\n") + 
            r"$\max[ E_z(y=z=0) ]$ [%]")
            # r"$\frac{\max|E^{max}|_i - \min|E^{max}|_i}{\min|E^{max}|_i}$")
 vs.saveplot(plot_file("AmpVariation.png"), overwrite=True)
@@ -722,8 +758,8 @@ plt.legend()
 plt.xlabel(test_param_label)
 plt.ylabel(trs.choose("Electric Field Noise Difference\n", 
                       "Diferencia de ruido en campo eléctrico\n") + 
-           trs.choose(r"${E_z}^{noise}(x=\Delta X/2) - {E_z}^{noise}(x=-\Delta X/2)$",
-                      r"${E_z}^{ruido}(x=\Delta X/2) - {E_z}^{ruido}(x=-\Delta X/2)$") )
+           trs.choose(r"${E_z}^{noise}(x=x_f) - {E_z}^{noise}(x=x_0)$",
+                      r"${E_z}^{ruido}(x=x_f) - {E_z}^{ruido}(x=x_0)$") )
 plt.tight_layout()
 
 vs.saveplot(plot_file("NoiseDifVsXVsResolution.png"), overwrite=True)

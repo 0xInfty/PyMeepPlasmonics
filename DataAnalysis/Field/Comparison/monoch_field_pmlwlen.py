@@ -720,8 +720,8 @@ plt.legend()
 plt.xlabel(test_param_label)
 plt.ylabel(trs.choose("Electric Field Noise Difference\n", 
                       "Diferencia de ruido en campo eléctrico\n") + 
-           trs.choose(r"${E_z}^{noise}(x=\Delta X/2) - {E_z}^{noise}(x=-\Delta X/2)$",
-                      r"${E_z}^{ruido}(x=\Delta X/2) - {E_z}^{ruido}(x=-\Delta X/2)$") )
+           trs.choose(r"${E_z}^{noise}(x=x_f) - {E_z}^{noise}(x=x_0)$",
+                      r"${E_z}^{ruido}(x=x_f) - {E_z}^{ruido}(x=x_0)$") )
 plt.tight_layout()
 
 vs.saveplot(plot_file("NoiseDifVsXVsResolution.png"), overwrite=True)

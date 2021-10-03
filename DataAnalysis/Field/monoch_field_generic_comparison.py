@@ -19,21 +19,17 @@ else:
 import sys
 sys.path.append(syshome)
 
-import imageio as mim
+# import imageio as mim
 import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import matplotlib.gridspec as gridspec
-from matplotlib.ticker import AutoMinorLocator
 from matplotlib.colors import colorConverter
 import os
 import v_analysis as va
-import v_materials as vmt
-import v_meep as vm
 import v_meep_analysis as vma
 import v_plot as vp
-import v_theory as vt
 import v_save as vs
 import v_utilities as vu
 
@@ -726,8 +722,8 @@ plt.legend()
 plt.xlabel(test_param_label)
 plt.ylabel(trs.choose("Electric Field Noise Difference\n", 
                       "Diferencia de ruido en campo eléctrico\n") + 
-           trs.choose(r"${E_z}^{noise}(x=\Delta X/2) - {E_z}^{noise}(x=-\Delta X/2)$",
-                      r"${E_z}^{ruido}(x=\Delta X/2) - {E_z}^{ruido}(x=-\Delta X/2)$") )
+           trs.choose(r"${E_z}^{noise}(x=x_f) - {E_z}^{noise}(x=x_0)$",
+                      r"${E_z}^{ruido}(x=x_f) - {E_z}^{ruido}(x=x_0)$") )
 plt.tight_layout()
 
 vs.saveplot(plot_file("NoiseDifVsXVsResolution.png"), overwrite=True)

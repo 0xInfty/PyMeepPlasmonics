@@ -44,7 +44,9 @@ round_up_period_line = np.array([vu.round_to_multiple(period_line[k], courant[k]
 round_down_period_line = np.array([vu.round_to_multiple(period_line[k], courant[k]/resolution[k], round_down=True) for k in range(len(resolution_wlen))]) # chosen
 round_period_line = np.array([vu.round_to_multiple(period_line[k], courant[k]/resolution[k]) for k in range(len(resolution_wlen))])
 
-round_down_period_plane = np.array([vu.round_to_multiple(period_plane[k], courant[k]/resolution[k], round_down=True) for k in range(len(resolution_wlen))])
+round_up_period_line = np.array([max(round_up_period_line[k], wlen[k]/n_period_line[k]) for k in range(len(resolution_wlen))])
+round_down_period_line = np.array([max(round_down_period_line[k], wlen[k]/n_period_line[k]) for k in range(len(resolution_wlen))])
+round_period_line = np.array([max(round_period_line[k], wlen[k]/n_period_line[k]) for k in range(len(resolution_wlen))])
 
 round_up_t_points_line = np.round( round_up_until_time / round_down_period_line ) # chosen
 round_down_t_points_line = np.round( round_down_until_time / round_up_period_line )

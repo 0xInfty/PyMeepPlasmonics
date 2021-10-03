@@ -614,7 +614,7 @@ leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right
 fig.set_size_inches([9.28, 4.8])
 plt.savefig(plot_file("Maximum.png"))
 
-#%%
+#%% MAXIMUM WAVELENGTH VS TEST PARAMETER
 
 plt.figure()
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
@@ -915,9 +915,17 @@ plt.savefig(plot_file("FieldPlaneAll.png"))
 
 #%% PLOT PROFILE AND PLANE (SUBPLOTS)
 
-fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
-axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
-                    gridspec_kw={"wspace":0, "hspace":0})
+vertical_plot = False
+
+if vertical_plot:
+    fig = plt.figure(figsize=(n*subfig_size, m*subfig_size))
+    axes = fig.subplots(ncols=n, nrows=m, sharex=True, sharey=True, 
+                        gridspec_kw={"wspace":0, "hspace":0})
+    axes = axes.T
+else:
+    fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
+    axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
+                        gridspec_kw={"wspace":0, "hspace":0})
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
 
@@ -959,21 +967,33 @@ for i in range(len(series)):
         axes[i][j].axvline(0, color="k", linewidth=.5)
         axes[i][j].set_xlim(xlims)
         axes[i][j].set_title(series_label[i](series[i][j]))
-        if i==len(series)-1:
-            axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-        if j==0:
-            axes[i][j].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
-                                              r"Campo eléctrico $E_z(y=z=0)$"))
-        # else:
-        #     axes[i][j].set_ytick_labels([])
+        
+        if vertical_plot:
+            if j==len(series[i])-1:
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+            if i==0:
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                                                  r"Campo eléctrico $E_z(y=z=0)$"))
+        else:
+            if i==len(series)-1:
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+            if j==0:
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                                                  r"Campo eléctrico $E_z(y=z=0)$"))
         
         axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].grid(True, axis="y", which="both", alpha=.3)
-        if i==0:
-            axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = 1.02)
+        if vertical_plot:
+            if i==0:
+                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = 1.02)
+            elif i==len(series)-1:
+                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = -.25)
         else:
-            axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = -.25)
+            if j==0:
+                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = 1.02)
+            elif j==len(series[i])-1:
+                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = -.25)
         
         ax_field = vp.add_subplot_axes(axes[i][j], field_area)
         axes_field[-1].append(ax_field)
@@ -989,7 +1009,9 @@ for i in range(len(series)):
         ax_field.set_yticks([])
         
         if i==len(series)-1 and j==len(series[i])-1:
-            cax = axes[i][j].inset_axes([1.04, 0, 0.07, n], #[1.04, 0, 0.07, 1], 
+            if vertical_plot: ncax=m
+            else: ncax=n
+            cax = axes[i][j].inset_axes([1.04, 0, 0.07, ncax], #[1.04, 0, 0.07, 1], 
                                         transform=axes[i][j].transAxes)
             cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
             cbar.set_label(trs.choose("Electric field $E_z$",
