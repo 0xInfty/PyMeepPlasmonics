@@ -42,9 +42,12 @@ vp.set_style()
 # Saving directories
 # folder = ["Field/Sources/MonochPlanewave/TestRes/Not Centered/Vacuum",
 #           "Field/Sources/MonochPlanewave/TestRes/Not Centered/Water"]
-folder = ["Field/Sources/MonochPlanewave/TestSaturation/Vacuum",
-          "Field/Sources/MonochPlanewave/TestSaturation/Water",
-          "Field/Sources/MonochPlanewave/TestSaturation/WlenInMedium"]
+# folder = ["Field/Sources/MonochPlanewave/TestSaturation/Vacuum",
+#           "Field/Sources/MonochPlanewave/TestSaturation/Water",
+#           "Field/Sources/MonochPlanewave/TestSaturation/WlenInMedium"]
+folder = ["Field/Sources/MonochPlanewave/TestNewWlenInMed/Vacuum",
+          "Field/Sources/MonochPlanewave/TestNewWlenInMed/Water",
+          "Field/Sources/MonochPlanewave/TestNewWlenInMed/WlenInMedium"]
 home = vs.get_home()
 
 # Parameter for the test
@@ -57,10 +60,9 @@ test_param_label = trs.choose(r"Resolution [points/$\lambda$]",
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*3
-series_label = [*[lambda s : " "]*2,
-                lambda s : trs.choose("Resolution ", "Resolución ") + rf"{vu.find_numbers(s)[test_param_position]:.0f}"]
+series_label = [lambda s : trs.choose("Resolution ", "Resolución ") + rf"{vu.find_numbers(s)[test_param_position]:.0f}"]*3
 series_must = [""]*3 # leave "" per default
-series_mustnt = [""]*3 # leave "" per default
+series_mustnt = [["170", "180"]]*3 # leave "" per default
 
 # Scattering plot options
 plot_title_base = trs.choose('Dimnesionless monochromatic wave', 
@@ -70,9 +72,15 @@ series_legend = trs.choose(["Vacuum", r"Water $\lambda_{ref}$ in Vacuum", "Water
 series_colormaps = [plab.cm.Reds, plab.cm.Blues, plab.cm.YlGn]
 series_colors = ["red", "blue", "limegreen"]
 series_markers = ["o", "o", "o"]
+series_markersize = [8, 7, 6]
 series_linestyles = ["solid"]*3
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/Sources/MonochPlanewave/TestRes/Saturation/TestRes" + n)
+plot_folder = "DataAnalysis/Field/Sources/MonochPlanewave/TestRes/NewWlenInMed"
+
+force_normalization = True
+periods_sensitivity = 0.12 # 0.05
+amplitude_sensitivity = 0.06 # 0.05
+peaks_sep_sensitivity = 0.2 # 0.1
 
 #%% LOAD DATA
 
@@ -92,7 +100,7 @@ del i
     
 files_line = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
                for j in range(len(series[i]))] for i in range(len(series))]
-files_plane = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
+files_plane = [[h5.File(file[i](series[i][j], "Field-Planes.h5"), "r") 
                 for j in range(len(series[i]))] for i in range(len(series))]
 
 results_line = [[files_line[i][j]["Ez"] 
@@ -131,6 +139,7 @@ for i in range(len(series)):
 del i, j
             
 requires_normalization = False
+wlen_in_vacuum = []
 from_um_factor = []
 resolution = []
 resolution_wlen = []
@@ -148,6 +157,7 @@ norm_amplitude = []
 norm_period = []
 sysname = []
 for p in params:
+    wlen_in_vacuum.append( [pi["wlen_in_vacuum"] for pi in p] )
     from_um_factor.append( [pi["from_um_factor"] for pi in p] )
     resolution.append( [pi["resolution"] for pi in p] )
     resolution_wlen.append( [pi["resolution_wlen"] for pi in p] )
@@ -220,17 +230,19 @@ z_plane_cropped = [[z_plane_cropped[i][j][z_plane_index[i][j](-cell_width[i][j]/
 source_results = [[vma.get_source_from_line(results_line[i][j], x_line_index[i][j], source_center[i][j]) 
                    for j in range(len(series[i]))] for i in range(len(series))]
 
-if not requires_normalization:
+if not requires_normalization and not force_normalization:
     
     period_results, amplitude_results = norm_period, norm_amplitude
     
 else:
     
     period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j],
-                                                  periods_sensitivity=0.05) 
+                                                  peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                                  periods_sensitivity=periods_sensitivity) 
                        for j in range(len(series[i]))] for i in range(len(series))]
     amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j],
-                                                        amplitude_sensitivity=0.05) 
+                                                        amplitude_sensitivity=amplitude_sensitivity,
+                                                        peaks_sep_sensitivity=peaks_sep_sensitivity) 
                           for j in range(len(series[i]))] for i in range(len(series))]
     
     source_results = [[source_results[i][j] / amplitude_results[i][j] 
@@ -242,7 +254,17 @@ else:
     
     norm_period, norm_amplitude = period_results, amplitude_results
 
+cropped_line = [[vma.crop_field_xprofile(results_line[i][j], x_line_index[i][j], 
+                                          cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+
+cropped_plane = [[vma.crop_field_yzplane(results_plane[i][j], y_plane_index[i][j], z_plane_index[i][j],
+                                          cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+
 #%% GENERAL PLOT CONFIGURATION
+
+if not os.path.isdir(os.path.join(home, plot_folder)):
+    os.mkdir(os.path.join(home, plot_folder))
+plot_file = lambda n : os.path.join(home, plot_folder, n)
 
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
           for sc, s in zip(series_colormaps, series)]
@@ -255,11 +277,14 @@ ax2 = plt.twinx()
 lines, lines2, lines3 = [], [], []
 for i in range(len(series)):
     l, = ax.plot(test_param[i],
-                 [params[i][j]["courant"]/params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
+                 [params[i][j]["courant"]/params[i][j]["resolution"] for j in range(len(series[i]))], 
+                 "o", color=series_colors[i], alpha=0.5, markersize=series_markersize[i])
     l2, = ax.plot(test_param[i],
-                  [1/params[i][j]["resolution"] for j in range(len(series[i]))], "o", color=series_colors[i], fillstyle="none")
+                  [1/params[i][j]["resolution"] for j in range(len(series[i]))], 
+                  "o", color=series_colors[i], fillstyle="none", markersize=series_markersize[i]+1)
     l3, = ax.plot(test_param[i],
-                 [period_line[i][j] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5, fillstyle="top")
+                 [period_line[i][j] for j in range(len(series[i]))], 
+                 "o", color=series_colors[i], alpha=0.5, fillstyle="top", markersize=series_markersize[i]+2)
     lines.append(l)
     lines2.append(l2)
     lines3.append(l3)
@@ -292,9 +317,6 @@ plt.legend(series_legend)
 
 plt.savefig(plot_file("Points.png"))
 
-cropped_line = [[vma.crop_field_xprofile(results_line[i][j], x_line_index[i][j], 
-                                         cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-
 plt.figure()
 for i in range(len(series)):        
     plt.plot(test_param[i],
@@ -305,22 +327,30 @@ plt.legend(series_legend)
 
 plt.savefig(plot_file("InnerPoints.png"))
 
-these_markersize = [6,7,8]
+# these_markersize = [6,7,8]
+# plt.figure()
+# lines, lines2 = [], []
+# for i in range(len(series)):
+#     l, = plt.plot(test_param[i],
+#                   [until_time[i][j]/period_line[i][j] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5, markersize=these_markersize[i]+1, markeredgewidth=0)
+#     l2, = plt.plot(test_param[i],
+#                    [results_line[i][j].shape[-1] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=1, fillstyle="none", markersize=these_markersize[i])
+#     lines.append(l)
+#     lines2.append(l2)
+# plt.xlabel(test_param_label)
+# plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
+# plt.legend(series_legend)
+# plt.legend([*lines, *lines2], 
+#            [*[s + trs.choose(" Predicted Points", " predicción") for s in series_legend], 
+#             *[s + trs.choose(" Actual Points", " realidad") for s in series_legend]])
+
 plt.figure()
-lines, lines2 = [], []
 for i in range(len(series)):
-    l, = plt.plot(test_param[i],
-                  [until_time[i][j]/period_line[i][j] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5, markersize=these_markersize[i]+1, markeredgewidth=0)
-    l2, = plt.plot(test_param[i],
-                   [results_line[i][j].shape[-1] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=1, fillstyle="none", markersize=these_markersize[i])
-    lines.append(l)
-    lines2.append(l2)
+    plt.plot(test_param[i],
+                  [results_line[i][j].shape[-1] for j in range(len(series[i]))], "o", color=series_colors[i], alpha=0.5)
 plt.xlabel(test_param_label)
 plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
 plt.legend(series_legend)
-plt.legend([*lines, *lines2], 
-           [*[s + trs.choose(" Predicted Points", " predicción") for s in series_legend], 
-            *[s + trs.choose(" Actual Points", " realidad") for s in series_legend]])
 
 plt.savefig(plot_file("TimePoints.png"))
 
@@ -356,8 +386,11 @@ for i in range(len(series)):
     for j in range(len(series[i])):
         l, = plt.plot(t_line[i][j] / period_results[i][j], 
                       source_results[i][j],
-                      label=series_label[i](series[i][j]),
                       color=colors[i][j])            
+        if i == len(series)-1:
+            l.set_label(series_label[i](series[i][j]))
+        else:
+            l.set_label(" ")
         if j == int( 2 * len(series[i]) / 3 ):
             series_lines.append(l)
 plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
@@ -388,8 +421,11 @@ series_lines = []
 for i in range(len(series)):
     for j in range(len(series[i])):
         l, = plt.plot(fourier_wlen[i][j], fourier[i][j],
-                      label=series_label[i](series[i][j]),
                       color=colors[i][j])
+        if i == len(series)-1:
+            l.set_label(series_label[i](series[i][j]))
+        else:
+            l.set_label(" ")
         if j == int( 2 * len(series[i]) / 3 ):
             series_lines.append(l)
 if use_units:
@@ -436,8 +472,8 @@ vs.saveplot(plot_file("LambdaVariation.png"), overwrite=True)
 
 #%%
 
-peaks_index = [[vma.get_peaks_from_source(source_results[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-peaks_heights = [[source_results[i][j][peaks_index[i][j]] for j in range(len(series[i]))] for i in range(len(series))]
+peaks_index = [[vma.get_peaks_from_source(source_results[i][j], peaks_sep_sensitivity=.2) for j in range(len(series[i]))] for i in range(len(series))]
+peaks_heights = [[np.abs(source_results[i][j][peaks_index[i][j]]) for j in range(len(series[i]))] for i in range(len(series))]
 peaks_times = [[t_line[i][j][peaks_index[i][j]] for j in range(len(series[i]))] for i in range(len(series))]
 peaks_periods = [[np.diff(peaks_times[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
@@ -463,7 +499,7 @@ peaks_periods = [[np.diff(peaks_times[i][j]) for j in range(len(series[i]))] for
 
 #%%
 
-peaks_height_variation = [[100 * ( max(peaks_heights[i][j]) - min(peaks_heights[i][j]) ) / min(peaks_heights[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+peaks_height_variation = [[100 * ( max(peaks_heights[i][j]) - min(peaks_heights[i][j]) ) / np.mean(peaks_heights[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 plt.figure()
 plt.title(plot_title_base)
@@ -481,7 +517,7 @@ vs.saveplot(plot_file("AmpVariation.png"), overwrite=True)
 
 #%%
 
-peaks_period_variation = [[100 * ( max(peaks_periods[i][j]) - min(peaks_periods[i][j]) ) / min(peaks_periods[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+peaks_period_variation = [[100 * ( max(peaks_periods[i][j]) - min(peaks_periods[i][j]) ) / np.mean(peaks_periods[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 plt.figure()
 plt.title(plot_title_base)
@@ -569,13 +605,13 @@ def see_x_probe_fourier(i,j):
     
 #%% ANALYSE X AXIS FOR DIFFERENT POSITIONS VIA FIT AND RESIDUA
 
-n_x_probe = 10
+n_x_probe = 20
 
 x_probe_position = [[ [-cell_width[i][j]/2 + pml_width[i][j] + k * (cell_width[i][j] - 2*pml_width[i][j]) / (n_x_probe-1) 
                        for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 x_probe_position_factor = [[ [x_probe_position[i][j][k] / (cell_width[i][j] - 2*pml_width[i][j])
                               for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
-                       
+
 x_probe_field = [[ [results_line[i][j][x_line_index[i][j](x_probe_position[i][j][k]), :]
                     for k in range(n_x_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 
@@ -766,14 +802,25 @@ vs.saveplot(plot_file("NoiseDifVsXVsResolution.png"), overwrite=True)
 
 #%% ANALYSE X AXIS FOR DIFFERENT TIMES VIA FIT AND RESIDUA
 
-n_t_probe = 10
+n_t_probe = 20
 
-cropped_line = [[vma.crop_field_xprofile(results_line[i][j], x_line_index[i][j], 
-                                         cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+# time_one_cell = [[(cell_width[i][j] - 2*pml_width[i][j]) * index[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+# start_point = [[t_line_index[i][j](time_one_cell[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-time_one_cell = [[(cell_width[i][j] - 2*pml_width[i][j]) * index[i][j] for j in range(len(series[i]))] for i in range(len(series))]
-start_point = [[t_line_index[i][j](time_one_cell[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+start_time = []
+for i in range(len(series)):
+    start_time.append([])
+    for j in range(len(series[i])):
+        if wlen_in_vacuum[i][j]:
+            start_time[i].append(index[i][j])
+        else:
+            start_time[i].append(1)
+# end_time = [[start_time[i][j]/period_results[i][j] + (time_period_factor[i][j]-1) for j in range(len(series[i]))] for i in range(len(series))]
 
+start_point = [[np.where(t_line[i][j] / period_results[i][j] >= start_time[i][j])[0][0] for j in range(len(series[i]))] for i in range(len(series))]
+# end_point = [[np.where(t_line[i][j] / period_results[i][j] < end_time[i][j])[0][-1] for j in range(len(series[i]))] for i in range(len(series))]
+
+# probe_index = [[ [int(k) for k in np.linspace(start_point[i][j], end_point[i][j], n_t_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 probe_index = [[ [int(k) for k in np.linspace(start_point[i][j], len(t_line[i][j])-1, n_t_probe)] for j in range(len(series[i]))] for i in range(len(series))]
 
 t_probe_field = [[ [cropped_line[i][j][:, k] for k in probe_index[i][j]] for j in range(len(series[i]))] for i in range(len(series))]
@@ -843,7 +890,7 @@ def see_t_probe(i,j):
         main_ax.plot(x_line_cropped[i][j] / (cell_width[i][j] - 2*pml_width[i][j]),
                      t_probe_field[i][j][k], 
                      color=colors[k],
-                     label=f"t = {t_probe_time[i][j][k] / norm_period[i][j]:.2f} T")      
+                     label=f"t = {t_probe_time[i][j][k] / norm_period[i][j]:.2f}" + r" $\tau$")      
         main_ax.plot(x_line_cropped[i][j] / (cell_width[i][j] - 2*pml_width[i][j]),
                     t_probe_fit_functions[i][j]( x_line_cropped[i][j],
                                                 t_probe_fit_amplitude[i][j][k],
@@ -905,12 +952,12 @@ for i in range(len(series)):
               [t_probe_fit_res_std[i][j][0] for j in range(len(series[i]))],
               "o", color=colorConverter.to_rgba(series_colors[i], alpha=0.7), 
               fillstyle="none", markersize=8, markeredgewidth=1.5,
-              label=f"{series_legend[i]} t = {t_probe_time[i][j][0] / norm_period[i][j] :.2f} T")
+              label=f"{series_legend[i]} t = {t_probe_time[i][j][0] / norm_period[i][j] :.2f}" + r" $\tau$")
     plt.plot(test_param[i], 
              [t_probe_fit_res_std[i][j][-1] for j in range(len(series[i]))],
              "o", color=series_colors[i], 
              alpha=0.4, markeredgewidth=0, markersize=8,
-             label=f"{series_legend[i]} t = {t_probe_time[i][j][-1] / norm_period[i][j] :.2f} T")
+             label=f"{series_legend[i]} t = {t_probe_time[i][j][-1] / norm_period[i][j] :.2f}" + r" $\tau$")
 
 plt.legend()
 
@@ -921,3 +968,157 @@ plt.ylabel(trs.choose("Electric Field Noise Amplitude\n",
 plt.tight_layout()
 
 vs.saveplot(plot_file("NoiseVsTVsResolution.png"), overwrite=True)
+
+#%%
+
+# x_field_integral = np.sum(results_line[i][j], axis=-1) * np.mean(np.diff(t_line[i][j]))
+# x_field_integral_left = x_field_integral[:x_line_index[i][j](-cell_width[i][j]/2 + pml_width[i][j])][::-1]
+# x_field_integral_right = x_field_integral[x_line_index[i][j](+cell_width[i][j]/2 - pml_width[i][j])+1:]
+
+# find_peaks( np.abs( x_field_integral_left - norm_amplitude[i][j] / np.e ) )
+
+zcropped_planes = [[results_plane[i][j][:, : z_plane_index[i][j](cell_width[i][j]/2 - pml_width[i][j]) + 1, ...] for j in range(len(series[i]))] for i in range(len(series))]
+zcropped_planes = [[zcropped_planes[i][j][:, z_plane_index[i][j](-cell_width[i][j]/2 + pml_width[i][j]) :, ...] for j in range(len(series[i]))] for i in range(len(series))]
+
+y_field_integral = np.mean(np.abs(zcropped_planes[i][j]), axis=-1) #* np.mean(np.diff(t_line[i][j]))
+y_field_integral = np.mean(np.abs(y_field_integral), axis=-1) #* np.mean(np.diff(z_line[i][j]))
+# x_field_integral_left = x_field_integral[:x_line_index[i][j](-cell_width[i][j]/2 + pml_width[i][j])][::-1]
+# x_field_integral_right = x_field_integral[x_line_index[i][j](+cell_width[i][j]/2 - pml_width[i][j])+1:]
+
+# find_peaks( np.abs( x_field_integral_left - norm_amplitude[i][j] / np.e ) )
+
+#%%
+
+def see_xt_axis(i, j):
+    
+    plt.figure()
+    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
+    
+    T, X = np.meshgrid(t_line[i][j], x_line_cropped[i][j])
+    plt.contourf(T, X, cropped_line[i][j], 100, cmap='RdBu')
+    plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
+    plt.ylabel(trs.choose("Position $X$ [MPu]", "Posición $X$ [uMP]"))
+    
+    plt.figure()    
+    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")    
+    
+    T, X = np.meshgrid(t_line[i][j], x_line[i][j])
+    plt.contourf(T, X, results_line[i][j], 100, cmap='RdBu')
+    xlims = plt.xlim()
+    plt.hlines(-cell_width[i][j]/2 + pml_width[i][j], *xlims, 
+               color="k", linestyle="dashed")
+    plt.hlines(cell_width[i][j]/2 - pml_width[i][j], *xlims, 
+               color="k", linestyle="dashed")
+    plt.xlim(*xlims)
+    plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
+    plt.ylabel(trs.choose("Position $X$ [MPu]", "Posición $X$ [uMP]"))
+    
+#%%
+
+def see_x_axis_in_t(i, j, t):
+    
+    k = np.argmin( np.abs(t_line[i][j] - t) )
+    
+    plt.figure()
+    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
+    plt.axhline(color="k", linewidth=0.5)
+    plt.axvline(color="k", linewidth=0.5)
+    plt.plot(x_line[i][j], results_line[i][j][..., k], linewidth=1.5)
+    plt.xlim(min(x_line[i][j]), max(x_line[i][j]))
+    plt.xlabel(trs.choose("Position $X$ [MPu]", "Posición $X$ [uMP]"))
+    plt.ylabel(trs.choose("Electric field $E_z$", "Campo eléctrico $E_z$"))
+    
+    plt.axvline(-cell_width[i][j]/2 + pml_width[i][j], 
+                color="k", linestyle="dashed", linewidth=1)
+    plt.axvline(cell_width[i][j]/2 - pml_width[i][j], 
+                color="k", linestyle="dashed", linewidth=1)
+        
+    plt.figure()
+    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
+    plt.axhline(color="k", linewidth=0.5)
+    plt.axvline(color="k", linewidth=0.5)
+    plt.plot(x_line_cropped[i][j], cropped_line[i][j][..., k], linewidth=1.5)
+    plt.xlim(min(x_line_cropped[i][j]), max(x_line_cropped[i][j]))
+    plt.xlabel(trs.choose("Position $X$ [MPu]", "Posición $X$ [uMP]"))
+    plt.ylabel(trs.choose("Electric field $E_z$", "Campo eléctrico $E_z$"))
+
+#%%
+
+def see_yz_plane_in_t(i, j, t):
+    
+    k = np.argmin( np.abs(t_plane[i][j] - t) )
+    
+    fig = plt.figure()
+    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
+    ax = plt.subplot()
+    ax.set_aspect('equal')
+    lims = (np.min(cropped_plane[i][j]), np.max(cropped_plane[i][j]))
+    lims = max([abs(l) for l in lims])
+    lims = [-lims, lims]
+
+    ims = ax.imshow(cropped_plane[i][j][...,k].T,
+                    cmap='RdBu', #interpolation='spline36', 
+                    vmin=lims[0], vmax=lims[1],
+                    extent=[min(y_plane_cropped[i][j]), max(y_plane_cropped[i][j]),
+                            min(z_plane_cropped[i][j]), max(z_plane_cropped[i][j])])
+    plt.grid(False)
+    
+    ax.text(-.1, -.105, f"Time t = {t:.2f}" + r" $\tau$", transform=ax.transAxes)
+    plt.show()
+    plt.xlabel(trs.choose("Position $Y$ [MPu]", "Posición $Y$ [uMP]"))
+    plt.ylabel(trs.choose("Position $Z$ [MPu]", "Posición $Z$ [uMP]"))
+    if use_units:
+        plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                     (300, 11), xycoords='figure points') # 50, 300
+    else:
+        plt.annotate(trs.choose(r"1 Meep Unit = $\lambda$",
+                                r"1 Unidad de Meep = $\lambda$"),
+                     (300, 11), xycoords='figure points') # 50, 310
+    
+    cax = ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
+                        transform=ax.transAxes)
+    cbar = fig.colorbar(ims, ax=ax, cax=cax)
+    cbar.set_label(trs.choose("Electric field $E_z$",
+                              "Campo eléctrico $E_z$"))
+
+    fig = plt.figure()
+    plt.title(f"{series_legend[i]} {series_label[1](series[i][j])}")
+    ax = plt.subplot()
+    ax.set_aspect('equal')
+    lims = (np.min(results_plane[i][j]), np.max(results_plane[i][j]))
+    lims = max([abs(l) for l in lims])
+    lims = [-lims, lims]  
+    
+    k = np.argmin( np.abs(t_plane[i][j] - t) )
+
+    ims = ax.imshow(results_plane[i][j][...,k].T,
+                    cmap='RdBu', #interpolation='spline36', 
+                    vmin=lims[0], vmax=lims[1],
+                    extent=[min(y_plane[i][j]), max(y_plane[i][j]),
+                            min(z_plane[i][j]), max(z_plane[i][j])])
+
+    plt.axvline(-cell_width[i][j]/2 + pml_width[i][j], 
+                color="k", linestyle="dashed", linewidth=1)
+    plt.axvline(cell_width[i][j]/2 - pml_width[i][j], 
+                color="k", linestyle="dashed", linewidth=1)
+    plt.grid(False)
+    
+    ax.text(-.1, -.105, f"Time t = {t:.2f}" + r" $\tau$", transform=ax.transAxes)
+    plt.show()
+    plt.xlabel(trs.choose("Position $Y$ [MPu]", "Posición $Y$ [uMP]"))
+    plt.ylabel(trs.choose("Position $Z$ [MPu]", "Posición $Z$ [uMP]"))
+    if use_units:
+        plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                     (300, 11), xycoords='figure points') # 50, 300
+    else:
+        plt.annotate(trs.choose(r"1 Meep Unit = $\lambda$",
+                                r"1 Unidad de Meep = $\lambda$"),
+                     (300, 11), xycoords='figure points') # 50, 310
+    
+    cax = ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
+                        transform=ax.transAxes)
+    cbar = fig.colorbar(ims, ax=ax, cax=cax)
+    cbar.set_label(trs.choose("Electric field $E_z$",
+                              "Campo eléctrico $E_z$"))

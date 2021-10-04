@@ -93,7 +93,7 @@ del i
     
 files_line = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
                for j in range(len(series[i]))] for i in range(len(series))]
-files_plane = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") 
+files_plane = [[h5.File(file[i](series[i][j], "Field-Planes.h5"), "r") 
                 for j in range(len(series[i]))] for i in range(len(series))]
 
 results_line = [[files_line[i][j]["Ez"] 
@@ -807,7 +807,7 @@ def see_t_probe(i,j):
         main_ax.plot(x_line_cropped[i][j] / (cell_width[i][j] - 2*pml_width[i][j]),
                      t_probe_field[i][j][k], 
                      color=colors[k],
-                     label=f"t = {t_probe_time[i][j][k] / norm_period[i][j]:.2f} T")      
+                     label=f"t = {t_probe_time[i][j][k] / norm_period[i][j]:.2f}" + r" $\tau$")      
         main_ax.plot(x_line_cropped[i][j] / (cell_width[i][j] - 2*pml_width[i][j]),
                     t_probe_fit_functions[i][j]( x_line_cropped[i][j],
                                                 t_probe_fit_amplitude[i][j][k],
@@ -869,12 +869,12 @@ for i in range(len(series)):
               [t_probe_fit_res_std[i][j][0] for j in range(len(series[i]))],
               "o", color=colorConverter.to_rgba(series_colors[i], alpha=0.7), 
               fillstyle="none", markersize=8, markeredgewidth=1.5,
-              label=f"{series_legend[i]} t = {t_probe_time[i][j][0] / norm_period[i][j] :.2f} T")
+              label=f"{series_legend[i]} t = {t_probe_time[i][j][0] / norm_period[i][j] :.2f}" + r" $\tau$")
     plt.plot(test_param[i], 
              [t_probe_fit_res_std[i][j][-1] for j in range(len(series[i]))],
              "o", color=series_colors[i], 
              alpha=0.4, markeredgewidth=0, markersize=8,
-             label=f"{series_legend[i]} t = {t_probe_time[i][j][-1] / norm_period[i][j] :.2f} T")
+             label=f"{series_legend[i]} t = {t_probe_time[i][j][-1] / norm_period[i][j] :.2f}" + r" $\tau$")
 
 plt.legend()
 
