@@ -171,26 +171,29 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         pm.log(f"Running with units: {resolution:.0f} points in a Meep Unit of " + 
                f"{from_um_factor*1e3:.0f} nm with {wlen * from_um_factor * 1e3} nm wavelength")
     else:
-        wlen = 1 # Wavelength is 1 Meep Unit, to make it simple
         if wlen_in_vacuum:
-            resolution = resolution_wlen # Divide wlen in vacuum in resolution_wlen pieces
+            wlen = 1
         else:
-            resolution = int(round(resolution_wlen * submerged_index / wlen)) # Divide wlen in medium instead
-            resolution_wlen = wlen * resolution / submerged_index
+            wlen = submerged_index * 1 # Wavelength in medium wlen/index is 1 Meep unit
+        resolution = resolution_wlen # Divide wlen in vacuum in resolution_wlen pieces
         from_um_factor = 1e3
         if wlen_in_vacuum:
             log_text = "vacuum"
         else:
             log_text = "medium"
-        pm.log(f"Running without units: {resolution_wlen:.1f} points in a {log_text} wavelength")
+        pm.log(f"Running without units: {resolution_wlen:.0f} points in a {log_text} wavelength")
     period = wlen
     
-    # Space configuration
-    if wlen_in_vacuum:
-        pml_width = pml_wlen_factor * wlen # Multiples of wavelength in vacuum
+    # Space configuration    
+    if units:
+        if wlen_in_vacuum:
+            pml_width = pml_wlen_factor * wlen # Multiples of vacuum wavelength
+        else:
+            pml_width = pml_wlen_factor * wlen / submerged_index # Multiples of medium wavelength
+        empty_width = empty_wlen_factor * wlen
     else:
-        pml_width = pml_wlen_factor * wlen / submerged_index # Multiples of wavelength in medium
-    empty_width = empty_wlen_factor * wlen / submerged_index # Multiples of wavelength in medium
+        pml_width = pml_wlen_factor # Multiples of reference wavelength, which is 1 Meep unit
+        empty_width = empty_wlen_factor # Multiples of reference wavelength, which is 1 Meep unit
     cell_width = 2 * (pml_width + empty_width)
     
     # Time configuration
