@@ -164,10 +164,10 @@ def crop_field_yzplane(yzplane_field, y_plane_index, z_plane_index,
         stands for different instants of time.
     """
     
-    cropped = yzplane_field[: y_plane_index(cell_width/2 - pml_width) + 1, :, :]
-    cropped = cropped[y_plane_index(-cell_width/2 + pml_width) :, :, :]
-    cropped = cropped[:,: z_plane_index(cell_width/2 - pml_width) + 1, :]
-    cropped = cropped[:, z_plane_index(-cell_width/2 + pml_width) :, :]
+    cropped = yzplane_field[: y_plane_index(cell_width/2 - pml_width) + 1, ...]
+    cropped = cropped[y_plane_index(-cell_width/2 + pml_width) :, ...]
+    cropped = cropped[:,: z_plane_index(cell_width/2 - pml_width) + 1, ...]
+    cropped = cropped[:, z_plane_index(-cell_width/2 + pml_width) :, ...]
     
     return cropped 
     
@@ -260,7 +260,7 @@ def get_source_from_line(xline_field, x_line_index,
 
 def get_peaks_from_source(source_field, 
                           peaks_sep_sensitivity=0.1,
-                          last_stable_periods=5):   
+                          last_stable_periods=5):
     """Finds maximum peaks of a periodic oscillating signal as the source field.
 
     Parameters
@@ -282,10 +282,13 @@ def get_peaks_from_source(source_field,
         List of int index for the maximum peaks found inside the input array.
     """
     
-    peaks = find_peaks(source_field, height=0)[0]
+    # peaks = find_peaks(source_field, height=0)[0]
+    peaks = find_peaks(np.abs(source_field), 
+                       height=np.max(np.abs(source_field))/2)[0]
+    # All peaks, no only maximums, but minimums too
     
     # Take the last periods as reference and define periodicity criteria
-    mean_diff = np.mean(np.diff(peaks)[-last_stable_periods:])
+    mean_diff = np.mean(np.diff(peaks[-2*last_stable_periods:]))
     def selection_criteria(k):
         eval_point = np.abs( mean_diff - (peaks[k+1] - peaks[k]) )
         return eval_point <= peaks_sep_sensitivity * mean_diff
@@ -299,6 +302,23 @@ def get_peaks_from_source(source_field,
             selected_peaks.append(peaks[k])
         elif selection_criteria(k):
             selected_peaks.append(peaks[k])
+
+    # Check if there's always a single maximum and a single minimum per period
+    # If not, try to fix it or raise Warning.
+    selected_sign = np.sign(source_field[selected_peaks])
+    if np.min(np.abs(np.diff( selected_sign ))) != 2:
+        error_index = np.argmin(np.abs(np.diff( selected_sign )))
+        missing_index_lower_bound = selected_peaks[ error_index ]
+        missing_index_upper_bound = selected_peaks[ error_index + 1 ]
+        if missing_index_upper_bound - missing_index_lower_bound == 2:
+            selected_peaks = [*selected_peaks[: error_index + 1],
+                              missing_index_lower_bound + 1,
+                              *selected_peaks[error_index + 1 :]]
+            selected_sign = np.sign(source_field[selected_peaks])
+            if np.min(np.abs(np.diff( selected_sign ))) != 2:
+                print("Warning! Sign algorithm failed and it couldn't be fixed!")
+        else:
+            print("Warning! Sign algorithm must have failed!")
 
     return selected_peaks
 
@@ -335,22 +355,22 @@ def get_period_from_source(source_field, t_line,
     peaks = get_peaks_from_source(source_field, 
                                   peaks_sep_sensitivity=peaks_sep_sensitivity,
                                   last_stable_periods=last_stable_periods)
-    periods = np.array(t_line[peaks[1:]] - t_line[peaks[:-1]])
+    semiperiods = np.array(t_line[peaks[1:]] - t_line[peaks[:-1]])
     
     # Take the last periods as reference and define stability criteria
-    mean_periods = np.mean(periods[-last_stable_periods:])
+    mean_semiperiods = np.mean(semiperiods[-2*last_stable_periods:])
     def selection_criteria(k):
-        eval_point = np.abs(periods[k] - mean_periods)
-        return eval_point <= periods_sensitivity * mean_periods
+        eval_point = np.abs(semiperiods[k] - mean_semiperiods)
+        return eval_point <= periods_sensitivity * mean_semiperiods
     
     # Choose only the latter stable periods to compute period
     keep_periods_from = 0
-    for k in range(len(periods)):
+    for k in range(len(semiperiods)):
         if not selection_criteria(k):
             keep_periods_from = max(keep_periods_from, k+1)
-    stable_periods = periods[keep_periods_from:]
+    stable_semiperiods = semiperiods[keep_periods_from:]
     
-    return np.mean(stable_periods)
+    return 2*np.mean(stable_semiperiods)
 
 def get_amplitude_from_source(source_field,
                               peaks_sep_sensitivity=0.1,
@@ -385,20 +405,20 @@ def get_amplitude_from_source(source_field,
     peaks = get_peaks_from_source(source_field, 
                                   peaks_sep_sensitivity=peaks_sep_sensitivity,
                                   last_stable_periods=last_stable_periods)
-    heights = source_field[peaks]
+    heights = np.abs(source_field[peaks])
     
     # Take the last periods as reference and define stability criteria
-    mean_height = np.mean(source_field[peaks[-last_stable_periods:]])
+    mean_height = np.mean(heights[-2*last_stable_periods:])
     def selection_criteria(k):
         eval_point = np.abs(heights[k] - mean_height)
         return eval_point <= amplitude_sensitivity * mean_height
     
     # Choose only the latter stable periods to compute amplitude
-    keep_periods_from = 0
+    amp_keep_periods_from = 0
     for k in range(len(heights)):
         if not selection_criteria(k):
-            keep_periods_from = max(keep_periods_from, k+1)
-    stable_heights = source_field[peaks[keep_periods_from:]]
+            amp_keep_periods_from = max(amp_keep_periods_from, k+1)
+    stable_heights = np.abs(source_field[peaks[amp_keep_periods_from:]])
     
     return np.mean(stable_heights)
 
@@ -575,14 +595,14 @@ def get_all_field_peaks_from_yzplanes(yzplane_field,
     zprofile_field = get_zprofile_from_plane(yzplane_field, y_plane_index)
     
     zprofile_maxs = find_zpeaks_zprofile(zprofile_field, z_plane_index, 
-                                              cell_width, pml_width)[-1]
+                                         cell_width, pml_width)[-1]
     
     # Find peaks in time for the maximum absolute intensification field values
     field_peaks_index = find_peaks(
         np.abs(zprofile_maxs), height=(np.max(np.abs(zprofile_maxs))/2, None))[0]
     
     # Take the last periods as reference and define periodicity criteria
-    mean_diff = np.mean(np.diff(field_peaks_index)[-last_stable_periods:])
+    mean_diff = np.mean(np.diff(field_peaks_index)[-2*last_stable_periods:])
     def selection_criteria(k):
         eval_point = np.abs( mean_diff - (field_peaks_index[k+1] - field_peaks_index[k]) )
         return eval_point <= peaks_sep_sensitivity * mean_diff
@@ -703,7 +723,7 @@ def get_single_field_peak_from_yzplanes(yzplane_field,
         peaks_sep_sensitivity=peaks_sep_sensitivity, last_stable_periods=last_stable_periods)
     
     # Take the last periods as reference and define stability criteria
-    mean_value = np.mean( all_amplitudes[-last_stable_periods:] )
+    mean_value = np.mean( all_amplitudes[-2*last_stable_periods:] )
     def selection_criteria(k):
         eval_point = np.abs(all_amplitudes[k] - mean_value)
         return eval_point <= field_peaks_sensitivity * mean_value
@@ -793,7 +813,7 @@ def get_mean_field_peak_from_yzplanes(yzplane_field,
         peaks_sep_sensitivity=peaks_sep_sensitivity, last_stable_periods=last_stable_periods)
     
     # Take the last periods as reference and define stability criteria
-    mean_value = np.mean( all_amplitudes[-last_stable_periods:] )
+    mean_value = np.mean( all_amplitudes[-2*last_stable_periods:] )
     def selection_criteria(k):
         eval_point = np.abs(all_amplitudes[k] - mean_value)
         return eval_point <= field_peaks_sensitivity * mean_value

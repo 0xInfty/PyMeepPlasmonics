@@ -41,6 +41,7 @@ def set_style():
                          'ytick.labelcolor':'black',
                          'legend.frameon':False,
                          'legend.framealpha':0,
+                         'lines.markersize':8
                          })
 
 def add_style(figure_id=None, new_figure=False, **kwargs):

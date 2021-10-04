@@ -583,13 +583,22 @@ def filter_by_string_must(string_list, string_must, must=True):
         The filtered list of strings.
     """
     
+    if not isinstance(string_must, list):
+        string_must = [string_must]
+    
     filtered_string_list = []
     for s in string_list:
-        if must and string_must in s:
+        do_append = True
+        for smust in string_must:
+            if must and smust not in s:
+                do_append = False
+                break
+            elif not must and smust in s:
+                do_append = False
+                break
+        if do_append:
             filtered_string_list.append(s)
-        elif not must and string_must not in s:
-            filtered_string_list.append(s)
-    
+            
     return filtered_string_list
 
 #%%
