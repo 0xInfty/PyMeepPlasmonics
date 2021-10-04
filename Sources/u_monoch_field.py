@@ -193,7 +193,10 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         empty_width = empty_wlen_factor * wlen
     else:
         pml_width = pml_wlen_factor # Multiples of reference wavelength, which is 1 Meep unit
-        empty_width = empty_wlen_factor # Multiples of reference wavelength, which is 1 Meep unit
+        if wlen_in_vacuum:
+            empty_width = empty_wlen_factor / submerged_index # Multiples of reference wavelength, which is 1 Meep unit
+        else:
+            empty_width = empty_wlen_factor # Multiples of reference wavelength, which is 1 Meep unit
     cell_width = 2 * (pml_width + empty_width)
     
     # Time configuration
