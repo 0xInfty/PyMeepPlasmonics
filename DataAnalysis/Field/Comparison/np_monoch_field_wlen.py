@@ -19,14 +19,18 @@ else:
 import sys
 sys.path.append(syshome)
 
+import matplotlib
+matplotlib.use('Agg')
+
 import imageio as mim
 import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
+from matplotlib.colors import to_rgba
 from matplotlib.ticker import AutoMinorLocator
+import matplotlib.gridspec as gridspec
 import os
-from scipy.signal import find_peaks
 import v_materials as vmt
 import v_meep as vm
 import v_meep_analysis as vma
@@ -37,8 +41,9 @@ import v_utilities as vu
 
 english = False
 trs = vu.BilingualManager(english=english)
+vp.set_style()
 
-#%% PARAMETERS
+#%% PARAMETERS <<
 
 # Saving directories
 # folder = ["Field/NPMonoch/AuSphere/VacWatField/Vacuum", 
@@ -49,184 +54,182 @@ home = vs.get_home()
 
 # Parameter for the test
 test_param_string = "wlen"
-test_param_in_params = True
+test_param_in_params = False
+test_param_in_series = True
 test_param_position = 0
 test_param_label = trs.choose("Wavelength", "Longitud de onda")
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = [lambda s : trs.choose(r"Vacuum", r"Vacío") + 
-                rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm",
-                lambda s : trs.choose("Water", "Agua") + 
-                rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm"]
-series_must = ["Res5"]*2 # leave "" per default
+series_label = [lambda s : rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm"]*2
+series_must = ["Res5ERF2.0"]*2 # leave "" per default
 series_mustnt = ["Old"]*2 # leave "" per default
 
 # Scattering plot options
 plot_title_ending = trs.choose("Au 60 nm sphere", "esfera de Au de 60 nm")
-series_legend = ["Vacuum", "Water"]
-series_colors = [plab.cm.Reds, plab.cm.Blues]
+series_legend = trs.choose(["Vacuum", "Water"], ["Vacío", "Agua"])
+series_colormaps = [plab.cm.Reds, plab.cm.Blues]
+series_ind_colors = [["C0", "C2", "C3"]]*2
+series_colors = ["red", "blue"]
+series_markers = ["o","o"]
+series_markersizes = [8,8]
 series_linestyles = ["solid"]*2
 plot_make_big = False
-plot_file = lambda n : os.path.join(home, "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/WLen/WLenRes5EF2.0" + n)
+plot_folder = "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/WLen/Empty"
 
-#%% LOAD DATA
+force_normalization = False
+periods_sensitivity = 0.05
+amplitude_sensitivity = 0.05
+peaks_sep_sensitivity = 0.1 # 0.1
 
-path = []
-file = []
-series = []
-files_line = []
-files_plane = []
-files_line_norm = []
-results_line = []
-results_plane = []
-results_line_norm = []
-t_line = []
-x_line = []
-t_plane = []
-y_plane = []
-z_plane = []
-t_line_norm = []
-x_line_norm = []
-params = []
+#%% LOAD BASIC DATA <<
 
-for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
+# First some useful definitions regarding directories
+def file_definer(path): return lambda s, n : os.path.join(path, s, n)
+path = [os.path.join(home, fold) for fold in folder]
+file = [file_definer(pa) for pa in path]
 
-    path.append( os.path.join(home, f) )
-    file.append( lambda f, s : os.path.join(path[-1], f, s) )
+# Now look for the series of data inside of each folder
+series = [[]] * len(path)
+for i in range(len(folder)):
+    series[i] = os.listdir(path[i])
+    series[i] = vu.filter_by_string_must(series[i], series_must[i])
+    if series_mustnt[i]!="": 
+        series[i] = vu.filter_by_string_must(series[i], series_mustnt[i], False)
+    series[i] = sorting_function[i](series[i])
+del i
     
-    series.append( os.listdir(path[-1]) )
-    series[-1] = vu.filter_by_string_must(series[-1], sm)
-    if smn!="": series[-1] = vu.filter_by_string_must(series[-1], smn, False)
-    series[-1] = sf(series[-1])
-    
-    files_line.append( [] )
-    files_plane.append( [] )
-    for s in series[-1]:
-        files_line[-1].append( h5.File(file[-1](s, "Field-Lines.h5"), "r") )
-        files_plane[-1].append( h5.File(file[-1](s, "Field-Planes.h5"), "r") )
-    del s
-    
-    results_line.append( [fi["Ez"] for fi in files_line[-1]] )
-    results_plane.append( [fi["Ez"] for fi in files_plane[-1]] )
-    params.append( [dict(fi["Ez"].attrs) for fi in files_line[-1]] )
-    
-    t_line.append( [np.asarray(fi["T"]) for fi in files_line[-1]] )
-    x_line.append( [np.asarray(fi["X"]) for fi in files_line[-1]] )
-    
-    t_plane.append( [np.asarray(fi["T"]) for fi in files_plane[-1]] )
-    y_plane.append( [np.asarray(fi["Y"]) for fi in files_plane[-1]] )
-    z_plane.append( [np.asarray(fi["Z"]) for fi in files_plane[-1]] )
-    
-    for s, p in zip(series[-1], params[-1]):
-        try:
-            f = h5.File(file[-1](s, "Resources.h5"))
-            p["used_ram"] = np.array(f["RAM"])
-            p["used_swap"] = np.array(f["SWAP"])
-            p["elapsed_time"] = np.array(f["ElapsedTime"])
-        except FileNotFoundError:
-            f = h5.File(file[-1](s, "RAM.h5"))
-            p["used_ram"] = np.array(f["RAM"])
-            p["used_swap"] = np.array(f["SWAP"])
-            p["elapsed_time"] = p["elapsed"]
-            del p["elapsed"]
-    # del s, p
-    
+# Get the corresponding data files
+files_line = [[h5.File(file[i](series[i][j], "Field-Lines.h5"), "r") for j in range(len(series[i]))] for i in range(len(series))]
+files_plane = [[h5.File(file[i](series[i][j], "Field-Planes.h5"), "r") for j in range(len(series[i]))] for i in range(len(series))]
+
+# Get the corresponding field data
+results_line = [[files_line[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
+results_plane = [[files_plane[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
+
+# Get the time and spatial dimensions data
+t_line = [[np.asarray(files_line[i][j]["T"]) for j in range(len(series[i]))] for i in range(len(series))]
+x_line = [[np.asarray(files_line[i][j]["X"]) for j in range(len(series[i]))] for i in range(len(series))]
+
+t_plane = [[np.asarray(files_plane[i][j]["T"]) for j in range(len(series[i]))] for i in range(len(series))]
+y_plane = [[np.asarray(files_plane[i][j]["Y"]) for j in range(len(series[i]))] for i in range(len(series))]
+z_plane = [[np.asarray(files_plane[i][j]["Z"]) for j in range(len(series[i]))] for i in range(len(series))]
+
+# Get the parameters of the simulations
+params = [[dict(files_line[i][j]["Ez"].attrs) for j in range(len(series[i]))] for i in range(len(series))]
+
+# Get the test parameter
+if test_param_in_series:
+    test_param = [[vu.find_numbers(series[i][j])[test_param_position] for j in range(len(series[i]))] for i in range(len(series))]
+elif test_param_in_params:
+    test_param = [[params[i][j][test_param_string] for j in range(len(series[i]))] for i in range(len(series))]
+else:
+    raise ValueError("Test parameter is nowhere to be found")
+
+#%% LOAD NORMALIZATION DATA <<
+
+# Extract some normalization parameters, if possible, and check if it's needed
+requires_normalization = False
+norm_amplitude = [[]] * len(series)
+norm_period = [[]] * len(series)
+norm_path = [[]] * len(series)
+for i in range(len(series)):
     try:
-        files_line_norm.append( [] )
-        try:
-            for s in series[-1]:
-                files_line_norm[-1].append( h5.File(file[-1](s, "Field-Lines-Norm.h5"), "r") )
-            del s
-            
-            results_line_norm.append( [fi["Ez"] for fi in files_line_norm[-1]] )
-            
-            t_line_norm.append( [np.asarray(fi["T"]) for fi in files_line_norm[-1]] )
-            x_line_norm.append( [np.asarray(fi["X"]) for fi in files_line_norm[-1]] )
-        except:            
-            for s, p in zip(series[-1], params[-1]):
-                files_line_norm[-1].append( h5.File(os.path.join(p["norm_path"], 
-                                                                 "Field-Lines-Norm.h5"), "r") )
-            del s
-            
-            results_line_norm.append( [fi["Ez"] for fi in files_line_norm[-1]] )
-            
-            t_line_norm.append( [np.asarray(fi["T"]) for fi in files_line_norm[-1]] )
-            x_line_norm.append( [np.asarray(fi["X"]) for fi in files_line_norm[-1]] )
-        available_normfield = True
-    except:
-        available_normfield = False
-
-del f, sf, sm, smn
-            
-from_um_factor = []
-resolution = []
-r = []
-material = []
-paper = []
-index = []
-wlen = []
-cell_width = []
-pml_width = []
-source_center = []
-period_plane = []
-period_line = []
-until_time = []
-time_period_factor = []
-norm_until_time = []
-norm_amplitude = []
-norm_period = []
-norm_path = []
-sysname = []
-for p in params:
-    from_um_factor.append( [pi["from_um_factor"] for pi in p] )
-    resolution.append( [pi["resolution"] for pi in p] )
-    r.append( [pi["r"] for pi in p] )
-    material.append( [pi["material"] for pi in p])
-    paper.append( [pi["paper"] for pi in p] )
-    index.append( [pi["submerged_index"] for pi in p] )
-    wlen.append( [pi["wlen"] for pi in p] )
-    cell_width.append( [pi["cell_width"] for pi in p] )
-    pml_width.append( [pi["pml_width"] for pi in p] )
-    source_center.append( [pi["source_center"] for pi in p] )
-    period_plane.append( [pi["period_plane"] for pi in p] )
-    period_line.append( [pi["period_line"] for pi in p] )
-    until_time.append( [pi["until_time"] for pi in p] )
-    time_period_factor.append( [pi["time_period_factor"] for pi in p] )
-    try:
-        norm_until_time.append( [pi["norm_until_time"] for pi in p] )
-        norm_amplitude.append( [pi["norm_amplitude"] for pi in p] )    
-        norm_period.append( [pi["norm_period"] for pi in p] )
-        norm_path.append( [pi["norm_path"] for pi in p] )
-        requires_normalization = False
+        norm_amplitude[i] = [params[i][j]["norm_amplitude"] for j in range(len(series[i]))]
+        norm_period[i] = [params[i][j]["norm_period"] for j in range(len(series[i]))]
+        norm_path[i] = [params[i][j]["norm_path"] for j in range(len(series[i]))]
     except:
         requires_normalization = True
-    sysname.append( [pi["sysname"] for pi in p] )
-del p
+del i
 
-if test_param_in_params:
-    test_param = [[p[test_param_string] for p in par] for par in params]
-else:
-    test_param = [[vu.find_numbers(s)[test_param_position] for s in ser] for ser in series]
+# Now try to get the normalization data files
+files_line_norm = []
+for i in range(len(series)):
+    files_line_norm.append([])
+    for j in range(len(series[i])):
+        try:    
+            try:
+                files_line_norm[i].append( h5.File(file[i](series[i][j], "Field-Lines-Norm.h5"), "r") )
+            except:
+                files_line_norm[i].append( h5.File(os.path.join(norm_path[i][j], "Field-Lines-Norm.h5"), "r") )
+            print(f"Loading available normfield for {i},{j}")
+        except:
+            norm_path_ij = vm.check_normfield(params[i][j])
+            try:
+                files_line_norm[i].append( h5.File(os.path.join(norm_path_ij[0], "Field-Lines-Norm.h5"), "r") )
+                print(f"Loading compatible normfield for {i},{j}")
+                norm_path[i][j] = norm_path_ij
+            except:
+                files_line_norm[i].append( files_line[i][j] )
+                print(f"Using NP data for {i},{j} normalization.",
+                      "This is by all means not ideal!!",
+                      "If possible, run again these simulations.")
+del i, j
 
+# Get the corresponding field data
+results_line_norm = [[ files_line_norm[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
+
+# Get the time and spatial dimensions data
+t_line_norm = [[ np.asarray(files_line_norm[i][j]["T"]) for j in range(len(series[i]))] for i in range(len(series))]
+x_line_norm = [[ np.asarray(files_line_norm[i][j]["X"]) for j in range(len(series[i]))] for i in range(len(series))]
+
+#%% LOAD PARAMETERS AND CONTROL VARIABLES <<
+
+# Get the RAM and elapsed time data
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        try:
+            f = h5.File(file[i](series[i][j], "Resources.h5"))
+            params[i][j]["used_ram"] = np.array(f["RAM"])
+            params[i][j]["used_swap"] = np.array(f["SWAP"])
+            params[i][j]["elapsed_time"] = np.array(f["ElapsedTime"])
+        except FileNotFoundError:
+            f = h5.File(file[i](series[i][j], "RAM.h5"))
+            params[i][j]["used_ram"] = np.array(f["RAM"])
+            params[i][j]["used_swap"] = np.array(f["SWAP"])
+            params[i][j]["elapsed_time"] = params["elapsed"]
+            params.pop("elapsed")
+del i, j
+
+# Extract elapsed time data
+elapsed_time = [[params[i][j]["elapsed_time"] for j in range(len(series[i]))] for i in range(len(series))]
+total_elapsed_time = [[sum(params[i][j]["elapsed_time"]) for j in range(len(series[i]))] for i in range(len(series))]
+
+# Extract RAM Data
+used_ram = [[np.array(params[i][j]["used_ram"])/(1024)**2 for j in range(len(series[i]))] for i in range(len(series))]
+total_used_ram = [[np.sum(used_ram[i][j], axis=1) for j in range(len(series[i]))] for i in range(len(series))]
+used_swap = [[params[i][j]["used_swap"] for j in range(len(series[i]))] for i in range(len(series))]
+
+# Extract some other parameters from the parameters dicts
+from_um_factor = [[params[i][j]["from_um_factor"] for j in range(len(series[i]))] for i in range(len(series))]
+resolution = [[params[i][j]["resolution"] for j in range(len(series[i]))] for i in range(len(series))]
+courant = [[params[i][j]["courant"] for j in range(len(series[i]))] for i in range(len(series))]
+r = [[params[i][j]["r"] for j in range(len(series[i]))] for i in range(len(series))]
+material = [[params[i][j]["material"] for j in range(len(series[i]))] for i in range(len(series))]
+paper = [[params[i][j]["paper"] for j in range(len(series[i]))] for i in range(len(series))]
+index = [[params[i][j]["submerged_index"] for j in range(len(series[i]))] for i in range(len(series))]
+wlen = [[params[i][j]["wlen"] for j in range(len(series[i]))] for i in range(len(series))]
+cell_width = [[params[i][j]["cell_width"] for j in range(len(series[i]))] for i in range(len(series))]
+pml_width = [[params[i][j]["pml_width"] for j in range(len(series[i]))] for i in range(len(series))]
+source_center = [[params[i][j]["source_center"] for j in range(len(series[i]))] for i in range(len(series))]
+period_plane = [[params[i][j]["period_plane"] for j in range(len(series[i]))] for i in range(len(series))]
+period_line = [[params[i][j]["period_line"] for j in range(len(series[i]))] for i in range(len(series))]
+until_time = [[params[i][j]["until_time"] for j in range(len(series[i]))] for i in range(len(series))]
+time_period_factor = [[params[i][j]["time_period_factor"] for j in range(len(series[i]))] for i in range(len(series))]
+
+# Determine some other parameters, calculating them from others
+empty_width = [[cell_width[i][j]/2 - pml_width[i][j] - r[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+empty_r_factor = [[empty_width[i][j] / r[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+resolution_wlen = [[wlen[i][j] * resolution[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+
+# Guess some more parameters, calculating them from others
 minor_division = [[fum * 1e3 / res for fum, res in zip(frum, reso)] for frum, reso in zip(from_um_factor, resolution)]
-try:
-    width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in params] 
-    effective_width_points = [[(p["cell_width"] - 2 * params["pml_width"]) * p["resolution"] for p in par] for par in params]
-except:
-    width_points = [[2*int((p["pml_width"] + p["empty_width"] + p["r"]) * p["resolution"]) for p in par] for par in params] 
-    effective_width_points = [[2*int((p["empty_width"] + p["r"]) * p["resolution"]) for p in par] for par in params]
+width_points = [[int(cell_width[i][j] * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+inner_width_points = [[int( (cell_width[i][j] - 2*pml_width[i][j]) * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
 memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
 
-elapsed_time = [[p["elapsed_time"] for p in par] for par in params]
-total_elapsed_time = [[sum(p["elapsed_time"]) for p in par] for par in params]
-
-used_ram = [[np.array(p["used_ram"])/(1024)**2 for p in par] for par in params]
-total_used_ram = [[np.sum(used_ram[i][j], axis=1) for j in range(len(series[i]))] for i in range(len(series))]
-used_swap = [[p["used_swap"] for p in par] for par in params]
-
-#%% POSITION RECONSTRUCTION
+#%% POSITION RECONSTRUCTION <<
 
 t_line_index = [[vma.def_index_function(t_line[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 x_line_index = [[vma.def_index_function(x_line[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
@@ -235,9 +238,8 @@ t_plane_index = [[vma.def_index_function(t_plane[i][j]) for j in range(len(serie
 y_plane_index = [[vma.def_index_function(y_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 z_plane_index = [[vma.def_index_function(z_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-if available_normfield:
-    t_line_norm_index = [[vma.def_index_function(t_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-    x_line_norm_index = [[vma.def_index_function(x_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+t_line_norm_index = [[vma.def_index_function(t_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+x_line_norm_index = [[vma.def_index_function(x_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 x_line_cropped = [[x_line[i][j][:x_line_index[i][j](cell_width[i][j]/2 - pml_width[i][j])+1] for j in range(len(series[i]))] for i in range(len(series))]
 x_line_cropped = [[x_line_cropped[i][j][x_line_index[i][j](-cell_width[i][j]/2 + pml_width[i][j]):] for j in range(len(series[i]))] for i in range(len(series))]
@@ -248,171 +250,253 @@ y_plane_cropped = [[y_plane_cropped[i][j][y_plane_index[i][j](-cell_width[i][j]/
 z_plane_cropped = [[z_plane[i][j][:z_plane_index[i][j](cell_width[i][j]/2 - pml_width[i][j])+1] for j in range(len(series[i]))] for i in range(len(series))]
 z_plane_cropped = [[z_plane_cropped[i][j][z_plane_index[i][j](-cell_width[i][j]/2 + pml_width[i][j]):] for j in range(len(series[i]))] for i in range(len(series))]
 
-#%% DATA EXTRACTION
+# Get dimnesion para
+space_points = [[results_line[i][j].shape[0] for j in range(len(series[i]))] for i in range(len(series))]
+inner_space_points = [[len(x_line_cropped[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+time_points = [[results_line[i][j].shape[-1] for j in range(len(series[i]))] for i in range(len(series))]
 
-if available_normfield:
+#%% DATA EXTRACTION <<
+
+source_results = [[vma.get_source_from_line(results_line_norm[i][j], x_line_norm_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+
+if not requires_normalization and not force_normalization:
     
-    source_results = [[vma.get_source_from_line(results_line_norm[i][j], x_line_norm_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
     period_results, amplitude_results = norm_period, norm_amplitude
     
 else:
-
-    try:
-
-        files_line_norm = [[h5.File(os.path.join( norm_path[i][j], "Field-Lines-Norm.h5" )) for j in range(len(series[i]))] for i in range(len(series))]
-        results_line_norm = [[files_line_norm[i][j]["Ez"] for j in range(len(series[i]))] for i in range(len(series))]
-        t_line_norm = [[files_line_norm[i][j]["T"] for j in range(len(series[i]))] for i in range(len(series))]
-        x_line_norm = [[files_line_norm[i][j]["X"] for j in range(len(series[i]))] for i in range(len(series))]
-        t_line_norm_index = [[vma.def_index_function(t_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-        x_line_norm_index = [[vma.def_index_function(x_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-        source_results = [[vma.get_source_from_line(results_line_norm[i][j], x_line_norm_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-                
-        print("Found normalization data")
     
-    except FileNotFoundError:
-        
-        norm_path = [[]]
-        results_line_norm = [[]]
-        t_line_norm = [[]]
-        x_line_norm = [[]]
-        t_line_norm_index = [[]]
-        x_line_norm_index = [[]]
-        source_results = [[]]
-        
-        for i in range(len(series)):
-            
-            norm_path.append([])
-            results_line_norm.append([])
-            t_line_norm.append([])
-            x_line_norm.append([])
-            t_line_norm_index.append([])
-            x_line_norm_index.append([])
-            source_results.append([])
-            
-            for j in range(len(series[i])):
-                norm_path_ij = vm.check_normfield[i][j]
-                                
-            try:
-                
-                files_line_norm_ij = h5.File(os.path.join( norm_path_ij, "Field-Lines-Norm.h5" ))
-                results_line_norm_ij = files_line_norm_ij["Ez"]
-                t_line_norm_ij = files_line_norm_ij["T"]
-                x_line_norm_ij = files_line_norm_ij["X"]
-                t_line_norm_index_ij = vma.def_index_function(t_line_norm_ij)
-                x_line_norm_index_ij = vma.def_index_function(x_line_norm_ij)
-                source_results_ij = vma.get_source_from_line(results_line_norm_ij, 
-                                                             x_line_norm_index_ij, 
-                                                             source_center[i][j])
-                
-                print(f"Found some data that could be used for ({i},{j}) normalization at {norm_path[i][j]}")
-                
-                norm_path[-1].append(files_line_norm_ij)
-                results_line_norm[-1].append(results_line_norm_ij)
-                t_line_norm[-1].append(t_line_norm_ij)
-                x_line_norm[-1].append(x_line_norm_ij)
-                t_line_norm_index[-1].append(t_line_norm_index_ij)
-                x_line_norm_index[-1].append(x_line_norm_index_ij)
-                source_results[-1].append(source_results_ij)
-
-            except:
-        
-                source_results_ij = vma.get_source_from_line(results_line[i][j], x_line_index[i][j], source_center[i][j])
-        
-                print(f"Using NP data for ({i},{j}) normalization.",
-                      "This is by all means not ideal!!",
-                      "If possible, run again these simulations.")
-                
-                source_results[-1].append(source_results_ij)
+    period_results = [[vma.get_period_from_source(source_results[i][j], t_line_norm[i][j],
+                                                  peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                                  periods_sensitivity=periods_sensitivity)[-1] 
+                       for j in range(len(series[i]))] for i in range(len(series))]
+    amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j],
+                                                        peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                                        amplitude_sensitivity=amplitude_sensitivity)[-1] 
+                          for j in range(len(series[i]))] for i in range(len(series))]
     
-    period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j], peaks_sensitivity=.15) for j in range(len(series[i]))] for i in range(len(series))]
-    amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j], peaks_sensitivity=.15) for j in range(len(series[i]))] for i in range(len(series))]
-    
-if requires_normalization:
-    
-    # source_results = [[source_results[i][j] / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+    # source_results = [[np.asarray(source_results[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
     results_plane = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
-    results_line = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+    results_line = [[np.asarray(results_line[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+
+sim_source_results = [[vma.get_source_from_line(results_line[i][j], x_line_index[i][j], source_center[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 zprofile_results = [[vma.get_zprofile_from_plane(results_plane[i][j], y_plane_index[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-zprofile_integral = [[vma.integrate_field_zprofile(zprofile_results[i][j], z_plane_index[i][j],
-                                                   cell_width[i][j], pml_width[i][j], period_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+zprofile_zintegral = [[vma.z_integrate_field_zprofile(zprofile_results[i][j], z_plane[i][j], z_plane_index[i][j],
+                                                     cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 zprofile_max = [[vma.find_zpeaks_zprofile(zprofile_results[i][j], z_plane_index[i][j],
-                                               cell_width[i][j], pml_width[i][j])[1] for j in range(len(series[i]))] for i in range(len(series))]
+                                          cell_width[i][j], pml_width[i][j])[1] for j in range(len(series[i]))] for i in range(len(series))]
+
+background_results = [[vma.get_background_from_plane(results_plane[i][j], y_plane_index[i][j], z_plane_index[i][j], cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+
+back_phase_results = [[vma.get_phase_field_peak_background(zprofile_max[i][j], background_results[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 field_peaks_all_index = []
 field_peaks_single_index = []
+field_peaks_single_amplitude = []
 field_peaks_zprofile = []
 field_peaks_plane = []
 for i in range(len(series)):
     field_peaks_all_index.append([])
     field_peaks_single_index.append([])
+    field_peaks_single_amplitude.append([])
     field_peaks_zprofile.append([])
     field_peaks_plane.append([])
     for j in range(len(series[i])):
         ind, mxs, zprof, plan = vma.get_all_field_peaks_from_yzplanes(results_plane[i][j],
                                                                     y_plane_index[i][j], z_plane_index[i][j], 
                                                                     cell_width[i][j], pml_width[i][j])
-        field_peaks_all_index[-1].append(ind)
+        field_peaks_all_index[i].append(ind)
         
-        ind, mxs, zprof, plan = vma.get_single_field_peak_from_yzplanes(results_plane[i][j],
-                                                                       y_plane_index[i][j], z_plane_index[i][j], 
-                                                                       cell_width[i][j], pml_width[i][j])
-        field_peaks_single_index[-1].append(ind)
-        field_peaks_zprofile[-1].append(zprof)
-        field_peaks_plane[-1].append(plan)
+        # ind, mxs, zprof, plan = vma.get_single_field_peak_from_yzplanes(results_plane[i][j],
+        ind, mxs, zprof, plan = vma.get_mean_field_peak_from_yzplanes(results_plane[i][j],
+                                                                      y_plane_index[i][j], z_plane_index[i][j], 
+                                                                      cell_width[i][j], pml_width[i][j])
+        field_peaks_single_index[i].append(ind)
+        field_peaks_single_amplitude[i].append(mxs)
+        field_peaks_zprofile[i].append(zprof)
+        field_peaks_plane[i].append(plan)
 del i, j, ind, mxs, zprof, plan
 
-#%% SHOW SOURCE AND FOURIER
+#%% GENERAL PLOT CONFIGURATION <<
 
-# colors = [["C0"], ["C4"], ["C3"]]
+n = len(series)
+m = max([len(s) for s in series])
+
+if n*m <= 3:
+    subfig_size = 6.5
+if n*m <= 6:
+    subfig_size = 4.5
+else:
+    subfig_size = 3.5
+    
+vertical_plot = True
+
+empty_proportion = [[2*params[i][j]["empty_width"]/(params[i][j]["cell_width"]-2*params[i][j]["pml_width"]) for j in range(len(series[i]))] for i in range(len(series))]
+if (np.array(empty_proportion) > 0.6).any():
+    field_area = [0.5 - 0.30/2, 0.72 - 0.30/2, 0.30, 0.30]
+    legend_area = (3.4, -2.5)
+elif (np.array(empty_proportion) > 0.4).any():
+    field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
+    legend_area = (3.0, -1.9)
+else:
+    field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
+    legend_area = (2.5, -1.3)
+
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
+
+if not os.path.isdir(os.path.join(home, plot_folder)):
+    os.mkdir(os.path.join(home, plot_folder))
+plot_file = lambda n : os.path.join(home, plot_folder, n)
+
+#%% BASIC CONTROL
 
 plt.figure()
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
+for i in range(len(series)):        
+    plt.plot(test_param[i],
+             [results_line[i][j].shape[0] for j in range(len(series[i]))], 
+             series_markers[i], color=series_colors[i], alpha=0.5,
+             markersize=series_markersizes[i])
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Number of points in whole cell", "Número de puntos en la celda completa"))
+plt.legend(series_legend)
 
-lines = []
+plt.savefig(plot_file("Points.png"))
+
+cropped_line = [[vma.crop_field_xprofile(results_line[i][j], x_line_index[i][j], 
+                                         cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+
+plt.figure()
+for i in range(len(series)):        
+    plt.plot(test_param[i],
+             [cropped_line[i][j].shape[0] for j in range(len(series[i]))], 
+             series_markers[i], color=series_colors[i], alpha=0.5,
+             markersize=series_markersizes[i])
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Number of points in real cell", "Número de puntos en la celda real"))
+plt.legend(series_legend)
+
+plt.savefig(plot_file("InnerPoints.png"))
+
+plt.figure()
 for i in range(len(series)):
-    for j in range(len(series[i])):
-        if available_normfield:
-            l, = plt.plot(t_line_norm[i][j]/period_results[i][j], 
-                          source_results[i][j] / amplitude_results[i][j],
-                          label=series_label[i](series[i][j]),
-                          color=colors[i][j])
-        else:
-            l, = plt.plot(t_line_norm[i][j]/period_results[i][j], 
-                          source_results[i][j],
-                          label=series_label[i](series[i][j]),
-                          color=colors[i][j])            
-        lines.append(l)
-plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
-plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                      r"Campo eléctrico normalizado $E_z(y=z=0)$"))
-plt.legend(ncol=2)
+    plt.plot(test_param[i],
+             [results_line[i][j].shape[-1] for j in range(len(series[i]))], 
+             series_markers[i], color=series_colors[i], alpha=0.5,
+             markersize=series_markersizes[i])
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Number of points in time", "Número de puntos en el tiempo"))
+plt.legend(series_legend)
 
-plt.savefig(plot_file("Source.png"))
-        
-fourier = [[np.abs(np.fft.rfft(source_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
+plt.savefig(plot_file("TimePoints.png"))
+
+fig = plt.figure()
+ax = plt.subplot()
+ax2 = plt.twinx()
+lines, lines2, lines3 = [], [], []
+for i in range(len(series)):
+    l, = ax.plot(test_param[i],
+                 [params[i][j]["courant"]/resolution[i][j] for j in range(len(series[i]))], 
+                 series_markers[i], color=series_colors[i], alpha=0.5,
+                 markersize=series_markersizes[i])
+    l3, = ax.plot(test_param[i],
+                 [period_line[i][j] for j in range(len(series[i]))], 
+                 series_markers[i], color=series_colors[i], alpha=0.5,
+                 markersize=series_markersizes[i], fillstyle="top")
+    l2, = ax.plot(test_param[i],
+                  [1/resolution[i][j] for j in range(len(series[i]))], 
+                  series_markers[i], color=series_colors[i], fillstyle="none",
+                  markersize=series_markersizes[i])
+    lines.append(l)
+    lines2.append(l2)
+    lines3.append(l3)
+plt.xlabel(test_param_label)
+ax.set_ylabel(trs.choose("Time Minimum Division [MPu]", "Mínima división del tiempo [uMP]"))
+ax2.set_ylabel(trs.choose("Space Minimum Division [MPu]", "Mínima división del espacio [uMP]"))
+plt.legend([*lines, *lines3, *lines2], 
+           [*[s + r" $\Delta t$" for s in series_legend], 
+           *[s + r" $\Delta t_{line}$" for s in series_legend],
+           *[s + r" $\Delta r$" for s in series_legend]],
+           ncol=3)
+plt.savefig(plot_file("MinimumDivision.png"))
+
+fig, [ax, ax2] = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
+for i in range(len(series)):
+    ax.plot(test_param[i],
+            [resolution[i][j] for j in range(len(series[i]))], 
+            series_markers[i], color=series_colors[i], alpha=0.5,
+            markersize=series_markersizes[i])
+    ax2.plot(test_param[i],
+             [resolution_wlen[i][j] for j in range(len(series[i]))], 
+             series_markers[i], color=series_colors[i], alpha=0.5,
+             markersize=series_markersizes[i], fillstyle="none")
+plt.xlabel(test_param_label)
+ax.set_ylabel(trs.choose("Resolution", "Resolución") + r" [points/$\Delta r$]")
+ax2.set_ylabel(trs.choose("Resolution", "Resolución") + r" [points/$\lambda$]")
+
+first_legend = ax.legend(series_legend, loc="center left")
+second_legend = ax2.legend(series_legend, loc="center right")
+
+#%% MAKE FOURIER ANALYSIS FOR SOURCE <<
+
+fourier = [[np.abs(np.fft.rfft(source_results[i][j] / amplitude_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
 fourier_freq = [[np.fft.rfftfreq(len(source_results[i][j]), d=period_line[i][j])  for j in range(len(series[i]))] for i in range(len(series))]
 fourier_wlen = [[from_um_factor[i][j] * 1e3 / fourier_freq[i][j]  for j in range(len(series[i]))] for i in range(len(series))]
 fourier_best = [[wlen[i][j] * from_um_factor[i][j] * 1e3 for j in range(len(series[i]))] for i in range(len(series))]
+# fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
 
-plt.figure()
+fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
+fourier_max_best = [[fourier_wlen[i][j][ np.argmin(np.abs(fourier_wlen[i][j] - fourier_best[i][j])) ]  for j in range(len(series[i]))] for i in range(len(series))]
+
+#%% SHOW SOURCE AND FOURIER USED FOR NORMALIZATION
+
+fig = plt.figure()
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
+
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l, = plt.plot(t_line_norm[i][j] / period_results[i][j], 
+                      source_results[i][j] / amplitude_results[i][j],
+                      label=series_legend[i] + " " + series_label[i](series[i][j]),
+                      color=colors[i][j],
+                      linestyle=series_linestyles[i])
+plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
+plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                      r"Campo eléctrico $E_z(y=z=0)$"))
+box = fig.axes[0].get_position()
+box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+fig.axes[0].set_position(box)
+leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
+
+fig.set_size_inches([9.28, 4.8])
+plt.savefig(plot_file("Source.png"))
+
+fig = plt.figure()
+plt.title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+          plot_title_ending)
 lines = []
 for i in range(len(series)):
     for j in range(len(series[i])):
         plt.plot(fourier_wlen[i][j], fourier[i][j],
-                 label=series_label[i](series[i][j]),
-                 color=colors[i][j])
+                 label=series_legend[i] + " " + series_label[i](series[i][j]),
+                 color=colors[i][j],
+                 linestyle=series_linestyles[i])
 plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
 plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
                       r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
-plt.legend(ncol=2)
+box = fig.axes[0].get_position()
+box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+fig.axes[0].set_position(box)
+leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
+
+fig.set_size_inches([9.28, 4.8])
+
+# plt.annotate(trs.choose(f"Maximum at {fourier_max_wlen:.2f} nm",
+#                         f"Máximo en {fourier_max_wlen:.2f} nm"),
+#              (5, 5), xycoords='figure points')
 
 plt.savefig(plot_file("SourceFFT.png"))
 
@@ -420,84 +504,189 @@ plt.xlim([350, 850])
         
 plt.savefig(plot_file("SourceFFTZoom.png"))
 
-#%% BEST MATCH WAVELENGTH ANALYSIS
-
-fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
-fourier_max_best = [[fourier_wlen[i][j][ np.argmin(np.abs(fourier_wlen[i][j] - fourier_best[i][j])) ]  for j in range(len(series[i]))] for i in range(len(series))]
+#%% WAVELENGTH CHECK PLOT
 
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
-
-if len(series)>1:
-    colors = [*["red", "blue"]*2]
-else:
-    colors = ["k"]
-
-markers = ["o", "o"]
-markers_alpha = [0.4, 0.4]
+          for sc, s in zip(series_colormaps, series)]
 
 plt.figure()
-plt.suptitle(trs.choose('Monochromatic source wavelength on ', 
-                        'Longitud de onda de fuente monocromática sobre ') + 
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
 for i in range(len(series)):
     plt.plot(test_param[i], 
              100 * ( np.array(fourier_max_wlen[i]) - np.array(fourier_max_best[i]) ) / np.array(fourier_max_best[i]), 
-             color=colors[i], marker=markers[i], alpha=markers_alpha[i],
-             markersize=8, linestyle="", markeredgewidth=0)
-plt.grid(True)
+             color=series_colors[i], marker=series_markers[i], alpha=0.4,
+             linestyle="", markeredgewidth=0, markersize=series_markersizes[i])
+plt.axhline(0, color="k", linewidth=0.5, label="")
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
 plt.ylabel(trs.choose("Maximum Wavelength Percentual Variation", 
                       "Variación porcentual de la longitud de onda máxima\n") + 
            r"$\lambda_{max} = \argmax [\mathcal{F}\;(E_z)]$ [%]")
+
 plt.tight_layout()
 vs.saveplot(plot_file("LambdaVariation.png"), overwrite=True)
 
-#%% SHOW RESONANCE OSCILLATIONS
+#%% SHOW SOURCE AND FOURIER DURING SIMULATION
 
+# colors = [["C0"], ["C4"], ["C3"]]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
-plt.figure()        
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
+fig = plt.figure()
+plt.title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+          plot_title_ending)
+
+lines = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l, = plt.plot(t_line[i][j]/period_results[i][j], 
+                      sim_source_results[i][j],
+                      label=series_legend[i] + " " + series_label[i](series[i][j]),
+                      linestyle=series_linestyles[i],
+                      color=colors[i][j])            
+        lines.append(l)
+plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
+plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                      r"Campo eléctrico $E_z(y=z=0)$"))
+box = fig.axes[0].get_position()
+box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+fig.axes[0].set_position(box)
+leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
+
+fig.set_size_inches([9.28, 4.8])
+plt.savefig(plot_file("SimSource.png"))
+        
+fourier = [[np.abs(np.fft.rfft(sim_source_results[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
+fourier_freq = [[np.fft.rfftfreq(len(sim_source_results[i][j]), d=period_line[i][j])  for j in range(len(series[i]))] for i in range(len(series))]
+fourier_wlen = [[from_um_factor[i][j] * 1e3 / fourier_freq[i][j]  for j in range(len(series[i]))] for i in range(len(series))]
+# fourier_max_wlen = [[fourier_wlen[i][j][ np.argmax(fourier[i][j]) ]  for j in range(len(series[i]))] for i in range(len(series))]
+
+fig = plt.figure()
+plt.title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+          plot_title_ending)
+lines = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        plt.plot(fourier_wlen[i][j], fourier[i][j],
+                 label=series_legend[i] + " " + series_label[i](series[i][j]),
+                 linestyle=series_linestyles[i],
+                 color=colors[i][j])
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$",
+                      r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$"))
+box = fig.axes[0].get_position()
+box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+fig.axes[0].set_position(box)
+leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
+
+# plt.annotate(trs.choose(f"Maximum at {fourier_max_wlen:.2f} nm",
+#                         f"Máximo en {fourier_max_wlen:.2f} nm"),
+#              (5, 5), xycoords='figure points')
+
+fig.set_size_inches([9.28, 4.8])
+plt.savefig(plot_file("SimSourceFFT.png"))
+
+plt.xlim([350, 850])
+        
+plt.savefig(plot_file("SimSourceFFTZoom.png"))
+
+#%% SHOW FIELD PEAKS INTENSIFICATION OSCILLATIONS
+
+fig = plt.figure()        
+plt.title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+          plot_title_ending)
 
 for i in range(len(series)):
     for j in range(len(series[i])):
             plt.plot(t_line[i][j] / period_results[i][j], 
-                     zprofile_integral[i][j], color=colors[i][j],
-                     label=series_label[i](series[i][j]))
+                     zprofile_zintegral[i][j], color=colors[i][j],
+                     label=series_legend[i] + " " + series_label[i](series[i][j]),
+                     linestyle=series_linestyles[i])
 plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
 plt.ylabel(trs.choose(r"Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
                       r"Integral del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
 
-plt.legend()
+box = fig.axes[0].get_position()
+box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+fig.axes[0].set_position(box)
+leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
+
+fig.set_size_inches([9.28, 4.8])
 plt.savefig(plot_file("Integral.png"))
 
-plt.figure()        
+# fig = plt.figure() 
+fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0, "height_ratios":[1,.5]})
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+# plot_grid = gridspec.GridSpec(ncols=1, nrows=4, hspace=0, figure=fig)
+# axes = [fig.add_subplot(plot_grid[:3,:]), fig.add_subplot(plot_grid[-1:,:])]
+
+for i in range(len(series)):
+    for j in range(len(series[i])):
+            axes[0].plot(t_line[i][j]/period_results[i][j], 
+                     zprofile_max[i][j],
+                     color=colors[i][j],
+                     label=series_legend[i] + " " + series_label[i](series[i][j]),
+                     linestyle=series_linestyles[i])
+            axes[1].plot(t_line[i][j]/period_results[i][j], 
+                     background_results[i][j],
+                     color=colors[i][j],
+                     label="",
+                     linestyle=series_linestyles[i])
+axes[0].axhline(0, color="k", linewidth=0.5)
+axes[1].axhline(0, color="k", linewidth=0.5)
+axes[-1].set_xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
+axes[0].set_ylabel(trs.choose("Electric Field Maximum\n",
+                              "Máximo del campo eléctrico\n") + r"$max[ E_z(x=y=0, z) ](t)$")
+axes[-1].set_ylabel(trs.choose("Electric Field\n"+r"Background $E_{z0}$",
+                               "Fondo del campo\n"+r"eléctrico $E_{z0}$"))
+axes[-1].yaxis.tick_right()
+axes[-1].yaxis.set_label_position("right")
+
+for ax in axes:
+    box = ax.get_position()
+    box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+    ax.set_position(box)
+leg = axes[0].legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
+
+fig.set_size_inches([9.28, 4.8])
+plt.savefig(plot_file("Maximum.png"))
+
+#%% MAXIMUM INTENSIFICATION AMPLITUDE AND PHASE VS TEST PARAMETER PLOT
+
+fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
 
 for i in range(len(series)):
-    for j in range(len(series[i])):
-            plt.plot(t_line[i][j]/period_results[i][j], 
-                     zprofile_max[i][j],
-                     color=colors[i][j],
-                     label=series_label[i](series[i][j]))
-plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
-plt.ylabel(trs.choose(r"Normalized Electric Field Maximum $max[ E_z(z) ]$",
-                      r"Máximo del campo eléctrico normalizado $max[ E_z(z) ]$"))
+    axes[0].plot(test_param[i], 
+                 field_peaks_single_amplitude[i], 
+                 color=series_colors[i], marker=series_markers[i], alpha=0.4,
+                 linestyle="", markeredgewidth=0, markersize=series_markersizes[i])
+    axes[1].plot(test_param[i], 
+                 back_phase_results[i], 
+                 color=series_colors[i], marker=series_markers[i], alpha=0.4,
+                 linestyle="", markeredgewidth=0, markersize=series_markersizes[i])
+# axes[0].axhline(0, color="k", linewidth=0.5, label="")
+# axes[1].axhline(0, color="k", linewidth=0.5, label="")
 
-plt.legend()
-plt.savefig(plot_file("Maximum.png"))
+axes[-1].set_xlabel(test_param_label)
+axes[0].set_ylabel(trs.choose("Electric Field Maximum\n",
+                              "Máximo del\ncampo eléctrico\n") + r"$\max[ E_z(x=0) ]$")
+axes[1].set_ylabel(trs.choose(r"Electric Field $E_z(x=0)$"+"\n"+r"Relative Phase $\Delta\phi$"+"\n" +"With Background $E_{z0}(x=0)$",
+                              r"Fase relativa $\Delta\phi$"+"\n"+r"del campo eléctrico $E_z$"+"\n"+r" con el fondo $E_{z0}(x=0)$"))
+axes[0].legend(series_legend)
 
-#%% GET THEORY (SCATTERING)
+plt.tight_layout()
+vs.saveplot(plot_file("MaximumTestParam.png"), overwrite=True)
+
+#%% GET THEORY (SCATTERING) <<
 
 def wlen_range(material, surrounding_index):
     if material=="Au":
         if surrounding_index == 1: return (450, 750)
-        elif surrounding_index == 1.33: return (550, 850)
+        elif surrounding_index == 1.33: return (500, 800)
     else:
         raise ValueError("Please, expand this function.")
 
@@ -505,11 +694,13 @@ scatt_max_wlen_theory = [[vmt.max_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e
                                              material[i][j], 
                                              paper[i][j], 
                                              wlen_range(material[i][j],
-                                                        index[i][j]))[0] for j in range(len(series[i]))] for i in range(len(series))]
+                                                        index[i][j]),
+                                             surrounding_index=index[i][j])[0] 
+                          for j in range(len(series[i]))] for i in range(len(series))]
 
 scatt_max_wlen_predict = [wlen[i][np.argmin(np.abs([wlen[i][j] * from_um_factor[i][j] * 1e3 - scatt_max_wlen_theory[i][j] for j in range(len(series[i]))]))] for i in range(len(series))]
 
-#%% GET THEORY (FIELD)
+#%% GET THEORY (FIELD) <<
 
 rvec = []
 for i in range(len(series)):
@@ -543,46 +734,102 @@ for i in range(len(series)):
         theory_ku = np.array([vt.E(epsilon, alpha_ku, E0, 
                                    rv, r[i][j], epsilon_ext=index[i][j]**2) 
                               for rv in rvec[i][j]])[:,-1]
-        zprofile_cm_theory[-1].append(theory_cm)
-        zprofile_ku_theory[-1].append(theory_ku)
+        zprofile_cm_theory[i].append(theory_cm)
+        zprofile_ku_theory[i].append(theory_ku)
         
-#%% PLOT MAXIMUM INTENSIFICATION PROFILE (THEORY)
+#%% 
+    
+fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
 
-# colors = [["C0"], ["C4"], ["C3"]]
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+for i in range(len(series)):
+    axes[0].plot(test_param[i], 
+                 field_peaks_single_amplitude[i], 
+                 color=series_colors[i], marker=series_markers[i], alpha=0.4,
+                 linestyle="", markeredgewidth=0, markersize=series_markersizes[i])
+    axes[1].plot(test_param[i], 
+                 back_phase_results[i], 
+                 color=series_colors[i], marker=series_markers[i], alpha=0.4,
+                 linestyle="", markeredgewidth=0, markersize=series_markersizes[i])
+# axes[0].axhline(0, color="k", linewidth=0.5, label="")
+# axes[1].axhline(0, color="k", linewidth=0.5, label="")
 
-plt.figure()
+axes[-1].set_xlabel(test_param_label)
+axes[0].set_ylabel(trs.choose("Electric Field Maximum\n",
+                              "Máximo del\ncampo eléctrico\n") + r"$\max[ E_z(x=0) ]$")
+axes[1].set_ylabel(trs.choose(r"Electric Field $E_z(x=0)$"+"\n"+r"Relative Phase $\Delta\phi$"+"\n" +"With Background $E_{z0}(x=0)$",
+                              r"Fase relativa $\Delta\phi$"+"\n"+r"del campo eléctrico $E_z$"+"\n"+r" con el fondo $E_{z0}(x=0)$"))
+axes[0].legend(series_legend)
+
+plt.tight_layout()
+vs.saveplot(plot_file("MaximumTestParam.png"), overwrite=True)
+        
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (THEORY) <<
+
+fig = plt.figure(figsize=(n*subfig_size, subfig_size))
+axes = fig.subplots(ncols=len(series), sharex=True, sharey=True,
+                    gridspec_kw={"wspace":0, "hspace":0})
+
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
 l_series = []
 l_origin = []
 for i in range(len(series)):
     for j in range(len(series[i])):
-        l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
+        axes[i].set_title(series_legend[i])
+        
+        axes[i].axvline(r[i][j] * from_um_factor[i][j] * 1e3, 
+                        color="k", linestyle="dotted", linewidth=.8)
+        axes[i].axvline(-r[i][j] * from_um_factor[i][j] * 1e3, 
+                        color="k", linestyle="dotted", linewidth=.8)
+        
+        l_cm, = axes[i].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
                          np.abs(zprofile_cm_theory[i][j]),
                          label=series_label[i](series[i][j]),
-                         color=colors[i][j], linestyle="dashed")
-        l_ku, = plt.plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
+                         color=series_ind_colors[i][j], #linestyle="dashed",
+                         alpha=0.5)
+        l_ku, = axes[i].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
                          np.abs(zprofile_ku_theory[i][j]),
                          label=series_label[i](series[i][j]),
-                         color=colors[i][j], linestyle="dotted")
+                         color=series_ind_colors[i][j], linestyle="dashed",
+                         alpha=1)
         l_series.append(l_cm)
-        if i == 0 and j == len(series[0]) - 1:
+        
+        axes[i].axvline(r[i][j] * from_um_factor[i][j] * 1e3, 
+                        color="k", linestyle="dotted", linewidth=.8)
+        axes[i].axvline(-r[i][j] * from_um_factor[i][j] * 1e3, 
+                        color="k", linestyle="dotted", linewidth=.8)
+        
+        axes[i].axhline(0, color="k", linewidth=.5)
+        
+        if i == 0 and j == int(len(series[0])/2):
             l_origin = [l_cm, l_ku]
-plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
-plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                      r"Campo eléctrico normalizado $E_z(y=z=0)$"))
-plt.legend(ncol=2)
+        axes[i].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+        
+        axes[i].xaxis.set_minor_locator(AutoMinorLocator())
+        axes[i].yaxis.set_minor_locator(AutoMinorLocator())
+        axes[i].grid(True, axis="y", which="both", alpha=.3)
+        
+axes[0].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                              r"Campo eléctrico $E_z(y=z=0)$"))
 
-first_legend = plt.legend(l_origin, trs.choose(["CM Theory", "Ku Theory"],
+for ax in axes:
+    box = ax.get_position()
+    box_height = box.y1 - box.y0
+    box.y1 = box.y1 - .02 * box_height
+    box.y0 = box.y0 + .13 * box_height
+    ax.set_position(box)
+
+first_legend = axes[0].legend(l_origin, trs.choose(["CM Theory", "Ku Theory"],
                                                ["Teoría CM", "Teoría Ku"]),
-                          loc="center")
-second_legend = plt.legend(
-    l_series, 
-    [l.get_label() for l in l_series],
-    loc="upper center")
-plt.gca().add_artist(first_legend)
+                              loc="center", frameon=False, bbox_to_anchor=(1,-.2), ncol=2)
+second_legend = axes[0].legend(
+    l_series[:len(series[0])], 
+    [l.get_label() for l in l_series[:len(series[0])]],
+    bbox_to_anchor=(1, -.28),
+    loc="center", ncol=len(series[0]), frameon=False)
+axes[0].add_artist(first_legend)
 
 plt.savefig(plot_file("FieldProfileTheory.png"))
 
@@ -590,19 +837,20 @@ plt.savefig(plot_file("FieldProfileTheory.png"))
 
 # colors = [["C0"], ["C4"], ["C3"]]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
 plt.figure()
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
 for i in range(len(series)):
     for j in range(len(series[i])):
-        plt.plot(z_plane_cropped[i][j], field_peaks_zprofile[i][j],
-                 label=series_label[i](series[i][j]),
+        plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
+                 field_peaks_zprofile[i][j],
+                 label=series_legend[i] + " " + series_label[i](series[i][j]),
                  color=colors[i][j])
-plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
-plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                      r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+plt.xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                      r"Campo eléctrico $E_z(y=z=0)$"))
 plt.legend()
 
 plt.savefig(plot_file("FieldProfileData.png"))
@@ -611,7 +859,7 @@ plt.savefig(plot_file("FieldProfileData.png"))
 
 # colors = [["C0"], ["C4"], ["C3"]]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
 plt.figure()
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
@@ -622,7 +870,7 @@ for i in range(len(series)):
     for j in range(len(series[i])):
         l_mp, = plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
                          field_peaks_zprofile[i][j] ,
-                         label=series_label[i](series[i][j]),
+                         label=series_legend[i] + " " + series_label[i](series[i][j]),
                          color=colors[i][j])
         l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
                          np.abs(zprofile_cm_theory[i][j]),
@@ -633,9 +881,9 @@ for i in range(len(series)):
         l_series.append(l_mp)
         if i == 0 and j == len(series[i])-1:
             l_origin = [l_mp, l_cm, l_ku]
-plt.xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
-plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                      r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+plt.xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                      r"Campo eléctrico $E_z(y=z=0)$"))
 
 plt.legend(ncol=2)
 
@@ -683,16 +931,13 @@ for i in range(len(series)):
         l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
                                 np.abs(zprofile_ku_theory[i][j]),
                                 color=colors[i][j], linestyle="dotted")
-        xlims = axes[i][j].get_xlim()
         axes[i][j].axhline(0, color="k", linewidth=.5)
         axes[i][j].axvline(0, color="k", linewidth=.5)
-        axes[i][j].set_xlim(xlims)
-        axes[i][j].set_title(series_label[i](series[i][j]))
         if i==len(series)-1:
-            axes[i][j].set_xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+            axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
         if j==0:
-            axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                                              r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+            axes[i][j].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                                              r"Campo eléctrico $E_z(y=z=0)$"))
         if i==len(series)-1 and j==len(series[i])-1:
             axes[i][j].legend([l_mp, l_cm, l_ku], 
                               trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
@@ -703,22 +948,11 @@ for i in range(len(series)):
         axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
         # axes[i][j].grid(True, axis="y", which="major")
         axes[i][j].grid(True, axis="y", which="both", alpha=.3)
-        axes[i][j].set_title(series_label[i](series[i][j]))
+        axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]))
 
 plt.savefig(plot_file("FieldProfileAllSubplots.png"))
 
-
 #%% PLOT MAXIMUM INTENSIFICATION FIELD (SUBPLOTS)
-
-n = len(series)
-m = max([len(s) for s in series])
-
-if n*m <= 3:
-    subfig_size = 6.5
-if n*m <= 6:
-    subfig_size = 4.5
-else:
-    subfig_size = 3.5
 
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
 axes = fig.subplots(ncols=m, nrows=n)
@@ -739,48 +973,34 @@ for i in range(len(series)):
                                         min(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
                                         max(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3])
         if i==len(series)-1:
-            axes[i][j].set_xlabel(trs.choose("Position Y [nm]", "Posición Y [nm]"))
+            axes[i][j].set_xlabel(trs.choose("Position $Y$ [nm]", "Posición $Y$ [nm]"))
         if j==0:
-            axes[i][j].set_ylabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+            axes[i][j].set_ylabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
         if j==len(series[i])-1:
             cax = axes[i][j].inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
                                         transform=axes[i][j].transAxes)
             cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-            cbar.set_label(trs.choose("Normalized electric field $E_z$",
-                                      "Campo eléctrico normalizado $E_z$"))
+            cbar.set_label(trs.choose("Electric field $E_z$",
+                                      "Campo eléctrico $E_z$"))
         # if i==0:
         #     axes[i][j].set_title(series_label[i](series[i][j]), y = 1.05)
         # else:
         #     axes[i][j].set_title(series_label[i](series[i][j]), y = -.3)
-        axes[i][j].set_title(series_label[i](series[i][j]))
+        axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]))
+        axes[i][j].grid(False)
 plt.savefig(plot_file("FieldPlaneAll.png"))
 
 #%% PLOT PROFILE AND PLANE (SUBPLOTS)
 
-n = len(series)
-m = max([len(s) for s in series])
-
-if n*m <= 3:
-    subfig_size = 6.5
-if n*m <= 6:
-    subfig_size = 4.5
+if vertical_plot:
+    fig = plt.figure(figsize=(n*subfig_size, m*subfig_size))
+    axes = fig.subplots(ncols=n, nrows=m, sharex=True, sharey=True, 
+                        gridspec_kw={"wspace":0, "hspace":0})
+    axes = axes.T
 else:
-    subfig_size = 3.5
-    
-empty_proportion = [[2*params[i][j]["empty_width"]/(params[i][j]["cell_width"]-2*params[i][j]["pml_width"]) for j in range(len(series[i]))] for i in range(len(series))]
-if (np.array(empty_proportion) > 0.6).any():
-    field_area = [0.5 - 0.30/2, 0.72 - 0.30/2, 0.30, 0.30]
-    legend_area = (3.5, -2.5)
-elif (np.array(empty_proportion) > 0.4).any():
-    field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
-    legend_area = (3.1, -1.9)
-else:
-    field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
-    legend_area = (2.6, -1.3)
-
-fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
-axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
-                    gridspec_kw={"wspace":0, "hspace":0})
+    fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
+    axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
+                        gridspec_kw={"wspace":0, "hspace":0})
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
 
@@ -821,22 +1041,33 @@ for i in range(len(series)):
         axes[i][j].axhline(0, color="k", linewidth=.5)
         axes[i][j].axvline(0, color="k", linewidth=.5)
         axes[i][j].set_xlim(xlims)
-        axes[i][j].set_title(series_label[i](series[i][j]))
-        if i==len(series)-1:
-            axes[i][j].set_xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
-        if j==0:
-            axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                                              r"Campo eléctrico normalizado $E_z(y=z=0)$"))
-        # else:
-        #     axes[i][j].set_ytick_labels([])
+        
+        if vertical_plot:
+            if j==len(series[i])-1:
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+            if i==0:
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                                                  r"Campo eléctrico $E_z(y=z=0)$"))
+        else:
+            if i==len(series)-1:
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+            if j==0:
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                                                  r"Campo eléctrico $E_z(y=z=0)$"))
         
         axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].grid(True, axis="y", which="both", alpha=.3)
-        if i==0:
-            axes[i][j].set_title(series_label[i](series[i][j]), y = 1.02)
+        if vertical_plot:
+            axes[i][j].annotate(series_label[i](series[i][j]),
+                                (5,17), xycoords="axes points", fontsize=12)
+            axes[i][j].annotate(series_legend[i],
+                                (5,5), xycoords="axes points", fontsize=12)
         else:
-            axes[i][j].set_title(series_label[i](series[i][j]), y = -.25)
+            if i==0:
+                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = 1.02)
+            elif i==len(series)-1:
+                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = -.25)
         
         ax_field = vp.add_subplot_axes(axes[i][j], field_area)
         axes_field[-1].append(ax_field)
@@ -852,11 +1083,13 @@ for i in range(len(series)):
         ax_field.set_yticks([])
         
         if i==len(series)-1 and j==len(series[i])-1:
-            cax = axes[i][j].inset_axes([1.04, 0, 0.07, 2], #[1.04, 0, 0.07, 1], 
+            if vertical_plot: ncax=m
+            else: ncax=n
+            cax = axes[i][j].inset_axes([1.04, 0, 0.07, ncax], #[1.04, 0, 0.07, 1], 
                                         transform=axes[i][j].transAxes)
             cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-            cbar.set_label(trs.choose("Normalized electric field $E_z$",
-                                      "Campo eléctrico normalizado $E_z$"))
+            cbar.set_label(trs.choose("Electric field $E_z$",
+                                      "Campo eléctrico $E_z$"))
             cbar.ax.minorticks_on()
         
 leg = plt.legend(
@@ -865,14 +1098,17 @@ leg = plt.legend(
     bbox_to_anchor=legend_area, #(2.5, 1.4), 
     loc="center right", frameon=False)
 
-fig.set_size_inches([13.5,  7.9]) # ([17.5,  7.9])
+if vertical_plot:
+    fig.set_size_inches([7.9,  13.5]) # ([17.5,  7.9])
+else:
+    fig.set_size_inches([13.5,  7.9]) # ([17.5,  7.9])
 plt.savefig(plot_file("AllSubplots.png"))
 
 #%% PLOT MAXIMUM INTENSIFICATION PROFILE (DATA) [ABSOLUTE VALUE]
 
 # colors = [["C0"], ["C4"], ["C3"]]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
 plt.figure()
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
@@ -880,11 +1116,11 @@ plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre
 for i in range(len(series)):
     for j in range(len(series[i])):
         plt.plot(z_plane_cropped[i][j], np.abs(field_peaks_zprofile[i][j]),
-                 label=series_label[i](series[i][j]),
-                 color=colors[i][j])
-plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
-plt.ylabel(trs.choose(r"Normalized Electric Field $|E_z|(y=z=0)$",
-                      r"Campo eléctrico normalizado $|E_z|(y=z=0)$"))
+                 label=series_legend[i] + " " + series_label[i](series[i][j]),
+                 color=colors[i][j], linestyle=series_linestyles[i])
+plt.xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+plt.ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
+                      r"Campo eléctrico $|E_z|(y=z=0)$"))
 plt.legend()
 
 plt.savefig(plot_file("AbsFieldProfileData.png"))
@@ -893,7 +1129,7 @@ plt.savefig(plot_file("AbsFieldProfileData.png"))
 
 # colors = [["C0"], ["C4"], ["C3"]]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
 plt.figure()
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
@@ -904,7 +1140,7 @@ for i in range(len(series)):
     for j in range(len(series[i])):
         l_mp, = plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
                          np.abs(field_peaks_zprofile[i][j]),
-                         label=series_label[i](series[i][j]),
+                         label=series_legend[i] + " " + series_label[i](series[i][j]),
                          color=colors[i][j])
         l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
                          np.abs(zprofile_cm_theory[i][j]),
@@ -915,9 +1151,9 @@ for i in range(len(series)):
         l_series.append(l_mp)
         if i == 0 and j == len(series[i])-1:
             l_origin = [l_mp, l_cm, l_ku]
-plt.xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
-plt.ylabel(trs.choose(r"Normalized Electric Field $|E_z|(y=z=0)$",
-                      r"Campo eléctrico normalizado $|E_z|(y=z=0)$"))
+plt.xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+plt.ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
+                      r"Campo eléctrico $|E_z|(y=z=0)$"))
 
 plt.legend(ncol=2)
 
@@ -933,16 +1169,6 @@ plt.gca().add_artist(first_legend)
 plt.savefig(plot_file("AbsFieldProfileAll.png"))
 
 #%% PLOT MAXIMUM INTENSIFICATION PROFILE (SUBPLOTS) [ABSOLUTE VALUE]
-
-n = len(series)
-m = max([len(s) for s in series])
-
-if n*m <= 3:
-    subfig_size = 6.5
-if n*m <= 6:
-    subfig_size = 4.5
-else:
-    subfig_size = 3.5
 
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
 axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, gridspec_kw={"wspace":0})
@@ -971,10 +1197,10 @@ for i in range(len(series)):
         axes[i][j].set_xlim(xlims)
         axes[i][j].set_title(series_label[i](series[i][j]))
         if i==len(series)-1:
-            axes[i][j].set_xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+            axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
         if j==0:
-            axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field $|E_z|(y=z=0)$",
-                                              r"Campo eléctrico normalizado $|E_z|(y=z=0)$"))
+            axes[i][j].set_ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
+                                              r"Campo eléctrico $|E_z|(y=z=0)$"))
         if i==len(series)-1 and j==len(series[i])-1:
             axes[i][j].legend([l_mp, l_cm, l_ku], 
                               trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
@@ -985,36 +1211,22 @@ for i in range(len(series)):
         axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
         # axes[i][j].grid(True, axis="y", which="major")
         axes[i][j].grid(True, axis="y", which="both", alpha=.3)
-        axes[i][j].set_title(series_label[i](series[i][j]))
+        axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]))
 
 plt.savefig(plot_file("AbsFieldProfileAllSubplots.png"))
 
-#%% PLOT PROFILE AND PLANE (SUBPLOTS) [ABSOLUTE VALUE]
+#%% PLOT PROFILE AND PLANE (SUBPLOTS) [ABSOLUTE VALUE] <<
 
-n = len(series)
-m = max([len(s) for s in series])
+if vertical_plot:
+    fig = plt.figure(figsize=(n*subfig_size, m*subfig_size))
+    axes = fig.subplots(ncols=n, nrows=m, sharex=True, sharey=True, 
+                        gridspec_kw={"wspace":0, "hspace":0})
+    axes = axes.T
+else:
+    fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
+    axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
+                        gridspec_kw={"wspace":0, "hspace":0})
 
-if n*m <= 3:
-    subfig_size = 6.5
-if n*m <= 6:
-    subfig_size = 4.5
-else:
-    subfig_size = 3.5
-    
-empty_proportion = [[2*params[i][j]["empty_width"]/(params[i][j]["cell_width"]-2*params[i][j]["pml_width"]) for j in range(len(series[i]))] for i in range(len(series))]
-if (np.array(empty_proportion) > 0.6).any():
-    field_area = [0.5 - 0.30/2, 0.72 - 0.30/2, 0.30, 0.30]
-    legend_area = (3.5, -2.5)
-elif (np.array(empty_proportion) > 0.4).any():
-    field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
-    legend_area = (3.1, -1.9)
-else:
-    field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
-    legend_area = (2.6, -1.3)
-    
-fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
-axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
-                    gridspec_kw={"wspace":0, "hspace":0})
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
 
@@ -1045,40 +1257,71 @@ for i in range(len(series)):
                                 color="k", linewidth=1.4) # color=colors[i][j]
         l_cm, = axes[i][j].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
                                 np.abs(zprofile_cm_theory[i][j]),
-                                linestyle=(0, (5, 1)), color="darkorchid") # color=colors[i][j]
+                                linestyle="solid", color=series_ind_colors[i][j], alpha=0.5)
+                                # linestyle=(0, (5, 1)), color="darkorchid") # color=colors[i][j]
         l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
                                 np.abs(zprofile_ku_theory[i][j]),
-                                linestyle=(0, (5, 3)), color="deeppink") # color=colors[i][j]
+                                linestyle="dashed", color=series_ind_colors[i][j]) # color=colors[i][j]
+                                # linestyle=(0, (5, 3)), color="deeppink") # color=colors[i][j]
         l_meep[-1].append(l_mp)
         l_cmos[-1].append(l_cm)
         l_kuwa[-1].append(l_ku)
         
-        xlims = axes[i][j].get_xlim()
         axes[i][j].axhline(0, color="k", linewidth=.5)
         axes[i][j].axvline(0, color="k", linewidth=.5)
-        axes[i][j].set_xlim(xlims)
-        axes[i][j].set_title(series_label[i](series[i][j]))
-        if i==len(series)-1:
-            axes[i][j].set_xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
-        if j==0:
-            axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field $|E_z|(y=z=0)$",
-                                             r"Campo eléctrico normalizado $|E_z|(y=z=0)$"))
+        axes[i][j].set_xlim(min(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3),
+                            max(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3))
+        # axes[i][j].set_facecolor(to_rgba(series_colors[i], alpha=0.05))
+        
+        if vertical_plot:
+            if j==len(series[i])-1:
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+            if i==0:
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
+                                                  r"Campo eléctrico $|E_z|(y=z=0)$"))
+        else:
+            if i==len(series)-1:
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+            if j==0:
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
+                                                  r"Campo eléctrico $|E_z|(y=z=0)$"))
         # else:
         #     axes[i][j].set_ytick_labels([])
         
         axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].grid(True, axis="y", which="both", alpha=.3)
-        if i==0:
-            axes[i][j].set_title(series_label[i](series[i][j]), y = 1.02)
+        if vertical_plot:
+            axes[i][j].annotate(series_label[i](series[i][j]),
+                                (5,17), xycoords="axes points", fontsize=12,
+                                color=series_ind_colors[i][j])
+            # axes[i][j].annotate(series_legend[i],
+            #                     (5,5), xycoords="axes points", fontsize=12)
+            if j==0:
+                axes[i][j].set_title(series_legend[i])
         else:
-            axes[i][j].set_title(series_label[i](series[i][j]), y = -.25)
+            if i==0:
+                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = 1.02)
+            elif i==len(series)-1:
+                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = -.25)
         
-        ax_field = vp.add_subplot_axes(axes[i][j], field_area)
+        if vertical_plot:
+            ax_field = vp.add_subplot_axes(axes[i][j], 
+                                           field_area)
+                                           # [field_area[0] - .10*field_area[2]/2,
+                                           #  field_area[1] - .10*field_area[3]/2,
+                                           #  1.15*field_area[2],
+                                           #  1.15*field_area[3]])
+                                           # [field_area[0] - .25*field_area[2]/2,
+                                           #  field_area[1] - .25*field_area[3]/2,
+                                           #  1.3*field_area[2],
+                                           #  1.3*field_area[3]])
+        else:
+            ax_field = vp.add_subplot_axes(axes[i][j], field_area)
         axes_field[-1].append(ax_field)
         
         ims = ax_field.imshow(np.abs(field_peaks_plane[i][j]).T, #np.power(np.abs(field_peaks_plane[i][j]),2).T
-                              cmap='Reds', #interpolation='spline36', 
+                              cmap=plab.cm.Reds, #interpolation='spline36', "Reds"
                               vmin=lims[0], vmax=lims[1],
                               extent=[min(y_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
                                       max(y_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
@@ -1088,20 +1331,28 @@ for i in range(len(series)):
         ax_field.set_yticks([])
         
         if i==len(series)-1 and j==len(series[i])-1:
-            cax = axes[i][j].inset_axes([1.04, 0, 0.07, 2], #[1.04, 0, 0.07, 1], 
+            if vertical_plot: ncax=m
+            else: ncax=n
+            cax = axes[i][j].inset_axes([1.04, 0, 0.07, ncax], #[1.04, 0, 0.07, 1], 
                                         transform=axes[i][j].transAxes)
             cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-            cbar.set_label(trs.choose(r"Normalized Squared Electric Field $|E_z|^2(y=z=0)$",
-                                      r"Cuadrado del campo eléctrico normalizado $|E_z|^2(y=z=0)$"))
+            cbar.set_label(trs.choose(r"Squared Electric Field $|E_z|^2(y=z=0)$",
+                                      r"Cuadrado del campo eléctrico $|E_z|^2(y=z=0)$"))
             cbar.ax.minorticks_on()
+        
+axes_field = np.array(axes_field)
         
 leg = plt.legend(
     [l_meep[-1][-1], l_cmos[-1][-1], l_kuwa[-1][-1]],
     trs.choose(["MEEP Data", "CM Theory", "Ku Theory"], ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-    bbox_to_anchor=legend_area, 
+    bbox_to_anchor=legend_area,
     loc="center right", frameon=False)
 
-fig.set_size_inches([13.5,  7.9]) # [17.5,  7.9]
+if vertical_plot:
+    fig.set_size_inches([10, 13.5]) #[9.68, 9.67])
+else:
+    fig.set_size_inches([13.5,  7.9]) # ([17.5,  7.9])
+
 plt.savefig(plot_file("AllSubplotsAbs.png"))
 
 #%% MAKE PROFILE GIF
@@ -1120,16 +1371,6 @@ label_function = lambda k : trs.choose('Time: {:.1f} of period',
                                            t_line[iref][jref][k]/period_results[iref][jref])
 
 # Animation base
-n = len(series)
-m = max([len(s) for s in series])
-
-if n*m <= 3:
-    subfig_size = 6.5
-if n*m <= 6:
-    subfig_size = 4.5
-else:
-    subfig_size = 3.5
-
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
 axes = fig.subplots(ncols=m, nrows=n)
 lims = [np.min([np.min([np.min(zprofile_results[i][j]) for j in range(len(series[i]))]) for i in range(len(series))]), 
@@ -1182,10 +1423,10 @@ def make_pic_line(k):
                                 transform=axes[i][j].transAxes)
             draw_pml_box(i, j)
             if i==len(series)-1:
-                axes[i][j].set_xlabel(trs.choose("Distance Z [nm]", "Distancia Z [nm]"))
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if j==0:
-                axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field Profile $E_z|_{z=0}$",
-                                                 r"Campo eléctrico normalizado $E_z|_{z=0}$"))
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field Profile $E_z|_{z=0}$",
+                                                 r"Campo eléctrico $E_z|_{z=0}$"))
             axes[i][j].set_xlim(min(z_plane[i][j]) * from_um_factor[i][j] * 1e3, 
                                 max(z_plane[i][j]) * from_um_factor[i][j] * 1e3)
             plt.show()
@@ -1277,15 +1518,15 @@ def make_pic_line(k):
                                       min(z_plane[i][j]) * from_um_factor[i][j] * 1e3,
                                       max(z_plane[i][j]) * from_um_factor[i][j] * 1e3])
             if i==len(series)-1:
-                axes[i][j].set_xlabel(trs.choose("Position Y [nm]", "Posición Y [nm]"))
+                axes[i][j].set_xlabel(trs.choose("Position $Y$ [nm]", "Posición $Y$ [nm]"))
             if j==0:
-                axes[i][j].set_ylabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+                axes[i][j].set_ylabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if j==len(series[i])-1:
                 cax = axes[i][j].inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
                                             transform=axes[i][j].transAxes)
                 cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-                cbar.set_label(trs.choose("Normalized electric field $E_z$",
-                                          "Campo eléctrico normalizado $E_z$"))
+                cbar.set_label(trs.choose("Electric field $E_z$",
+                                          "Campo eléctrico $E_z$"))
             if i==len(series)-1 and j==0:
                 axes[i][j].text(-.2, -.2, label_function(kij), 
                                 transform=axes[i][j].transAxes)
@@ -1386,10 +1627,10 @@ def make_pic_line(k):
                 axes[i][j].text(-.2, -.2, label_function(kij), 
                                 transform=axes[i][j].transAxes)
             if i==len(series)-1:
-                axes[i][j].set_xlabel(trs.choose("Distance Z [nm]", "Distancia Z [nm]"))
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if j==0:
-                axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field Profile $E_z|_{z=0}$",
-                                                 r"Campo eléctrico normalizado $E_z|_{z=0}$"))
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field Profile $E_z|_{z=0}$",
+                                                 r"Campo eléctrico $E_z|_{z=0}$"))
             axes[i][j].set_xlim(min(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3, 
                                 max(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3)
             plt.show()
@@ -1476,15 +1717,15 @@ def make_pic_line(k):
                                       min(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
                                       max(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3])
             if i==len(series)-1:
-                axes[i][j].set_xlabel(trs.choose("Position Y [nm]", "Posición Y [nm]"))
+                axes[i][j].set_xlabel(trs.choose("Position $Y$ [nm]", "Posición $Y$ [nm]"))
             if j==0:
-                axes[i][j].set_ylabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+                axes[i][j].set_ylabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if j==len(series[i])-1:
                 cax = axes[i][j].inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
                                             transform=axes[i][j].transAxes)
                 cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-                cbar.set_label(trs.choose("Normalized electric field $E_z$",
-                                          "Campo eléctrico normalizado $E_z$"))
+                cbar.set_label(trs.choose("Electric field $E_z$",
+                                          "Campo eléctrico $E_z$"))
             if i==len(series)-1 and j==0:
                 axes[i][j].text(-.2, -.2, label_function(kij), 
                                 transform=axes[i][j].transAxes)
@@ -1531,27 +1772,6 @@ label_function = lambda k : trs.choose('     Time:\n{:.1f} of period',
                                            t_line[iref][jref][k]/period_results[iref][jref])
 
 # Animation base
-n = len(series)
-m = max([len(s) for s in series])
-
-if n*m <= 3:
-    subfig_size = 6.5
-if n*m <= 6:
-    subfig_size = 4.5
-else:
-    subfig_size = 3.5
-
-empty_proportion = [[2*params[i][j]["empty_width"]/(params[i][j]["cell_width"]-2*params[i][j]["pml_width"]) for j in range(len(series[i]))] for i in range(len(series))]
-if (np.array(empty_proportion) > 0.6).any():
-    field_area = [0.5 - 0.30/2, 0.72 - 0.30/2, 0.30, 0.30]
-    legend_area = (3.5, -2.5)
-elif (np.array(empty_proportion) > 0.4).any():
-    field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
-    legend_area = (3.1, -1.9)
-else:
-    field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
-    legend_area = (2.6, -1.3)
-
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
 fig.set_size_inches([13.5,  7.9])
 axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
@@ -1559,7 +1779,7 @@ axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True,
 axes_field = [[vp.add_subplot_axes(axes[i][j], field_area)
                for j in range(len(series[i]))] for i in range(len(series))]
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colors, series)]
+          for sc, s in zip(series_colormaps, series)]
 
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
@@ -1628,10 +1848,10 @@ def make_pic_line(k):
                 axes[i][j].text(-.15, -.2, label_function(kij), 
                                 transform=axes[i][j].transAxes)
             if i==len(series)-1:
-                axes[i][j].set_xlabel(trs.choose("Position Z [nm]", "Posición Z [nm]"))
+                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if j==0:
-                axes[i][j].set_ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                                                  r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+                axes[i][j].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                                                  r"Campo eléctrico $E_z(y=z=0)$"))
             # else:
             #     axes[i][j].set_ytick_labels([])
             
@@ -1657,8 +1877,8 @@ def make_pic_line(k):
                 cax = axes[i][j].inset_axes([1.04, 0, 0.07, 2], #[1.04, 0, 0.07, 1], 
                                             transform=axes[i][j].transAxes)
                 cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-                cbar.set_label(trs.choose("Normalized electric field $E_z$",
-                                          "Campo eléctrico normalizado $E_z$"))
+                cbar.set_label(trs.choose("Electric field $E_z$",
+                                          "Campo eléctrico $E_z$"))
                 cbar.ax.minorticks_on()
             
     leg = plt.legend(
