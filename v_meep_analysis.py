@@ -322,7 +322,7 @@ def get_peaks_from_source(source_field,
 
     return selected_peaks
 
-def get_period_from_source(source_field, t_line,
+def get_period_from_source(source_field, t_line=None,
                            peaks_sep_sensitivity=0.1,
                            periods_sensitivity=0.05,
                            last_stable_periods=5):
@@ -333,6 +333,11 @@ def get_period_from_source(source_field, t_line,
     source_field : np.array of dimension 1
         One-dimensional array of a periodic oscillating signal. Generally, 
         field array of shape (K) where K stands for different time instants.
+    t_line=None : np.array of dimension 1, optional
+        One-dimensional array of periodic oscillating signal's independent 
+        variable. Generally, time array of shape (K) where K stands for 
+        different time instants. If None is given, a default integer index 
+        number array is created.
     peaks_sep_sensitivity=0.1 : float between zero and one, optional
         A factor representing the allowed variation percentage in consecutive 
         peaks separation. Any deviated value will be dropped.
@@ -351,6 +356,9 @@ def get_period_from_source(source_field, t_line,
         Mean period of the signal, taking into account only those peaks 
         identified to be stable.
     """
+    
+    if t_line is None:
+        t_line = np.arange(len(source_field))
     
     peaks = get_peaks_from_source(source_field, 
                                   peaks_sep_sensitivity=peaks_sep_sensitivity,
@@ -420,9 +428,43 @@ def get_amplitude_from_source(source_field,
             amp_keep_periods_from = max(amp_keep_periods_from, k+1)
     stable_heights = np.abs(source_field[peaks[amp_keep_periods_from:]])
     
-    return np.mean(stable_heights)
+    return np.mean(stable_heights)   
 
 #%% FIELD ANALYSIS: ZPROFILE FROM YZ PLANE
+
+def get_background_from_plane(yzplane_field, y_plane_index, z_plane_index,
+                              cell_width, pml_width):
+    """Extracts data corresponding to background field from YZ planes field array.
+
+    Parameters
+    ----------
+    yzplane_field : np.array with dimension 3
+        Three-dimensional field array of shape (N,M,K) where N stands for 
+        positions in the Y axis, M stands for positions in the Z axis and K 
+        stands for different time instants.
+    y_plane_index : function
+        Function of a single argument that takes in an Y position and returns 
+        the index of the closest value.
+    z_plane_index : function
+        Function of a single argument that takes in an Z position and returns 
+        the index of the closest value.
+    cell_width : int, float
+        Cubic cell side's total length, generally expressed in Meep units to 
+        be in the same units as the `y_plane` metadata array.
+    pml_width : int, float
+        Cell's isotropic PML's width, generally expressed in Meep units to be 
+        in the same units as the `y_plane` metadata array.
+
+    Returns
+    -------
+    np.array
+        One-dimensional field array of shape (K,) where K stands for different 
+        time instants.
+    """
+    
+    y0_wall = np.asarray(yzplane_field[y_plane_index(-cell_width/2 + pml_width), z_plane_index(0), :])
+    y1_wall = np.asarray(yzplane_field[y_plane_index(cell_width/2 - pml_width), z_plane_index(0), :])
+    return np.mean(np.array([y0_wall,y1_wall]), axis=0)    
 
 def get_zprofile_from_plane(yzplane_field, y_plane_index):
     """Extracts data corresponding to Z axis from YZ planes field array.
@@ -499,7 +541,7 @@ def detect_sign_field_zprofile(zprofile_field):
     return -np.sign(zprofile_field[0,...])
 
 def find_zpeaks_zprofile(zprofile_field, z_plane_index, 
-                              cell_width, pml_width):
+                         cell_width, pml_width):
     """Finds peaks in Z axis for a Z lines field array.
     
     Parameters
@@ -538,6 +580,88 @@ def find_zpeaks_zprofile(zprofile_field, z_plane_index,
     max_z_values = cropped_zprofile[abs_max_z_index, ...]
     
     return abs_max_z_index, max_z_values
+
+def get_phase_field_peak_background(zprofmax_field, background_field,
+                                    peaks_sep_sensitivity=0.1,
+                                    periods_sensitivity=0.05,
+                                    last_stable_periods=5):
+    """Calculates relative phase between field in peaks Z location and background.
+
+    Parameters
+    ----------
+    zprofmax_field : np.array with dimension 1
+        One-dimensional oscillating signal. Generally, field array, 
+        corresponding to Z peak location, of shape (K,) where K stands for 
+        different time instants.
+    background_field : np.array with dimension 1
+        One-dimensional reference oscillating signal, of the same period. 
+        Generally, background field array of shape (K,) where K stands for 
+        different time instants.
+    peaks_sep_sensitivity=0.1 : float between zero and one, optional
+        A factor representing the allowed variation percentage in consecutive 
+        peaks separation. Any deviated value will be dropped.
+    periods_sensitivity=0.05 : float between zero and one, optional
+        A factor representing the allowed variation percentage in the period 
+        of selected peaks. All values prior to a certain point will be dropped, 
+        keeping only the last values identified to be stable.
+    last_stable_periods=5 : int, optional
+        Number of periods to take as reference of the stable signal, extracted 
+        from the end as the signal is assumed to have both a transcient and a 
+        stationary regimen.
+
+    Returns
+    -------
+    delta_phase : float
+        Relative phase between field in peaks Z location and background field, 
+        expressed in multiples of pi radians.
+    """
+    
+    back_index = get_peaks_from_source(background_field, 
+                                       peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                       last_stable_periods=last_stable_periods)
+    zprof_index = get_peaks_from_source(zprofmax_field, 
+                                        peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                        last_stable_periods=last_stable_periods)
+    
+    back_iperiod = get_period_from_source(background_field,
+                                          peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                          periods_sensitivity=periods_sensitivity,
+                                          last_stable_periods=last_stable_periods)
+    zprof_iperiod = get_period_from_source(zprofmax_field,
+                                           peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                           periods_sensitivity=periods_sensitivity,
+                                           last_stable_periods=last_stable_periods)
+    
+    if zprofmax_field[ zprof_index[0] ]>0:
+        zprof_imaxs = np.array( zprof_index[::2] )
+        zprof_imins = np.array( zprof_index[1::2] )
+    else:
+        zprof_imins = np.array( zprof_index[::2] )
+        zprof_imaxs = np.array( zprof_index[1::2] )
+        
+    if background_field[ back_index[0]] >0:
+        back_imaxs = np.array( back_index[::2] )
+        back_imins = np.array( back_index[1::2] )
+    else:
+        back_imins = np.array( back_index[::2] )
+        back_imaxs = np.array( back_index[1::2] )
+    
+    min_number = np.min([len(zprof_imaxs), len(zprof_imins), 
+                         len(back_imaxs), len(back_imins)])
+    
+    zprof_imaxs, zprof_imins = zprof_imaxs[-min_number:], zprof_imins[-min_number:]
+    back_imaxs, back_imins = back_imaxs[-min_number:], back_imins[-min_number:]
+        
+    if np.abs(np.mean(zprof_imins - back_imins)) < np.abs(np.mean(zprof_imins - back_imaxs)):
+        delta_i = np.mean([ np.abs(np.mean(zprof_imins - back_imins)),
+                            np.abs(np.mean(zprof_imaxs - back_imaxs)) ])
+    else:
+        delta_i = np.mean([ np.abs(np.mean(zprof_imins - back_imaxs)),
+                            np.abs(np.mean(zprof_imaxs - back_imins)) ])
+        
+    delta_phase = 2 * delta_i / np.mean([back_iperiod, zprof_iperiod]) # in multiples of pi radians
+    
+    return delta_phase
 
 #%% FIELD ANALYSIS: RESONANCE FROM ZPROFILE
 
@@ -838,3 +962,4 @@ def get_mean_field_peak_from_yzplanes(yzplane_field,
     
     return [field_peaks_index, field_peaks_amplitude, 
             field_peaks_zprofile, field_peaks_yzplane]
+   
