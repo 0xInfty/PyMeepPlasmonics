@@ -19,15 +19,14 @@ else:
 import sys
 sys.path.append(syshome)
 
-import matplotlib
-matplotlib.use('Agg')
+# import matplotlib
+# matplotlib.use('Agg')
 
 import imageio as mim
 import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
-from matplotlib.colors import to_rgba
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.gridspec as gridspec
 import os
@@ -48,13 +47,13 @@ vp.set_style()
 # Saving directories
 # folder = ["Field/NPMonoch/AuSphere/VacWatField/Vacuum", 
 #           "Field/NPMonoch/AuSphere/VacWatField/Water"]
-folder = ["Field/NPMonoch/AuSphere/VacWatTest/TestEmpty/Vacuum", 
+folder = ["Field/NPMonoch/AuSphere/VacWatTest/TestEmpty/Water",
           "Field/NPMonoch/AuSphere/VacWatTest/TestEmpty/Water"]
 home = vs.get_home()
 
 # Parameter for the test
 test_param_string = "wlen"
-test_param_in_params = False
+test_param_in_params = True
 test_param_in_series = True
 test_param_position = 0
 test_param_label = trs.choose("Wavelength", "Longitud de onda")
@@ -62,18 +61,19 @@ test_param_label = trs.choose("Wavelength", "Longitud de onda")
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
 series_label = [lambda s : rf" $\lambda$ = {vu.find_numbers(s)[test_param_position]:.0f} nm"]*2
-series_must = ["Res5ERF2.0"]*2 # leave "" per default
+series_must = ["Res3ERF2.0", "Res5ERF2.0"] # leave "" per default
 series_mustnt = ["Old"]*2 # leave "" per default
 
 # Scattering plot options
-plot_title_ending = trs.choose("Au 60 nm sphere", "esfera de Au de 60 nm")
-series_legend = trs.choose(["Vacuum", "Water"], ["Vacío", "Agua"])
-series_colormaps = [plab.cm.Reds, plab.cm.Blues]
+plot_title_ending = trs.choose("Au 60 nm sphere in water", "esfera de Au de 60 nm en agua")
+series_legend = trs.choose(["Resolution 3", "Resolution 5"], 
+                           ["Resolución 3", "Resolución 5"])
+series_colormaps = [plab.cm.Blues]*2
+series_colors = ["blue"]*2
 series_ind_colors = [["C0", "C2", "C3"]]*2
-series_colors = ["red", "blue"]
-series_markers = ["o","o"]
-series_markersizes = [8,8]
-series_linestyles = ["solid"]*2
+series_markers = ["o","D"]
+series_markersizes = [8,7]
+series_linestyles = ["solid", "dashed"]
 plot_make_big = False
 plot_folder = "DataAnalysis/Field/NPMonoch/AuSphere/VacWatField/WLen/Empty"
 
