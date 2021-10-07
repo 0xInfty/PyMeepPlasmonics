@@ -1099,8 +1099,8 @@ def load_normfield(norm_path):
     x_line_norm_index = vma.def_index_function(x_line_norm)
     
     source_results = vma.get_source_from_line(results_line_norm, x_line_norm_index, source_center)
-    norm_period = vma.get_period_from_source(source_results, t_line_norm)
-    norm_amplitude = vma.get_amplitude_from_source(source_results)
+    norm_period = vma.get_period_from_source(source_results, t_line_norm)[-1]
+    norm_amplitude = vma.get_amplitude_from_source(source_results)[-1]
     
     norm_file.close()
             

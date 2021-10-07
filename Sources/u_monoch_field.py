@@ -459,8 +459,8 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     x_line_index = vma.def_index_function(x_line)
     
     source_results = vma.get_source_from_line(results_line, x_line_index, source_center)
-    norm_period = vma.get_period_from_source(source_results, t_line)
-    norm_amplitude = vma.get_amplitude_from_source(source_results)
+    norm_period = vma.get_period_from_source(source_results, t_line)[-1]
+    norm_amplitude = vma.get_amplitude_from_source(source_results)[-1]
     
     params["norm_period"] = norm_period
     params["norm_amplitude"] = norm_amplitude

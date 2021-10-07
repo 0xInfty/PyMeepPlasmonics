@@ -231,8 +231,8 @@ if not requires_normalization:
     
 else:
     
-    period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-    amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+    period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j])[-1] for j in range(len(series[i]))] for i in range(len(series))]
+    amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j])[-1] for j in range(len(series[i]))] for i in range(len(series))]
     
     results_plane = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
     results_line = [[np.asarray(results_line[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]

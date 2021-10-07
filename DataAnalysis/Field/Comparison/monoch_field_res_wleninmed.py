@@ -229,10 +229,10 @@ if not requires_normalization:
 else:
     
     period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j],
-                                                  periods_sensitivity=0.06) 
+                                                  periods_sensitivity=0.06)[-1] 
                        for j in range(len(series[i]))] for i in range(len(series))]
     amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j],
-                                                        amplitude_sensitivity=0.05) 
+                                                        amplitude_sensitivity=0.05)[-1] 
                           for j in range(len(series[i]))] for i in range(len(series))]
     
     source_results = [[source_results[i][j] / amplitude_results[i][j] 

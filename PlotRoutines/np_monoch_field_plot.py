@@ -23,8 +23,8 @@ vp.set_style()
 #%% PARAMETERS
 
 """
-series = "Norm532Res3"
-folder = "Field/NPMonoch/AuSphere/VacWatField/Vacuum"
+series = "DTest532"
+folder = "Field/NPMonoch/AuSphere/VacWatTest/DefinitiveTest/Water"
 
 hfield = False
 
@@ -149,7 +149,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
     z_plane_cropped = z_plane[:z_plane_index(cell_width/2 - pml_width)+1]
     z_plane_cropped = z_plane_cropped[z_plane_index(-cell_width/2 + pml_width):]
     
-    #%%
+    #%% DATA EXTRACTION
         
     source_results = vma.get_source_from_line(results_line_norm, 
                                               x_line_norm_index, 
@@ -161,8 +161,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         
     else:          
         
-        period = vma.get_period_from_source(source_results, t_line)
-        amplitude = vma.get_amplitude_from_source(source_results)
+        period = vma.get_period_from_source(source_results, t_line)[-1]
+        amplitude = vma.get_amplitude_from_source(source_results)[-1]
         
         results_plane = np.asarray(results_plane) / amplitude
         results_line = np.asarray(results_line) / amplitude
@@ -173,9 +173,9 @@ def plots_np_monoch_field(series, folder, hfield=False,
 
     zprofile_results = vma.get_zprofile_from_plane(results_plane, y_plane_index)
     
-    zprofile_integral = vma.integrate_field_zprofile(zprofile_results, z_plane_index,
-                                                     cell_width, pml_width, 
-                                                     period_plane)
+    zprofile_zintegral = vma.z_integrate_field_zprofile(zprofile_results, z_plane, 
+                                                       z_plane_index,
+                                                       cell_width, pml_width)
     
     zprofile_max = vma.find_zpeaks_zprofile(zprofile_results, z_plane_index,
                                             cell_width, pml_width)[-1]
@@ -282,7 +282,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
         plt.title(trs.choose('Monochromatic wave {:.0f} nm on {} Sphere With {:.1f} nm Diameter',
                              'Onda monocromática {:.0f} nm sobre esfera de {} con diámetro {:.1f} nm'
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
-        plt.plot(t_plane, zprofile_integral)
+        plt.plot(t_plane, zprofile_zintegral)
         plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose(r"Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
                               r"Integral del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
@@ -295,8 +295,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
                              ).format(wlen*from_um_factor*1e3, material, 2*r*from_um_factor*1e3 ))
         plt.plot(t_plane, zprofile_max)
         plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
-        plt.ylabel(trs.choose(r"Normalized Electric Field Maximum $max[ E_z(z) ]$",
-                              r"Máximo del campo eléctrico normalizado $max[ E_z(z) ]$"))
+        plt.ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$",
+                              r"Máximo del campo eléctrico $max[ E_z(z) ]$"))
         
         plt.savefig(sa.file("Maximum.png"))
         
@@ -314,8 +314,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         
         # plt.xlim(min(z_plane), max(z_plane))
         plt.xlabel(trs.choose("Position Z [MPu]", "Position Z [uMP]"))
-        plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                              r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+        plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                              r"Campo eléctrico $E_z(y=z=0)$"))
         
         plt.savefig(sa.file("ZProfile.png"))
         
@@ -331,8 +331,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         # plt.xlim(min(z_plane_cropped) * from_um_factor * 1e3, 
         #          max(z_plane_cropped) * from_um_factor * 1e3)
         plt.xlabel(trs.choose("Position Z [nm]", "Position Z [nm]"))
-        plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(y=z=0)$",
-                              r"Campo eléctrico normalizado $E_z(y=z=0)$"))
+        plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                              r"Campo eléctrico $E_z(y=z=0)$"))
         
         plt.savefig(sa.file("CroppedZProfile.png"))
     
@@ -364,8 +364,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         cax = ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
                             transform=ax.transAxes)
         cbar = fig.colorbar(ims, ax=ax, cax=cax)
-        cbar.set_label(trs.choose("Normalized electric field $E_z$",
-                                  "Campo eléctrico normalizado $E_z$"))
+        cbar.set_label(trs.choose("Electric field $E_z$",
+                                  "Campo eléctrico $E_z$"))
             
         plt.xlabel(trs.choose("Distance Y [MPu]", "Distancia Y [uMP]"))
         plt.ylabel(trs.choose("Distance Z [MPu]", "Distancia Z [uMP]"))
@@ -393,8 +393,8 @@ def plots_np_monoch_field(series, folder, hfield=False,
         cax = ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
                             transform=ax.transAxes)
         cbar = fig.colorbar(ims, ax=ax, cax=cax)
-        cbar.set_label(trs.choose("Normalized electric field $E_z$",
-                                  "Campo eléctrico normalizado $E_z$"))
+        cbar.set_label(trs.choose("Electric field $E_z$",
+                                  "Campo eléctrico $E_z$"))
             
         # plt.show()
         plt.xlabel(trs.choose("Distance Y [nm]", "Distancia Y [nm]"))
@@ -697,15 +697,14 @@ def plots_np_monoch_field(series, folder, hfield=False,
             ax.plot(z_plane, zprofile_results[...,k])
             plt.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
             plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
-            plt.axvline(source_center, color="r", linestyle="dashed")
             plt.axhline(0, color="k", linewidth=1)
         
             ax.text(-.1, -.105, trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
                                            f'Tiempo: {t_line[k]/period:.1f} uMP'), 
                     transform=ax.transAxes)
             plt.xlabel(trs.choose("Position Z [MPu]", "Position Z [uMP]"))
-            plt.ylabel(trs.choose(r"Normalized Electric Field $E_z(x=y=0)$",
-                                  r"Campo eléctrico normalizado $E_z(x=y=0)$"))
+            plt.ylabel(trs.choose(r"Electric Field $E_z(x=y=0)$",
+                                  r"Campo eléctrico $E_z(x=y=0)$"))
             plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
                                     f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
                          (300, 11), xycoords='figure points')
@@ -725,9 +724,74 @@ def plots_np_monoch_field(series, folder, hfield=False,
             os.remove('temp_pic.png')
             print('Saved gif')
         
-        make_gif_line(sa.file("AxisZ=0"))
+        make_gif_line(sa.file("AxisZ"))
         plt.close(fig)
         # del fig, ax, lims, nframes_step, nframes, call_series, label_function
+        
+    #%% MAKE ABSOLUTE PROFILE GIF
+    
+    if make_gifs and pm.assign(0):
+        
+        # What should be parameters
+        nframes = min(maxnframes, results_plane.shape[-1])
+        nframes = int( vu.round_to_multiple(nframes, params["time_period_factor"] ) )
+        nframes_period = int(nframes/np.max(params["time_period_factor"]))
+        
+        cut_points = []
+        for k in range(int(params["time_period_factor"])):
+            cut_points.append( np.argmin(np.abs(t_line / period - (k + 1))) )
+        cut_points = [0, *cut_points]
+        
+        frames_index = []
+        for k in range(len(cut_points)):
+            if k < len(cut_points)-1:
+                intermediate_frames = np.linspace(
+                    cut_points[k],
+                    cut_points[k+1],
+                    nframes_period+1)[:-1]
+                intermediate_frames = [int(fr) for fr in intermediate_frames]
+                frames_index = [*frames_index, *intermediate_frames]
+        
+        # Animation base
+        fig = plt.figure()
+        ax = plt.subplot()
+        lims = (0, np.max(np.abs(zprofile_results)))
+        
+        def make_pic_line(k):
+            ax.clear()
+            
+            ax.plot(z_plane, np.abs(zprofile_results[...,k]))
+            plt.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
+            plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
+            plt.axhline(0, color="k", linewidth=1)
+        
+            ax.text(-.1, -.105, trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
+                                           f'Tiempo: {t_line[k]/period:.1f} uMP'), 
+                    transform=ax.transAxes)
+            plt.xlabel(trs.choose("Position Z [MPu]", "Position Z [uMP]"))
+            plt.ylabel(trs.choose(r"Electric Field $|E_z|(x=y=0)$",
+                                  r"Campo eléctrico $|E_z|(x=y=0)$"))
+            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+                         (300, 11), xycoords='figure points')
+            plt.ylim(*lims)
+            
+            plt.show()
+            return ax
+        
+        def make_gif_line(gif_filename):
+            pics = []
+            for ik, k in enumerate(frames_index):
+                ax = make_pic_line(k)
+                plt.savefig('temp_pic.png') 
+                pics.append(mim.imread('temp_pic.png')) 
+                print(str(ik+1)+'/'+str(nframes))
+            mim.mimsave(gif_filename+'.gif', pics, fps=5)
+            os.remove('temp_pic.png')
+            print('Saved gif')
+        
+        make_gif_line(sa.file("AxisZAbs"))
+        plt.close(fig)
         
     #%%
     

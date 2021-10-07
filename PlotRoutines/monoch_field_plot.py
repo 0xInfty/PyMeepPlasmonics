@@ -129,8 +129,8 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
         
     else:
         
-        period = vma.get_period_from_source(source_results, t_line)
-        amplitude = vma.get_amplitude_from_source(source_results)
+        period = vma.get_period_from_source(source_results, t_line)[-1]
+        amplitude = vma.get_amplitude_from_source(source_results)[-1]
         
         results_plane = np.asarray(results_plane) / amplitude
         results_line = np.asarray(results_line) / amplitude

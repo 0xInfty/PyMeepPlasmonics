@@ -352,7 +352,9 @@ def get_period_from_source(source_field, t_line=None,
 
     Returns
     -------
-    float
+    considered_peaks : list
+        List of index k<K considered to calculate the mean period.
+    amplitude : float
         Mean period of the signal, taking into account only those peaks 
         identified to be stable.
     """
@@ -378,7 +380,10 @@ def get_period_from_source(source_field, t_line=None,
             keep_periods_from = max(keep_periods_from, k+1)
     stable_semiperiods = semiperiods[keep_periods_from:]
     
-    return 2*np.mean(stable_semiperiods)
+    period = 2*np.mean(stable_semiperiods)
+    considered_peaks = peaks[keep_periods_from:]
+    
+    return considered_peaks, period
 
 def get_amplitude_from_source(source_field,
                               peaks_sep_sensitivity=0.1,
@@ -405,7 +410,9 @@ def get_amplitude_from_source(source_field,
 
     Returns
     -------
-    float
+    considered_peaks : list
+        List of index k<K considered to calculate the mean amplitude.
+    amplitude : float
         Mean amplitude of the signal, taking into account only those peaks 
         identified to be stable.
     """
@@ -428,7 +435,10 @@ def get_amplitude_from_source(source_field,
             amp_keep_periods_from = max(amp_keep_periods_from, k+1)
     stable_heights = np.abs(source_field[peaks[amp_keep_periods_from:]])
     
-    return np.mean(stable_heights)   
+    considered_peaks = peaks[amp_keep_periods_from:]
+    amplitude = np.mean(stable_heights)
+    
+    return considered_peaks, amplitude
 
 #%% FIELD ANALYSIS: ZPROFILE FROM YZ PLANE
 
@@ -488,15 +498,18 @@ def get_zprofile_from_plane(yzplane_field, y_plane_index):
     
     return np.asarray(yzplane_field[y_plane_index(0), :, :])
 
-def integrate_field_zprofile(zprofile_field, z_plane_index,
-                             cell_width, pml_width, period_plane):
-    """Integrates inside of the cell Z profile fields from Z lines field array.
+def z_integrate_field_zprofile(zprofile_field, z_plane, z_plane_index,
+                               cell_width, pml_width):
+    """Crops and integrates in Z on Z profile fields from Z lines field array.
 
     Parameters
     ----------
     zprofile_field : np.array with dimension 2
         Bidimensional field array of shape (N,K) where N stands for positions 
         in the Z axis and K stands for different time instants.
+    z_plane : np.array with dimension 1
+        One-dimensional position array of shape (N) where N stands for 
+        positions in the Z axis.
     z_plane_index : function
         Function of a single argument that takes in an Z position and returns 
         the index of the closest value.
@@ -520,7 +533,7 @@ def integrate_field_zprofile(zprofile_field, z_plane_index,
     integral = np.sum(
         crop_field_zprofile(zprofile_field, z_plane_index,
                             cell_width, pml_width), 
-        axis=0) * period_plane
+        axis=0) * np.mean(np.diff(z_plane))
     
     return integral
 
@@ -626,11 +639,11 @@ def get_phase_field_peak_background(zprofmax_field, background_field,
     back_iperiod = get_period_from_source(background_field,
                                           peaks_sep_sensitivity=peaks_sep_sensitivity,
                                           periods_sensitivity=periods_sensitivity,
-                                          last_stable_periods=last_stable_periods)
+                                          last_stable_periods=last_stable_periods)[-1]
     zprof_iperiod = get_period_from_source(zprofmax_field,
                                            peaks_sep_sensitivity=peaks_sep_sensitivity,
                                            periods_sensitivity=periods_sensitivity,
-                                           last_stable_periods=last_stable_periods)
+                                           last_stable_periods=last_stable_periods)[-1]
     
     if zprofmax_field[ zprof_index[0] ]>0:
         zprof_imaxs = np.array( zprof_index[::2] )
@@ -662,6 +675,146 @@ def get_phase_field_peak_background(zprofmax_field, background_field,
     delta_phase = 2 * delta_i / np.mean([back_iperiod, zprof_iperiod]) # in multiples of pi radians
     
     return delta_phase
+
+#%% FIELD ANALYSIS: AVERAGE IN TIME
+
+def t_average_field_yzplane(yzplane_field, zprofmax_field, t_plane,
+                            y_plane_index, z_plane_index,
+                            cell_width, pml_width,
+                            peaks_sep_sensitivity=0.1,
+                            amplitude_sensitivity=0.05,
+                            last_stable_periods=5):
+    """Crops and integrates in T on YZ planes field array.
+
+    Parameters
+    ----------
+    yzplane_field : np.array with dimension 3
+        Three-dimensional field array of shape (N,M,K) where N stands for 
+        positions in the Y axis, M stands for positions in the Z axis and K 
+        stands for different time instants.
+    zprofmax_field : np.array with dimension 1
+        One-dimensional oscillating signal. Generally, field array, 
+        corresponding to Z peak location, of shape (K,) where K stands for 
+        different time instants.
+    t_plane : np.array of dimension 1, optional
+        One-dimensional time array of shape (K) where K stands for 
+        different time instants.
+    y_plane_index : function
+        Function of a single argument that takes in an Y position and returns 
+        the index of the closest value.
+    z_plane_index : function
+        Function of a single argument that takes in an Z position and returns 
+        the index of the closest value.
+    cell_width : int, float
+        Cubic cell side's total length, generally expressed in Meep units to 
+        be in the same units as the `y_plane` metadata array.
+    pml_width : int, float
+        Cell's isotropic PML's width, generally expressed in Meep units to be 
+        in the same units as the `y_plane` metadata array.
+    peaks_sep_sensitivity=0.1 : float between zero and one, optional
+        A factor representing the allowed variation percentage in consecutive 
+        peaks separation. Any deviated value will be dropped.
+    amplitude_sensitivity=0.05 : float between zero and one, optional
+        A factor representing the allowed variation percentage in the amplitude
+        of selected peaks. All values prior to a certain point will be dropped, 
+        keeping only the last values identified to be stable.
+    last_stable_periods=5 : int, optional
+        Number of periods to take as reference of the stable signal, extracted 
+        from the end as the signal is assumed to have both a transcient and a 
+        stationary regimen.
+
+    Returns
+    -------
+    integral : np.array with dimension 2
+        Bidimensional array of shape (N,M) where N stands for 
+        positions in the Y axis and M stands for positions in the Z axis
+    """
+    
+    # Get peaks that belong to the stationary
+    stable_peaks_index = get_amplitude_from_source(zprofmax_field, 
+                                                   peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                                   amplitude_sensitivity=amplitude_sensitivity,
+                                                   last_stable_periods=last_stable_periods)[0]
+        
+    # Keep only an even number of semi-periods
+    if np.sign(zprofmax_field[stable_peaks_index[0]]) == np.sign(zprofmax_field[stable_peaks_index[-1]]):
+        stable_peaks_index = stable_peaks_index[1:]
+    
+    integral = np.sum(
+        crop_field_yzplane(np.abs(yzplane_field[...,stable_peaks_index[0]:stable_peaks_index[-1]]),
+                            z_plane_index, cell_width, pml_width), 
+        axis=-1)
+    integral = integral * np.mean(np.diff(t_plane[stable_peaks_index[0]:stable_peaks_index[-1]]))
+    integral = integral / ( t_plane[stable_peaks_index[-1]]-t_plane[stable_peaks_index[0]] )
+    # Should multiply by time differential and divide by the period and the number of periods taken into account
+    # But I'm doing an average in time directly, to take a straight path
+    
+    return integral
+
+def t_average_field_zprofile(zprofile_field, zprofmax_field, 
+                             t_plane, z_plane_index,
+                             cell_width, pml_width,
+                             peaks_sep_sensitivity=0.1,
+                             amplitude_sensitivity=0.05,
+                             last_stable_periods=5):
+    """Crops and integrates in T on Z profile fields from Z lines field array.
+
+    Parameters
+    ----------
+    zprofile_field : np.array with dimension 2
+        Bidimensional field array of shape (N,K) where N stands for positions 
+        in the Z axis and K stands for different time instants.
+    t_plane : np.array of dimension 1, optional
+        One-dimensional time array of shape (K) where K stands for 
+        different time instants.
+    z_plane_index : function
+        Function of a single argument that takes in an Z position and returns 
+        the index of the closest value.
+    cell_width : int, float
+        Cubic cell side's total length, generally expressed in Meep units to 
+        be in the same units as the `y_plane` metadata array.
+    pml_width : int, float
+        Cell's isotropic PML's width, generally expressed in Meep units to be 
+        in the same units as the `y_plane` metadata array.
+    peaks_sep_sensitivity=0.1 : float between zero and one, optional
+        A factor representing the allowed variation percentage in consecutive 
+        peaks separation. Any deviated value will be dropped.
+    amplitude_sensitivity=0.05 : float between zero and one, optional
+        A factor representing the allowed variation percentage in the amplitude
+        of selected peaks. All values prior to a certain point will be dropped, 
+        keeping only the last values identified to be stable.
+    last_stable_periods=5 : int, optional
+        Number of periods to take as reference of the stable signal, extracted 
+        from the end as the signal is assumed to have both a transcient and a 
+        stationary regimen.
+
+    Returns
+    -------
+    integral : np.array with dimension 1
+        One-dimensional array of shape (N,) where N stands for different 
+        positions in the Z axis.
+    """
+    
+    # Get peaks that belong to the stationary
+    stable_peaks_index = get_amplitude_from_source(zprofmax_field, 
+                                                   peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                                   amplitude_sensitivity=amplitude_sensitivity,
+                                                   last_stable_periods=last_stable_periods)[0]
+        
+    # Keep only an even number of semi-periods
+    if np.sign(zprofmax_field[stable_peaks_index[0]]) == np.sign(zprofmax_field[stable_peaks_index[-1]]):
+        stable_peaks_index = stable_peaks_index[1:]
+    
+    integral = np.sum(
+        crop_field_zprofile(np.abs(zprofile_field[...,stable_peaks_index[0]:stable_peaks_index[-1]]), 
+                            z_plane_index, cell_width, pml_width), 
+        axis=-1)
+    integral = integral * np.mean(np.diff(t_plane[stable_peaks_index[0]:stable_peaks_index[-1]]))
+    integral = integral / ( t_plane[stable_peaks_index[-1]]-t_plane[stable_peaks_index[0]] )
+    # Should multiply by time differential and divide by the period and the number of periods taken into account
+    # But I'm doing an average in time directly, to take a straight path
+    
+    return integral
 
 #%% FIELD ANALYSIS: RESONANCE FROM ZPROFILE
 

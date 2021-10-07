@@ -260,8 +260,8 @@ if not requires_normalization:
     
 else:
     
-    period_results = [[vma.get_period_from_source(source_results[i][j], t_line_norm[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-    amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+    period_results = [[vma.get_period_from_source(source_results[i][j], t_line_norm[i][j])[-1] for j in range(len(series[i]))] for i in range(len(series))]
+    amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j])[-1] for j in range(len(series[i]))] for i in range(len(series))]
     
     results_plane = [[np.asarray(results_plane[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
     results_line = [[np.asarray(results_line[i][j]) / amplitude_results[i][j] for j in range(len(series[i]))] for i in range(len(series))]
@@ -270,8 +270,8 @@ sim_source_results = [[vma.get_source_from_line(results_line[i][j], x_line_index
 
 zprofile_results = [[vma.get_zprofile_from_plane(results_plane[i][j], y_plane_index[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
-zprofile_integral = [[vma.integrate_field_zprofile(zprofile_results[i][j], z_plane_index[i][j],
-                                                   cell_width[i][j], pml_width[i][j], period_plane[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+zprofile_zintegral = [[vma.z_integrate_field_zprofile(zprofile_results[i][j], z_plane[i][j], z_plane_index[i][j],
+                                                    cell_width[i][j], pml_width[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 zprofile_max = [[vma.find_zpeaks_zprofile(zprofile_results[i][j], z_plane_index[i][j],
                                           cell_width[i][j], pml_width[i][j])[1] for j in range(len(series[i]))] for i in range(len(series))]
@@ -576,7 +576,7 @@ plt.title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ')
 for i in range(len(series)):
     for j in range(len(series[i])):
             plt.plot(t_line[i][j] / period_results[i][j], 
-                     zprofile_integral[i][j], color=colors[i][j],
+                     zprofile_zintegral[i][j], color=colors[i][j],
                      label=series_legend[i] + " " + series_label[i](series[i][j]),
                      linestyle=series_linestyles[i])
 plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))

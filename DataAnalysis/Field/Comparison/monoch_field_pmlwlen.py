@@ -233,11 +233,11 @@ else:
     
     period_results = [[vma.get_period_from_source(source_results[i][j], t_line[i][j],
                                                   peaks_sep_sensitivity=peaks_sep_sensitivity,
-                                                  periods_sensitivity=periods_sensitivity) 
+                                                  periods_sensitivity=periods_sensitivity)[-1] 
                        for j in range(len(series[i]))] for i in range(len(series))]
     amplitude_results = [[vma.get_amplitude_from_source(source_results[i][j],
                                                         amplitude_sensitivity=amplitude_sensitivity,
-                                                        peaks_sep_sensitivity=peaks_sep_sensitivity) 
+                                                        peaks_sep_sensitivity=peaks_sep_sensitivity)[-1] 
                           for j in range(len(series[i]))] for i in range(len(series))]
     
     source_results = [[source_results[i][j] / amplitude_results[i][j] 
