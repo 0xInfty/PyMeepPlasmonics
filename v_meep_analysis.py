@@ -665,12 +665,32 @@ def get_phase_field_peak_background(zprofmax_field, background_field,
     zprof_imaxs, zprof_imins = zprof_imaxs[-min_number:], zprof_imins[-min_number:]
     back_imaxs, back_imins = back_imaxs[-min_number:], back_imins[-min_number:]
         
-    if np.abs(np.mean(zprof_imins - back_imins)) < np.abs(np.mean(zprof_imins - back_imaxs)):
-        delta_i = np.mean([ np.abs(np.mean(zprof_imins - back_imins)),
-                            np.abs(np.mean(zprof_imaxs - back_imaxs)) ])
+    
+    choose_which = np.argmin([np.mean(np.abs(zprof_imins - back_imins)),
+                              np.mean(np.abs(zprof_imaxs - back_imaxs)),
+                              np.mean(np.abs(zprof_imins - back_imaxs)),
+                              np.mean(np.abs(zprof_imaxs - back_imins))])
+    
+    if choose_which < 2:
+        choose_again = np.argmin([ np.mean(np.abs(zprof_imins - back_imins)),
+                                   np.mean(np.abs(zprof_imins[1:] - back_imins[:-1])) ])
+        data_1 = [ zprof_imins - back_imins,
+                   zprof_imins[1:] - back_imins[:-1] ][choose_again]
+        choose_again = np.argmin([ np.mean(np.abs(zprof_imaxs - back_imaxs)),
+                                   np.mean(np.abs(zprof_imaxs[1:] - back_imaxs[:-1])) ])
+        data_2 = [ zprof_imaxs - back_imaxs,
+                   zprof_imaxs[1:] - back_imaxs[:-1] ][choose_again]
+        delta_i = np.mean([ *data_1, *data_2 ])
     else:
-        delta_i = np.mean([ np.abs(np.mean(zprof_imins - back_imaxs)),
-                            np.abs(np.mean(zprof_imaxs - back_imins)) ])
+        choose_again = np.argmin([ np.mean(np.abs(zprof_imins - back_imaxs)),
+                                   np.mean(np.abs(zprof_imins[1:] - back_imaxs[:-1])) ])
+        data_1 = [ zprof_imins - back_imins,
+                   zprof_imins[1:] - back_imins[:-1] ][choose_again]
+        choose_again = np.argmin([ np.mean(np.abs(zprof_imaxs - back_imins)),
+                                   np.mean(np.abs(zprof_imaxs[1:] - back_imins[:-1])) ])
+        data_2 = [ zprof_imaxs - back_imaxs,
+                   zprof_imaxs[1:] - back_imaxs[:-1] ][choose_again]
+        delta_i = np.mean([ *data_1, *data_2 ])
         
     delta_phase = 2 * delta_i / np.mean([back_iperiod, zprof_iperiod]) # in multiples of pi radians
     
@@ -678,13 +698,13 @@ def get_phase_field_peak_background(zprofmax_field, background_field,
 
 #%% FIELD ANALYSIS: AVERAGE IN TIME
 
-def t_average_field_yzplane(yzplane_field, zprofmax_field, t_plane,
-                            y_plane_index, z_plane_index,
-                            cell_width, pml_width,
-                            peaks_sep_sensitivity=0.1,
-                            amplitude_sensitivity=0.05,
-                            last_stable_periods=5):
-    """Crops and integrates in T on YZ planes field array.
+def t_average_intensity_yzplane(yzplane_field, zprofmax_field, t_plane,
+                                y_plane_index, z_plane_index,
+                                cell_width, pml_width,
+                                peaks_sep_sensitivity=0.1,
+                                amplitude_sensitivity=0.05,
+                                last_stable_periods=5):
+    """Average intensity in T on cropped YZ planes field array.
 
     Parameters
     ----------
@@ -725,7 +745,7 @@ def t_average_field_yzplane(yzplane_field, zprofmax_field, t_plane,
 
     Returns
     -------
-    integral : np.array with dimension 2
+    intensity : np.array with dimension 2
         Bidimensional array of shape (N,M) where N stands for 
         positions in the Y axis and M stands for positions in the Z axis
     """
@@ -740,24 +760,24 @@ def t_average_field_yzplane(yzplane_field, zprofmax_field, t_plane,
     if np.sign(zprofmax_field[stable_peaks_index[0]]) == np.sign(zprofmax_field[stable_peaks_index[-1]]):
         stable_peaks_index = stable_peaks_index[1:]
     
-    integral = np.sum(
-        crop_field_yzplane(np.abs(yzplane_field[...,stable_peaks_index[0]:stable_peaks_index[-1]]),
-                            z_plane_index, cell_width, pml_width), 
+    intensity = np.sum(
+        crop_field_yzplane(np.power(yzplane_field[...,stable_peaks_index[0]:stable_peaks_index[-1]], 2),
+                           y_plane_index, z_plane_index, cell_width, pml_width), 
         axis=-1)
-    integral = integral * np.mean(np.diff(t_plane[stable_peaks_index[0]:stable_peaks_index[-1]]))
-    integral = integral / ( t_plane[stable_peaks_index[-1]]-t_plane[stable_peaks_index[0]] )
+    intensity = intensity * np.mean(np.diff(t_plane[stable_peaks_index[0]:stable_peaks_index[-1]]))
+    intensity = intensity / ( t_plane[stable_peaks_index[-1]]-t_plane[stable_peaks_index[0]] )
     # Should multiply by time differential and divide by the period and the number of periods taken into account
     # But I'm doing an average in time directly, to take a straight path
     
-    return integral
+    return intensity
 
-def t_average_field_zprofile(zprofile_field, zprofmax_field, 
-                             t_plane, z_plane_index,
-                             cell_width, pml_width,
-                             peaks_sep_sensitivity=0.1,
-                             amplitude_sensitivity=0.05,
-                             last_stable_periods=5):
-    """Crops and integrates in T on Z profile fields from Z lines field array.
+def t_average_intensity_zprofile(zprofile_field, zprofmax_field, 
+                                 t_plane, z_plane_index,
+                                 cell_width, pml_width,
+                                 peaks_sep_sensitivity=0.1,
+                                 amplitude_sensitivity=0.05,
+                                 last_stable_periods=5):
+    """Average intensity in T on cropped Z profile fields from Z lines field array.
 
     Parameters
     ----------
@@ -790,7 +810,7 @@ def t_average_field_zprofile(zprofile_field, zprofmax_field,
 
     Returns
     -------
-    integral : np.array with dimension 1
+    intensity : np.array with dimension 1
         One-dimensional array of shape (N,) where N stands for different 
         positions in the Z axis.
     """
@@ -805,16 +825,16 @@ def t_average_field_zprofile(zprofile_field, zprofmax_field,
     if np.sign(zprofmax_field[stable_peaks_index[0]]) == np.sign(zprofmax_field[stable_peaks_index[-1]]):
         stable_peaks_index = stable_peaks_index[1:]
     
-    integral = np.sum(
-        crop_field_zprofile(np.abs(zprofile_field[...,stable_peaks_index[0]:stable_peaks_index[-1]]), 
+    intensity = np.sum(
+        crop_field_zprofile(np.power(zprofile_field[...,stable_peaks_index[0]:stable_peaks_index[-1]], 2), 
                             z_plane_index, cell_width, pml_width), 
         axis=-1)
-    integral = integral * np.mean(np.diff(t_plane[stable_peaks_index[0]:stable_peaks_index[-1]]))
-    integral = integral / ( t_plane[stable_peaks_index[-1]]-t_plane[stable_peaks_index[0]] )
+    intensity = intensity * np.mean(np.diff(t_plane[stable_peaks_index[0]:stable_peaks_index[-1]]))
+    intensity = intensity / ( t_plane[stable_peaks_index[-1]]-t_plane[stable_peaks_index[0]] )
     # Should multiply by time differential and divide by the period and the number of periods taken into account
     # But I'm doing an average in time directly, to take a straight path
     
-    return integral
+    return intensity
 
 #%% FIELD ANALYSIS: RESONANCE FROM ZPROFILE
 
