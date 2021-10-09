@@ -22,6 +22,7 @@ sys.path.append(syshome)
 # import imageio as mim
 import h5py as h5
 import numpy as np
+from matplotlib import use as use_backend
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import matplotlib.gridspec as gridspec
@@ -532,7 +533,12 @@ vs.saveplot(plot_file("PerVariation.png"), overwrite=True)
 
 #%% FULL SOURCE ANALYSIS <<
 
+plot_for_display = True
+
+if plot_for_display: use_backend("Agg")
+
 fig = plt.figure()
+if plot_for_display: fig.dpi = 300
 
 plot_grid = gridspec.GridSpec(ncols=6, nrows=6, hspace=0, wspace=0.2, figure=fig)
 main_axes = [fig.add_subplot(plot_grid[:2,:3]), fig.add_subplot(plot_grid[2:4,:3])]
@@ -630,6 +636,10 @@ third_legend = amp_ax.legend(amp_ax.lines, series_legend,
 
 # plt.gca().add_artist(first_legend)
 # plt.gca().add_artist(second_legend)
+
+vs.saveplot(plot_file("SourceAnalysis.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% ANALYSE X AXIS FOR DIFFERENT POSITIONS VIA FOURIER
 
@@ -787,12 +797,17 @@ for i in range(len(series)):
 
 #%% X PROBE PLOT <<
 
+plot_for_display = True
+
+if plot_for_display: use_backend("Agg")
+
 # see_x_probe(0,6) a ver, tirá fachaaa con n_x_period=6 demostrativo
 def see_x_probe(i,j):
     
     colors = plab.cm.jet(np.linspace(0,1,n_x_probe+2)[1:-1])
     
     fig = plt.figure()
+    if plot_for_display: fig.dpi = 300
     
     plot_grid = gridspec.GridSpec(ncols=1, nrows=6, hspace=0, figure=fig)
     main_ax = fig.add_subplot(plot_grid[:4,:])
@@ -813,7 +828,7 @@ def see_x_probe(i,j):
                      linestyle="dashed", color="k", alpha=0.5)
     
    
-    res_ax.set_xlabel(trs.choose("Time T [period]", "Tiempo T [período]"))
+    res_ax.set_xlabel(trs.choose(r"Time $T$ [$\tau$]", r"Tiempo $T$ [$\tau$]"))
     res_ax.set_ylabel(trs.choose("Electric Field\n" + r"$E_z(y=z=0)$ Residua",
                                  "Residuos del\n" + "campo eléctrico\n" + "r""$E_z(y=z=0)$"))
     main_ax.set_ylabel(trs.choose("Electric Field\n" + r"$E_z(y=z=0)$",
@@ -847,6 +862,10 @@ def see_x_probe(i,j):
     fig.set_size_inches([12.59,  4.98])
     
 see_x_probe(0,6)
+
+vs.saveplot(plot_file("XProbe.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
     
 #%% NOISE VS X PLOT
 
@@ -946,7 +965,10 @@ vs.saveplot(plot_file("NoiseDifVsXVsResolution.png"), overwrite=True)
 
 #%% FULL NOISE VS X ANALYSIS <<
 
+if plot_for_display: use_backend("Agg")
+
 fig = plt.figure()
+if plot_for_display: fig.dpi = 200
 
 plot_grid = gridspec.GridSpec(ncols=3, nrows=len(series), hspace=0, wspace=0.1, figure=fig)
 axes = [fig.add_subplot(plot_grid[i,:2]) for i in range(len(series))]
@@ -1007,6 +1029,10 @@ sigma_ax.legend(frameon=True, facecolor="white", edgecolor="black",
                 bbox_to_anchor=(0.4, 0.52), bbox_transform=sigma_ax.axes.transAxes)
 
 fig.set_size_inches([13.22,  6.53])
+
+plt.savefig(plot_file("NoiseXAnalysis.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% ANALYSE X AXIS FOR DIFFERENT TIMES VIA FIT AND RESIDUA <<
 
@@ -1086,6 +1112,10 @@ t_probe_fit_res_std = [[ [np.std(t_probe_fit_residua[i][j][k]) for k in range(n_
 
 #%% T PROBE PLOT <<
 
+plot_for_display = True
+
+if plot_for_display: use_backend("Agg")
+
 # see_t_probe(0,6) a ver, tirá fachaaa con n_t_probe=20 y this_n_t_probe=8 demostrativo, con nt+1[:-1]
 def see_t_probe(i,j):
     
@@ -1094,6 +1124,7 @@ def see_t_probe(i,j):
     colors = plab.cm.jet(np.linspace(0,1,this_n_t_probe+2)[1:-1]) #jet
     
     fig = plt.figure()
+    if plot_for_display: fig.dpi = 200
     
     plot_grid = gridspec.GridSpec(ncols=1, nrows=6, hspace=0, figure=fig)
     main_ax = fig.add_subplot(plot_grid[:4,:])
@@ -1149,6 +1180,10 @@ def see_t_probe(i,j):
     fig.set_size_inches([12.59,  4.98])
     
 see_t_probe(0,6)
+
+plt.savefig(plot_file("TProbe.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
  
 #%% NOISE VS T PLOT
 
@@ -1213,7 +1248,10 @@ vs.saveplot(plot_file("NoiseVsTVsResolution.png"), overwrite=True)
 
 #%% FULL NOISE VS T ANALYSIS <<
 
+if plot_for_display: use_backend("Agg")
+
 fig = plt.figure()
+if plot_for_display: fig.dpi = 200
 
 plot_grid = gridspec.GridSpec(ncols=3, nrows=len(series), hspace=0, wspace=0.1, figure=fig)
 axes = [fig.add_subplot(plot_grid[i,:2]) for i in range(len(series))]
@@ -1253,7 +1291,7 @@ for ax in axes:
     box = ax.get_position()
     box.x0 = box.x0 + .3 * (box.x1 - box.x0)
     ax.set_position(box)
-axes[-1].set_xlabel(trs.choose("Time T [MPu]", "Tiempo T [uMP]"))
+axes[-1].set_xlabel(trs.choose(r"Time $T$ [$\tau$]", r"Tiempo $T$ [$\tau$]"))
 for ax in axes:
     ax.set_ylabel(trs.choose("Electric\n Field " + r"$E_z(y=z=0)$",
                              "Campo eléctrico \n " + r"$E_z(y=z=0)$"))
@@ -1275,6 +1313,10 @@ sigma_ax.legend(frameon=True, facecolor="white", edgecolor="black",
                 bbox_to_anchor=(0.4, 0.65), bbox_transform=sigma_ax.axes.transAxes)
 
 fig.set_size_inches([13.22,  6.53])
+
+plt.savefig(plot_file("NoiseTAnalysis.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
 
 #%%
 
