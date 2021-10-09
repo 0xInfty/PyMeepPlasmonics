@@ -472,9 +472,20 @@ def get_background_from_plane(yzplane_field, y_plane_index, z_plane_index,
         time instants.
     """
     
-    y0_wall = np.asarray(yzplane_field[y_plane_index(-cell_width/2 + pml_width), z_plane_index(0), :])
-    y1_wall = np.asarray(yzplane_field[y_plane_index(cell_width/2 - pml_width), z_plane_index(0), :])
-    return np.mean(np.array([y0_wall,y1_wall]), axis=0)    
+    y0_wall = np.mean(yzplane_field[y_plane_index(-cell_width/2 + pml_width), 
+                                    z_plane_index(-cell_width/2 + pml_width):z_plane_index(cell_width/2 - pml_width), 
+                                    :], axis=0)
+    y1_wall = np.mean(yzplane_field[y_plane_index(cell_width/2 - pml_width), 
+                                    z_plane_index(-cell_width/2 + pml_width):z_plane_index(cell_width/2 - pml_width), 
+                                    :], axis=0)
+    z0_wall = np.mean(yzplane_field[y_plane_index(-cell_width/2 + pml_width):y_plane_index(cell_width/2 - pml_width),
+                                    z_plane_index(-cell_width/2 + pml_width), 
+                                    :], axis=0)
+    z1_wall = np.mean(yzplane_field[y_plane_index(-cell_width/2 + pml_width):y_plane_index(cell_width/2 - pml_width), 
+                                    z_plane_index(cell_width/2 - pml_width), 
+                                    :], axis=0)
+    
+    return np.mean(np.array([y0_wall,y1_wall,z0_wall, z1_wall]), axis=0)    
 
 def get_zprofile_from_plane(yzplane_field, y_plane_index):
     """Extracts data corresponding to Z axis from YZ planes field array.
@@ -574,9 +585,9 @@ def find_zpeaks_zprofile(zprofile_field, z_plane_index,
 
     Returns
     -------
-    abs_max_z_index : int
-        Index n<N identified to extract all data corresponding to the maximum 
-        values of field in the Z axis.
+    abs_max_z_index : tuple of int
+        Pair of index n1,n2<N identified to extract all data corresponding to 
+        the maximum values of field at both sides of the Z axis.
     max_z_values : np.array with dimension 1
         One-dimensional array of shape (K,) where K stands for different time 
         instants.
@@ -585,12 +596,26 @@ def find_zpeaks_zprofile(zprofile_field, z_plane_index,
     cropped_zprofile = crop_single_field_zprofile(zprofile_field, z_plane_index, 
                                            cell_width, pml_width)
     
-    # Find the position of the absolute maximum
-    abs_max_index = np.argmax(np.abs(cropped_zprofile))
-    abs_max_z_index = np.unravel_index(abs_max_index, cropped_zprofile.shape)[0]
+    # Get the central z index
+    mid_index = int(cropped_zprofile.shape[0]/2)
+    
+    # Find the position of the absolute maximum on the left side
+    abs_max_index_left = np.argmax(np.abs(cropped_zprofile[:mid_index,...]))
+    abs_max_z_index_left = np.unravel_index(abs_max_index_left, 
+                                            cropped_zprofile[:mid_index,...].shape)[0]
+    
+    # Find the position of the absolute maximum on the right side
+    abs_max_index_right = np.argmax(np.abs(cropped_zprofile[mid_index:,...]))
+    abs_max_z_index_right = np.unravel_index(abs_max_index_right, 
+                                             cropped_zprofile[mid_index:,...].shape)[0]
+    abs_max_z_index_right = mid_index + abs_max_z_index_right
     
     # Take its position in Z axis as reference and get all values of the field
-    max_z_values = cropped_zprofile[abs_max_z_index, ...]
+    max_z_values_left = cropped_zprofile[abs_max_z_index_left, ...]
+    max_z_values_right = cropped_zprofile[abs_max_z_index_right, ...]
+    
+    max_z_values = np.mean(np.array([max_z_values_left,max_z_values_right]), axis=0)
+    abs_max_z_index = (max_z_values_left, max_z_values_right)
     
     return abs_max_z_index, max_z_values
 
@@ -691,6 +716,8 @@ def get_phase_field_peak_background(zprofmax_field, background_field,
         data_2 = [ zprof_imaxs - back_imaxs,
                    zprof_imaxs[1:] - back_imaxs[:-1] ][choose_again]
         delta_i = np.mean([ *data_1, *data_2 ])
+        if delta_i > 0: delta_i = delta_i + 1
+        else: delta_i = delta_i - 1
         
     delta_phase = 2 * delta_i / np.mean([back_iperiod, zprof_iperiod]) # in multiples of pi radians
     
@@ -894,44 +921,10 @@ def get_all_field_peaks_from_yzplanes(yzplane_field,
     zprofile_maxs = find_zpeaks_zprofile(zprofile_field, z_plane_index, 
                                          cell_width, pml_width)[-1]
     
-    # Find peaks in time for the maximum absolute intensification field values
-    field_peaks_index = find_peaks(
-        np.abs(zprofile_maxs), height=(np.max(np.abs(zprofile_maxs))/2, None))[0]
-    
-    # Take the last periods as reference and define periodicity criteria
-    mean_diff = np.mean(np.diff(field_peaks_index)[-2*last_stable_periods:])
-    def selection_criteria(k):
-        eval_point = np.abs( mean_diff - (field_peaks_index[k+1] - field_peaks_index[k]) )
-        return eval_point <= peaks_sep_sensitivity * mean_diff
-    
-    # Filter peaks to make sure they are periodic; i.e. they have equispaced index
-    selected_index = []
-    for k in range(len(field_peaks_index)):
-        if k == 0 and selection_criteria(k):
-            selected_index.append(k)
-        elif k == len(field_peaks_index)-1 and selection_criteria(k-1):
-            selected_index.append(k)
-        elif selection_criteria(k):
-            selected_index.append(k)
-    
-    # Check if there's always a single maximum and a single minimum per period
-    # If not, try to fix it or raise Warning.
-    selected_sign = np.sign(zprofile_maxs[field_peaks_index[selected_index]])
-    if np.min(np.abs(np.diff( selected_sign ))) != 2:
-        error_index = np.argmin(np.abs(np.diff( selected_sign )))
-        missing_index_lower_bound = selected_index[ error_index ]
-        missing_index_upper_bound = selected_index[ error_index + 1 ]
-        if missing_index_upper_bound - missing_index_lower_bound == 2:
-            selected_index = [*selected_index[: error_index + 1],
-                              missing_index_lower_bound + 1,
-                              *selected_index[error_index + 1 :]]
-            selected_sign = np.sign(zprofile_maxs[field_peaks_index[selected_index]])
-            if np.min(np.abs(np.diff( selected_sign ))) != 2:
-                print("Warning! Sign algorithm failed and it couldn't be fixed!")
-        else:
-            print("Warning! Sign algorithm must have failed!")
-    
-    field_peaks_index = field_peaks_index[selected_index]
+    # Find peaks in time for the maximum intensification field
+    field_peaks_index = get_peaks_from_source(zprofile_maxs,
+                                              peaks_sep_sensitivity=peaks_sep_sensitivity,
+                                              last_stable_periods=last_stable_periods)
     
     field_peaks_amplitudes = np.abs(zprofile_maxs[field_peaks_index])
     field_peaks_sign = np.sign(zprofile_maxs[field_peaks_index])
@@ -1130,8 +1123,9 @@ def get_mean_field_peak_from_yzplanes(yzplane_field,
     field_peaks_zprofile = np.mean(all_zprofile[..., selected_index], axis=-1)
     field_peaks_yzplane = np.mean(all_yzplane[..., selected_index], axis=-1)
     
-    closest_index = np.argmin( np.abs(all_amplitudes[keep_periods_from:] - np.mean(all_amplitudes[keep_periods_from:])) ) + keep_periods_from
-    field_peaks_index = int(all_index[closest_index])
+    # closest_index = np.argmin( np.abs(all_amplitudes[keep_periods_from:] - np.mean(all_amplitudes[keep_periods_from:])) ) + keep_periods_from
+    # field_peaks_index = int(all_index[closest_index])
+    field_peaks_index = np.array(all_index)[selected_index]
     
     return [field_peaks_index, field_peaks_amplitude, 
             field_peaks_zprofile, field_peaks_yzplane]
