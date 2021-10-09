@@ -298,30 +298,36 @@ back_phase_results = [[vma.get_phase_field_peak_background(zprofile_max[i][j], b
                                                            peaks_sep_sensitivity=0.12) for j in range(len(series[i]))] for i in range(len(series))]
 
 field_peaks_all_index = []
-field_peaks_single_index = []
+field_peaks_selected_index = []
+field_peaks_dropped_index = []
 field_peaks_single_amplitude = []
 field_peaks_zprofile = []
 field_peaks_plane = []
 for i in range(len(series)):
     field_peaks_all_index.append([])
-    field_peaks_single_index.append([])
+    field_peaks_selected_index.append([])
+    field_peaks_dropped_index.append([])
     field_peaks_single_amplitude.append([])
     field_peaks_zprofile.append([])
     field_peaks_plane.append([])
     for j in range(len(series[i])):
         ind, mxs, zprof, plan = vma.get_all_field_peaks_from_yzplanes(results_plane[i][j],
                                                                       y_plane_index[i][j], z_plane_index[i][j], 
-                                                                      cell_width[i][j], pml_width[i][j])
+                                                                      cell_width[i][j], pml_width[i][j],
+                                                                      peaks_sep_sensitivity=.2)
         field_peaks_all_index[i].append(ind)
-        
+
         # ind, mxs, zprof, plan = vma.get_single_field_peak_from_yzplanes(results_plane[i][j],
         ind, mxs, zprof, plan = vma.get_mean_field_peak_from_yzplanes(results_plane[i][j],
                                                                       y_plane_index[i][j], z_plane_index[i][j], 
                                                                       cell_width[i][j], pml_width[i][j])
-        field_peaks_single_index[i].append(ind)
+        field_peaks_selected_index[i].append(ind)
         field_peaks_single_amplitude[i].append(mxs)
         field_peaks_zprofile[i].append(zprof)
         field_peaks_plane[i].append(plan)
+        
+        field_peaks_dropped_index[i].append( [k for k in field_peaks_all_index[i][j] if k not in field_peaks_selected_index[i][j]] )
+        
 del i, j, ind, mxs, zprof, plan
 
 #%% GENERAL PLOT CONFIGURATION <<
@@ -340,16 +346,16 @@ vertical_plot = True
 
 empty_proportion = [[2*params[i][j]["empty_width"]/(params[i][j]["cell_width"]-2*params[i][j]["pml_width"]) for j in range(len(series[i]))] for i in range(len(series))]
 if (np.array(empty_proportion) > 0.6).any():
-    # field_area = [0.5 - 0.30/2, 0.72 - 0.30/2, 0.30, 0.30]
-    field_area = [1.02 - .35, 1 - .35, .35, .35]
+    field_area = [0.5 + .005 - 0.25/2, 0.72 - 0.25/2, 0.25, 0.25]
+    intensity_area = [1.02 - .35, 1 - .35, .35, .35]
     legend_area = (3.5, -2.5)
 elif (np.array(empty_proportion) > 0.4).any():
-    # field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
-    field_area = [1 - .38, 1 - .38, .38, .38]
+    field_area = [0.5 - 0.38/2, 0.72 - 0.38/2, 0.38, 0.38]
+    intensity_area = [1 - .42, 1 - .42, .42, .42]
     legend_area = (3.1, -1.9)
 else:
-    # field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
-    field_area = [1 - .45, 1 - .45, .45, .45]
+    field_area = [0.5 - 0.45/2, 0.72 - 0.45/2, 0.45, 0.45]
+    intensity_area = [1 - .5, 1 - .5, .5, .5]
     legend_area = (2.6, -1.3)
 
 colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
@@ -466,11 +472,11 @@ plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre
 
 for i in range(len(series)):
     for j in range(len(series[i])):
-        l, = plt.plot(t_line_norm[i][j] / period_results[i][j], 
-                      source_results[i][j] / amplitude_results[i][j],
-                      label=series_legend[i] + " " + series_label[i](series[i][j]),
-                      color=colors[i][j],
-                      linestyle=series_linestyles[i])
+        plt.plot(t_line_norm[i][j] / period_results[i][j], 
+                 source_results[i][j] / amplitude_results[i][j],
+                 label=series_legend[i] + " " + series_label[i](series[i][j]),
+                 color=colors[i][j],
+                 linestyle=series_linestyles[i])
 plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
 plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
                       r"Campo eléctrico $E_z(y=z=0)$"))
@@ -485,7 +491,6 @@ plt.savefig(plot_file("Source.png"))
 fig = plt.figure()
 plt.title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
           plot_title_ending)
-lines = []
 for i in range(len(series)):
     for j in range(len(series[i])):
         plt.plot(fourier_wlen[i][j], fourier[i][j],
@@ -601,63 +606,135 @@ plt.savefig(plot_file("SimSourceFFTZoom.png"))
 
 #%% SHOW FIELD PEAKS INTENSIFICATION OSCILLATIONS
 
-fig = plt.figure()        
+fig = plt.figure()
 plt.title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
           plot_title_ending)
 
 for i in range(len(series)):
     for j in range(len(series[i])):
-            plt.plot(t_line[i][j] / period_results[i][j], 
-                     zprofile_zintegral[i][j], color=colors[i][j],
-                     label=series_legend[i] + " " + series_label[i](series[i][j]),
-                     linestyle=series_linestyles[i], alpha=0.7)
-plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
+        plt.plot(t_plane[i][j] / period_results[i][j], 
+                 zprofile_zintegral[i][j],
+                 label=series_legend[i] + " " + series_label[i](series[i][j]),
+                 color=colors[i][j],
+                 linestyle=series_linestyles[i])
+plt.xlabel(trs.choose(r"Time $T$ [$\tau$]", r"Tiempo $T$ [$\tau$]"))
 plt.ylabel(trs.choose(r"Electric Field Integral $\int E_z(z) \; dz$ [a.u.]",
                       r"Integral del campo eléctrico $\int E_z(z) \; dz$ [u.a.]"))
+box = fig.axes[0].get_position()
+box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+fig.axes[0].set_position(box)
+leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
 
+plt.savefig(plot_file("Integral.png"))
+
+fig = plt.figure()
+plt.title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+          plot_title_ending)
+
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        plt.plot(t_plane[i][j] / period_results[i][j], 
+                 zprofile_max[i][j],
+                 label=series_legend[i] + " " + series_label[i](series[i][j]),
+                 color=colors[i][j],
+                 linestyle=series_linestyles[i])
+plt.xlabel(trs.choose(r"Time $T$ [$\tau$]", r"Tiempo $T$ [$\tau$]"))
+plt.ylabel(trs.choose(r"Electric Field Maximum $max[ E_z(z) ]$",
+                      r"Máximo del campo eléctrico $max[ E_z(z) ]$"))
+box = fig.axes[0].get_position()
+box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+fig.axes[0].set_position(box)
+leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
+
+plt.savefig(plot_file("Maximum.png"))
+
+#%% MAXIMUM INTENSIFICATION AMPLITUDE VS TIME PLOT
+
+fig = plt.figure()
+plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+             plot_title_ending)
+
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        # plt.plot(t_plane[i][j] / period_results[i][j],
+        #          zprofile_max[i][j],
+        #          color=colors[i][j], 
+        #          label=series_legend[i] + " " + series_label[i](series[i][j]),
+        #          zorder=0)
+        plt.plot(t_plane[i][j][field_peaks_all_index[i][j]] / period_results[i][j],
+                 np.abs(zprofile_max[i][j][field_peaks_all_index[i][j]]),
+                 "o-", color=colors[i][j], alpha=0.7, markersize=7,
+                 label=series_legend[i] + " " + series_label[i](series[i][j]))
+        plt.plot(t_plane[i][j][field_peaks_dropped_index[i][j]] / period_results[i][j],
+                 np.abs(zprofile_max[i][j][field_peaks_dropped_index[i][j]]),
+                 "x", color="white", markersize=5)
+plt.xlabel(trs.choose("Time in multiples of period", "Tiempo en múltiplos del período"))
+plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
+                      r"Campo eléctrico $E_z(y=z=0)$"))
 box = fig.axes[0].get_position()
 box.x1 = box.x1 - .25 * (box.x1 - box.x0)
 fig.axes[0].set_position(box)
 leg = plt.legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
 
 fig.set_size_inches([9.28, 4.8])
-plt.savefig(plot_file("Integral.png"))
 
-# fig = plt.figure() 
-fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0, "height_ratios":[1,.5]})
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
-# plot_grid = gridspec.GridSpec(ncols=1, nrows=4, hspace=0, figure=fig)
-# axes = [fig.add_subplot(plot_grid[:3,:]), fig.add_subplot(plot_grid[-1:,:])]
+#%% SHOW FIELD PEAKS INTENSIFICATION VS SOURCE OSCILLATIONS <<
+
+plot_for_display = True
+
+if plot_for_display: use_backend("Agg")
+
+fig, axes = plt.subplots(nrows=3, sharex=True, gridspec_kw={"hspace":0, "height_ratios":[.3,.75,1]})
+# axes[0].set_title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+#                   plot_title_ending)
+if plot_for_display: fig.dpi = 300
 
 for i in range(len(series)):
     for j in range(len(series[i])):
             axes[0].plot(t_line[i][j]/period_results[i][j], 
-                     zprofile_max[i][j],
-                     color=colors[i][j],
-                     label=series_legend[i] + " " + series_label[i](series[i][j]),
-                     linestyle=series_linestyles[i], alpha=0.7)
-            axes[1].plot(t_line[i][j]/period_results[i][j], 
                      background_results[i][j],
                      color=colors[i][j],
                      label="",
-                     linestyle=series_linestyles[i], alpha=0.7)
-axes[-1].set_xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
-axes[0].set_ylabel(trs.choose("Electric Field Maximum\n",
-                              "Máximo del campo eléctrico\n") + r"$max[ E_z(x=y=0, z) ](t)$")
-axes[-1].set_ylabel(trs.choose("Electric Field\n"+r"Background $E_{z0}$",
-                               "Fondo del campo\n"+r"eléctrico $E_{z0}$"))
-axes[-1].yaxis.tick_right()
-axes[-1].yaxis.set_label_position("right")
+                     linestyle=series_linestyles[i])
+            axes[1].plot(t_line[i][j]/period_results[i][j], 
+                     zprofile_max[i][j],
+                     color=colors[i][j],
+                     label=series_legend[i] + " " + series_label[i](series[i][j]),
+                     linestyle=series_linestyles[i])
+            axes[-1].plot(t_plane[i][j][field_peaks_all_index[i][j]] / period_results[i][j],
+                          np.abs(zprofile_max[i][j][field_peaks_all_index[i][j]]),
+                          "o-", color=colors[i][j], alpha=0.7, markersize=7,
+                          label=series_legend[i] + " " + series_label[i](series[i][j]))
+            axes[-1].plot(t_plane[i][j][field_peaks_dropped_index[i][j]] / period_results[i][j],
+                          np.abs(zprofile_max[i][j][field_peaks_dropped_index[i][j]]),
+                          "x", color="white", markersize=5)
+axes[0].axhline(0, color="k", linewidth=0.5)
+axes[1].axhline(0, color="k", linewidth=0.5)
+
+ylims = axes[0].get_ylim()
+axes[0].set_ylim(-np.max(np.abs(ylims)), np.max(np.abs(ylims)))
+axes[0].set_xlabel(trs.choose(r"Time $T$ [$\tau$]", r"Time $T$ [$\tau$]"))
+axes[-1].set_xlabel(trs.choose(r"Time $T$ [$\tau$]", r"Time $T$ [$\tau$]"))
+axes[1].set_ylabel(trs.choose("Electric Field\nMaximum\n",
+                              "Máximo del \ncampo eléctrico\n") + r"$E_z(x=y=0, z=z_{max})(t)$")
+axes[0].set_ylabel(trs.choose("Incident\nElectric Field\n"+r"$E_{z0}$",
+                              "Campo eléctrico\nincidente\n"+r"$E_{z0}$"))
+axes[-1].set_ylabel(trs.choose("Electric Field\nMaximum Amplitude\n",
+                               "Amplitud del\ncampo eléctrico máximo\n") + r"$max |E_z(x=y=0, z=z_{max})| (t)$")
 
 for ax in axes:
     box = ax.get_position()
-    box.x1 = box.x1 - .25 * (box.x1 - box.x0)
+    box.x1 = box.x1 - .15 * (box.x1 - box.x0)
     ax.set_position(box)
-leg = axes[0].legend(columnspacing=-0.5, bbox_to_anchor=(1.5, .5), loc="center right")
+leg = axes[1].legend(bbox_to_anchor=(1.3, .5), 
+                     loc="center right", bbox_transform=axes[1].transAxes)
+second_legend = axes[-1].legend(bbox_to_anchor=(1.3, .5), 
+                                loc="center right", bbox_transform=axes[-1].transAxes)
 
-fig.set_size_inches([9.28, 4.8])
-plt.savefig(plot_file("Maximum.png"))
+fig.set_size_inches([12.04,  7.85])
+vs.saveplot(plot_file("MaxVsTime.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% GET THEORY (SCATTERING) <<
 
@@ -715,33 +792,69 @@ for i in range(len(series)):
         zprofile_cm_theory[i].append(theory_cm)
         zprofile_ku_theory[i].append(theory_ku)
 
-#%% MAXIMUM INTENSIFICATION AMPLITUDE AND PHASE VS TEST PARAMETER PLOT
+zprofile_cm_max = [[np.max(np.abs(zprofile_cm_theory[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
+zprofile_ku_max = [[np.max(np.abs(zprofile_ku_theory[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
+
+zprofile_cm_argmax = [[np.argmax(np.abs(zprofile_cm_theory[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
+zprofile_ku_argmax = [[np.argmax(np.abs(zprofile_ku_theory[i][j])) for j in range(len(series[i]))] for i in range(len(series))]
+
+zprofile_cm_phase = [[np.arctan2(np.imag(zprofile_cm_theory[i][j][zprofile_cm_argmax[i][j]]),
+                                 np.real(zprofile_cm_theory[i][j][zprofile_cm_argmax[i][j]]))
+                      for j in range(len(series[i]))] for i in range(len(series))]
+zprofile_ku_phase = [[np.arctan2(np.imag(zprofile_ku_theory[i][j][zprofile_ku_argmax[i][j]]),
+                                 np.real(zprofile_ku_theory[i][j][zprofile_ku_argmax[i][j]]))
+                      for j in range(len(series[i]))] for i in range(len(series))]
+
+#%% MAXIMUM INTENSIFICATION AMPLITUDE AND PHASE VS TEST PARAMETER PLOT ==
+
+plot_for_display = False
+
+if plot_for_display: use_backend("Agg")
 
 fig, axes = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
+if not plot_for_display:
+    plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+                  plot_title_ending)
+    
+if plot_for_display: fig.dpi = 300
 
 for i in range(len(series)):
     axes[0].plot(test_param[i], 
                  field_peaks_single_amplitude[i], 
                  color=series_colors[i], marker=series_markers[i], alpha=0.4,
-                 linestyle="", markeredgewidth=0, markersize=series_markersizes[i])
+                 linestyle="", markeredgewidth=0)
     axes[1].plot(test_param[i], 
                  back_phase_results[i], 
                  color=series_colors[i], marker=series_markers[i], alpha=0.4,
-                 linestyle="", markeredgewidth=0, markersize=series_markersizes[i])
-# axes[0].axhline(0, color="k", linewidth=0.5, label="")
-# axes[1].axhline(0, color="k", linewidth=0.5, label="")
+                 linestyle="", markeredgewidth=0)
+
+for ax in axes:
+    ax.set_xlim(np.min(test_param[i]) - .15*(np.max(test_param)-np.min(test_param)),
+                np.max(test_param[i]) + .15*(np.max(test_param)-np.min(test_param)))
 
 axes[-1].set_xlabel(test_param_label)
 axes[0].set_ylabel(trs.choose("Electric Field Maximum\n",
                               "Máximo del\ncampo eléctrico\n") + r"$\max[ E_z(x=0) ]$")
 axes[1].set_ylabel(trs.choose(r"Electric Field $E_z(x=0)$"+"\n"+r"Relative Phase $\Delta\phi$"+"\n" +"With Background $E_{z0}(x=0)$",
                               r"Fase relativa $\Delta\phi$"+"\n"+r"del campo eléctrico $E_z$"+"\n"+r" con el fondo $E_{z0}(x=0)$"))
-axes[0].legend(series_legend)
 
-plt.tight_layout()
+if not plot_for_display:
+    axes[0].legend(series_legend, loc="center left",
+                   bbox_to_anchor=(1,1), bbox_transform=axes[0].transAxes)
+    
+for ax in axes: 
+    ax.set_xticks(test_param[-1])
+    ax.tick_params(which="minor", width=0)
+    if plot_for_display:
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
+    
+if plot_for_display:
+    fig.set_size_inches([2.7, 6.78])
+    plt.tight_layout()
 vs.saveplot(plot_file("MaximumTestParam.png"), overwrite=True)
+
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% PLOT MAXIMUM INTENSIFICATION PROFILE (THEORY) <<
 
@@ -779,8 +892,6 @@ for i in range(len(series)):
         axes[i].axvline(-r[i][j] * from_um_factor[i][j] * 1e3, 
                         color="k", linestyle="dotted", linewidth=.8)
         
-        axes[i].axhline(0, color="k", linewidth=.5)
-        
         if i == 0 and j == int(len(series[0])/2):
             l_origin = [l_cm, l_ku]
         axes[i].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
@@ -811,72 +922,7 @@ axes[0].add_artist(first_legend)
 
 plt.savefig(plot_file("FieldProfileTheory.png"))
 
-#%% PLOT MAXIMUM INTENSIFICATION PROFILE (DATA)
-
-# colors = [["C0"], ["C4"], ["C3"]]
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colormaps, series)]
-
-plt.figure()
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
-for i in range(len(series)):
-    for j in range(len(series[i])):
-        plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
-                 field_peaks_zprofile[i][j],
-                 label=series_legend[i] + " " + series_label[i](series[i][j]),
-                 color=colors[i][j])
-plt.xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
-                      r"Campo eléctrico $E_z(y=z=0)$"))
-plt.legend()
-
-plt.savefig(plot_file("FieldProfileData.png"))
-
-#%% PLOT MAXIMUM INTENSIFICATION PROFILE (ALL)
-
-# colors = [["C0"], ["C4"], ["C3"]]
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colormaps, series)]
-
-plt.figure()
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
-l_origin = []
-l_series = []
-for i in range(len(series)):
-    for j in range(len(series[i])):
-        l_mp, = plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
-                         field_peaks_zprofile[i][j] ,
-                         label=series_legend[i] + " " + series_label[i](series[i][j]),
-                         color=colors[i][j])
-        l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
-                         np.abs(zprofile_cm_theory[i][j]),
-                         color=colors[i][j], linestyle="dashed")
-        l_ku, = plt.plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
-                         np.abs(zprofile_ku_theory[i][j]),
-                         color=colors[i][j], linestyle="dotted")
-        l_series.append(l_mp)
-        if i == 0 and j == len(series[i])-1:
-            l_origin = [l_mp, l_cm, l_ku]
-plt.xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
-                      r"Campo eléctrico $E_z(y=z=0)$"))
-
-plt.legend(ncol=2)
-
-first_legend = plt.legend(l_origin, trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
-                                               ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-                          loc="lower right")
-second_legend = plt.legend(
-    l_series, 
-    [l.get_label() for l in l_series],
-    loc="upper center")
-plt.gca().add_artist(first_legend)
-
-plt.savefig(plot_file("FieldProfileAll.png"))
-
-#%% PLOT MAXIMUM INTENSIFICATION PROFILE (SUBPLOTS)
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE (DATA SUBPLOTS)
 
 n = len(series)
 m = max([len(s) for s in series])
@@ -902,13 +948,7 @@ for i in range(len(series)):
         l_mp, = axes[i][j].plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
                                 field_peaks_zprofile[i][j],
                                 label=series_label[i](series[i][j]),
-                                color=colors[i][j])
-        l_cm, = axes[i][j].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
-                                np.abs(zprofile_cm_theory[i][j]),
-                                color=colors[i][j], linestyle="dashed")
-        l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
-                                np.abs(zprofile_ku_theory[i][j]),
-                                color=colors[i][j], linestyle="dotted")
+                                color=series_ind_colors[i][j])
         axes[i][j].axhline(0, color="k", linewidth=.5)
         axes[i][j].axvline(0, color="k", linewidth=.5)
         if i==len(series)-1:
@@ -916,11 +956,6 @@ for i in range(len(series)):
         if j==0:
             axes[i][j].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
                                               r"Campo eléctrico $E_z(y=z=0)$"))
-        if i==len(series)-1 and j==len(series[i])-1:
-            axes[i][j].legend([l_mp, l_cm, l_ku], 
-                              trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
-                                         ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-                              loc="upper center")
         
         axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
@@ -930,7 +965,7 @@ for i in range(len(series)):
 
 plt.savefig(plot_file("FieldProfileAllSubplots.png"))
 
-#%% PLOT MAXIMUM INTENSIFICATION FIELD (SUBPLOTS)
+#%% PLOT MAXIMUM INTENSIFICATION PLANE (DATA SUBPLOTS)
 
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
 axes = fig.subplots(ncols=m, nrows=n)
@@ -968,7 +1003,10 @@ for i in range(len(series)):
         axes[i][j].grid(False)
 plt.savefig(plot_file("FieldPlaneAll.png"))
 
-#%% PLOT PROFILE AND PLANE (SUBPLOTS)
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE AND PLANE (DATA SUBPLOTS)
+
+if vertical_plot:
+    use_backend("Agg")
 
 if vertical_plot:
     fig = plt.figure(figsize=(n*subfig_size, m*subfig_size))
@@ -979,23 +1017,16 @@ else:
     fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
     axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
                         gridspec_kw={"wspace":0, "hspace":0})
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
+fig.dpi = 200
 
 lims = [np.min([np.min([np.min(field_peaks_plane[i][j]) for j in range(len(series[i]))]) for i in range(len(series))]),
         np.max([np.max([np.max(field_peaks_plane[i][j]) for j in range(len(series[i]))]) for i in range(len(series))])]
 lims = max([abs(l) for l in lims])
 lims = [-lims, lims]
         
-l_meep = []
-l_cmos = []
-l_kuwa = []
 axes_field = []
 for i in range(len(series)):
     axes_field.append([])
-    l_meep.append([])
-    l_cmos.append([])
-    l_kuwa.append([])
     for j in range(len(series[i])):
         axes[i][j].axvline(r[i][j] * from_um_factor[i][j] * 1e3, 
                            color="k", linestyle="dotted")
@@ -1004,21 +1035,12 @@ for i in range(len(series)):
         l_mp, = axes[i][j].plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
                                 field_peaks_zprofile[i][j],
                                 label=series_label[i](series[i][j]),
-                                color="k", linewidth=1.4) # color=colors[i][j]
-        l_cm, = axes[i][j].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
-                                np.abs(zprofile_cm_theory[i][j]),
-                                linestyle=(0, (5, 1)), color="darkorchid") # color=colors[i][j]
-        l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
-                                np.abs(zprofile_ku_theory[i][j]),
-                                linestyle=(0, (5, 3)), color="deeppink") # color=colors[i][j]
-        l_meep[-1].append(l_mp)
-        l_cmos[-1].append(l_cm)
-        l_kuwa[-1].append(l_ku)
+                                color=series_ind_colors[i][j], linewidth=1.4) # color=colors[i][j]
         
-        xlims = axes[i][j].get_xlim()
         axes[i][j].axhline(0, color="k", linewidth=.5)
         axes[i][j].axvline(0, color="k", linewidth=.5)
-        axes[i][j].set_xlim(xlims)
+        axes[i][j].set_xlim(min(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3),
+                            max(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3))
         
         if vertical_plot:
             if j==len(series[i])-1:
@@ -1038,9 +1060,12 @@ for i in range(len(series)):
         axes[i][j].grid(True, axis="y", which="both", alpha=.3)
         if vertical_plot:
             axes[i][j].annotate(series_label[i](series[i][j]),
-                                (5,17), xycoords="axes points", fontsize=12)
-            axes[i][j].annotate(series_legend[i],
-                                (5,5), xycoords="axes points", fontsize=12)
+                                (5,65), xycoords="axes points", fontsize=12, # (5,17)
+                                color=series_ind_colors[i][j])
+            # axes[i][j].annotate(series_legend[i],
+            #                     (5,5), xycoords="axes points", fontsize=12)
+            if j==0:
+                axes[i][j].set_title(series_legend[i])
         else:
             if i==0:
                 axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = 1.02)
@@ -1069,270 +1094,18 @@ for i in range(len(series)):
             cbar.set_label(trs.choose("Electric field $E_z$",
                                       "Campo eléctrico $E_z$"))
             cbar.ax.minorticks_on()
-        
-leg = plt.legend(
-    [l_meep[-1][-1], l_cmos[-1][-1], l_kuwa[-1][-1]],
-    trs.choose(["MEEP Data", "CM Theory", "Ku Theory"], ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-    bbox_to_anchor=legend_area, #(2.5, 1.4), 
-    loc="center right", frameon=False)
-
-if vertical_plot:
-    fig.set_size_inches([7.9,  13.5]) # ([17.5,  7.9])
-else:
-    fig.set_size_inches([13.5,  7.9]) # ([17.5,  7.9])
-plt.savefig(plot_file("AllSubplots.png"))
-
-#%% PLOT MAXIMUM INTENSIFICATION PROFILE (DATA) [ABSOLUTE VALUE]
-
-# colors = [["C0"], ["C4"], ["C3"]]
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colormaps, series)]
-
-plt.figure()
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
-for i in range(len(series)):
-    for j in range(len(series[i])):
-        plt.plot(z_plane_cropped[i][j], np.abs(field_peaks_zprofile[i][j]),
-                 label=series_legend[i] + " " + series_label[i](series[i][j]),
-                 color=colors[i][j], linestyle=series_linestyles[i])
-plt.xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-plt.ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
-                      r"Campo eléctrico $|E_z|(y=z=0)$"))
-plt.legend()
-
-plt.savefig(plot_file("AbsFieldProfileData.png"))
-
-#%% PLOT MAXIMUM INTENSIFICATION PROFILE (ALL) [ABSOLUTE VALUE]
-
-# colors = [["C0"], ["C4"], ["C3"]]
-colors = [sc(np.linspace(0,1,len(s)+2))[2:] 
-          for sc, s in zip(series_colormaps, series)]
-
-plt.figure()
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
-l_origin = []
-l_series = []
-for i in range(len(series)):
-    for j in range(len(series[i])):
-        l_mp, = plt.plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
-                         np.abs(field_peaks_zprofile[i][j]),
-                         label=series_legend[i] + " " + series_label[i](series[i][j]),
-                         color=colors[i][j])
-        l_cm, = plt.plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
-                         np.abs(zprofile_cm_theory[i][j]),
-                         color=colors[i][j], linestyle="dashed")
-        l_ku, = plt.plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
-                         np.abs(zprofile_ku_theory[i][j]),
-                         color=colors[i][j], linestyle="dotted")
-        l_series.append(l_mp)
-        if i == 0 and j == len(series[i])-1:
-            l_origin = [l_mp, l_cm, l_ku]
-plt.xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-plt.ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
-                      r"Campo eléctrico $|E_z|(y=z=0)$"))
-
-plt.legend(ncol=2)
-
-first_legend = plt.legend(l_origin, trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
-                                               ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-                          loc="lower right")
-second_legend = plt.legend(
-    l_series, 
-    [l.get_label() for l in l_series],
-    loc="upper center")
-plt.gca().add_artist(first_legend)
-
-plt.savefig(plot_file("AbsFieldProfileAll.png"))
-
-#%% PLOT MAXIMUM INTENSIFICATION PROFILE (SUBPLOTS) [ABSOLUTE VALUE]
-
-fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
-axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, gridspec_kw={"wspace":0})
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
-        
-for i in range(len(series)):
-    for j in range(len(series[i])):
-        axes[i][j].axvline(r[i][j] * from_um_factor[i][j] * 1e3, 
-                           color="k", linestyle="dotted")
-        axes[i][j].axvline(-r[i][j] * from_um_factor[i][j] * 1e3, 
-                           color="k", linestyle="dotted")
-        l_mp, = axes[i][j].plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
-                                np.abs(field_peaks_zprofile[i][j]),
-                                label=series_label[i](series[i][j]),
-                                color=colors[i][j])
-        l_cm, = axes[i][j].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
-                                np.abs(zprofile_cm_theory[i][j]),
-                                color=colors[i][j], linestyle="dashed")
-        l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
-                                np.abs(zprofile_ku_theory[i][j]),
-                                color=colors[i][j], linestyle="dotted")
-        xlims = axes[i][j].get_xlim()
-        axes[i][j].axhline(0, color="k", linewidth=.5)
-        axes[i][j].axvline(0, color="k", linewidth=.5)
-        axes[i][j].set_xlim(xlims)
-        axes[i][j].set_title(series_label[i](series[i][j]))
-        if i==len(series)-1:
-            axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-        if j==0:
-            axes[i][j].set_ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
-                                              r"Campo eléctrico $|E_z|(y=z=0)$"))
-        if i==len(series)-1 and j==len(series[i])-1:
-            axes[i][j].legend([l_mp, l_cm, l_ku], 
-                              trs.choose(["MEEP Data", "CM Theory", "Ku Theory"],
-                                         ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-                              loc="upper center")
-        
-        axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
-        axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
-        # axes[i][j].grid(True, axis="y", which="major")
-        axes[i][j].grid(True, axis="y", which="both", alpha=.3)
-        axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]))
-
-plt.savefig(plot_file("AbsFieldProfileAllSubplots.png"))
-
-#%% PLOT PROFILE AND PLANE (SUBPLOTS) [ABSOLUTE VALUE VS ABS] <<
-
-if vertical_plot:
-    fig = plt.figure(figsize=(n*subfig_size, m*subfig_size))
-    axes = fig.subplots(ncols=n, nrows=m, sharex=True, sharey=True, 
-                        gridspec_kw={"wspace":0, "hspace":0})
-    axes = axes.T
-else:
-    fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
-    axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
-                        gridspec_kw={"wspace":0, "hspace":0})
-
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
-
-# lims = [np.min([np.min([np.min(np.power(np.abs(field_peaks_plane[i][j]),2)) for j in range(len(series[i]))]) for i in range(len(series))]), 
-#         np.max([np.max([np.max(np.power(np.abs(field_peaks_plane[i][j]),2)) for j in range(len(series[i]))]) for i in range(len(series))])] 
-lims = [np.min([np.min([np.min(np.abs(field_peaks_plane[i][j])) for j in range(len(series[i]))]) for i in range(len(series))]), 
-        np.max([np.max([np.max(np.abs(field_peaks_plane[i][j])) for j in range(len(series[i]))]) for i in range(len(series))])] 
-lims = max([abs(l) for l in lims])
-lims = [0, lims]
-        
-l_meep = []
-l_cmos = []
-l_kuwa = []
-axes_field = []
-for i in range(len(series)):
-    axes_field.append([])
-    l_meep.append([])
-    l_cmos.append([])
-    l_kuwa.append([])
-    for j in range(len(series[i])):
-        axes[i][j].axvline(r[i][j] * from_um_factor[i][j] * 1e3, 
-                           color="k", linestyle="dotted")
-        axes[i][j].axvline(-r[i][j] * from_um_factor[i][j] * 1e3, 
-                           color="k", linestyle="dotted")
-        l_mp, = axes[i][j].plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
-                                np.abs(field_peaks_zprofile[i][j]),
-                                label=series_label[i](series[i][j]),
-                                color="k", linewidth=1.4) # color=colors[i][j]
-        l_cm, = axes[i][j].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
-                                np.abs(zprofile_cm_theory[i][j]),
-                                linestyle="solid", color=series_ind_colors[i][j], alpha=0.5)
-                                # linestyle=(0, (5, 1)), color="darkorchid") # color=colors[i][j]
-        l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
-                                np.abs(zprofile_ku_theory[i][j]),
-                                linestyle="dashed", color=series_ind_colors[i][j]) # color=colors[i][j]
-                                # linestyle=(0, (5, 3)), color="deeppink") # color=colors[i][j]
-        l_meep[-1].append(l_mp)
-        l_cmos[-1].append(l_cm)
-        l_kuwa[-1].append(l_ku)
-        
-        axes[i][j].axhline(0, color="k", linewidth=.5)
-        axes[i][j].axvline(0, color="k", linewidth=.5)
-        axes[i][j].set_xlim(min(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3),
-                            max(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3))
-        
-        if vertical_plot:
-            if j==len(series[i])-1:
-                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-            if i==0:
-                axes[i][j].set_ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
-                                                  r"Campo eléctrico $|E_z|(y=z=0)$"))
-        else:
-            if i==len(series)-1:
-                axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-            if j==0:
-                axes[i][j].set_ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
-                                                  r"Campo eléctrico $|E_z|(y=z=0)$"))
-        # else:
-        #     axes[i][j].set_ytick_labels([])
-        
-        axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
-        axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
-        axes[i][j].grid(True, axis="y", which="both", alpha=.3)
-        if vertical_plot:
-            axes[i][j].annotate(series_label[i](series[i][j]),
-                                (5,17), xycoords="axes points", fontsize=12,
-                                color=series_ind_colors[i][j])
-            # axes[i][j].annotate(series_legend[i],
-            #                     (5,5), xycoords="axes points", fontsize=12)
-            if j==0:
-                axes[i][j].set_title(series_legend[i])
-        else:
-            if i==0:
-                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = 1.02)
-            elif i==len(series)-1:
-                axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = -.25)
-        
-        if vertical_plot:
-            ax_field = vp.add_subplot_axes(axes[i][j], 
-                                           field_area)
-                                           # [field_area[0] - .10*field_area[2]/2,
-                                           #  field_area[1] - .10*field_area[3]/2,
-                                           #  1.15*field_area[2],
-                                           #  1.15*field_area[3]])
-                                           # [field_area[0] - .25*field_area[2]/2,
-                                           #  field_area[1] - .25*field_area[3]/2,
-                                           #  1.3*field_area[2],
-                                           #  1.3*field_area[3]])
-        else:
-            ax_field = vp.add_subplot_axes(axes[i][j], field_area)
-        axes_field[-1].append(ax_field)
-        
-        ims = ax_field.imshow(np.abs(field_peaks_plane[i][j]).T, #np.power(np.abs(field_peaks_plane[i][j]),2).T
-                              cmap=plab.cm.Reds, #interpolation='spline36', "Reds"
-                              vmin=lims[0], vmax=lims[1],
-                              extent=[min(y_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
-                                      max(y_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
-                                      min(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3,
-                                      max(z_plane_cropped[i][j]) * from_um_factor[i][j] * 1e3])
-        ax_field.set_xticks([])
-        ax_field.set_yticks([])
-        
-        if i==len(series)-1 and j==len(series[i])-1:
-            if vertical_plot: ncax=m
-            else: ncax=n
-            cax = axes[i][j].inset_axes([1.04, 0, 0.07, ncax], #[1.04, 0, 0.07, 1], 
-                                        transform=axes[i][j].transAxes)
-            cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-            cbar.set_label(trs.choose(r"Squared Electric Field $|E_z|^2(y=z=0)$",
-                                      r"Cuadrado del campo eléctrico $|E_z|^2(y=z=0)$"))
-            cbar.ax.minorticks_on()
-        
-axes_field = np.array(axes_field)
-        
-leg = plt.legend(
-    [l_meep[-1][-1], l_cmos[-1][-1], l_kuwa[-1][-1]],
-    trs.choose(["MEEP Data", "CM Theory", "Ku Theory"], ["Data MEEP", "Teoría CM", "Teoría Ku"]),
-    bbox_to_anchor=legend_area, 
-    loc="center right", frameon=False)
 
 if vertical_plot:
     fig.set_size_inches([10, 13.5]) #[9.68, 9.67])
 else:
     fig.set_size_inches([13.5,  7.9]) # ([17.5,  7.9])
+plt.savefig(plot_file("AllSubplots.png"))
 
-plt.savefig(plot_file("AllSubplotsAbs.png"))
+if vertical_plot: use_backend("Qt5Agg")
 
-#%% PLOT PROFILE AND PLANE (SUBPLOTS) [MEAN VALUE VS REAL] <<
+#%% PLOT MAXIMUM INTENSIFICATION PROFILE AND PLANE (DATA & THEORY SUBPLOTS) <<
+
+if plot_for_display: vertical_plot = True
 
 if vertical_plot:
     use_backend("Agg")
@@ -1346,15 +1119,15 @@ else:
     fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
     axes = fig.subplots(ncols=m, nrows=n, sharex=True, sharey=True, 
                         gridspec_kw={"wspace":0, "hspace":0})
-fig.dpi = 200
 
-plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
-             plot_title_ending)
+if plot_for_display: 
+    fig.dpi = 200
+else:
+    plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+                 plot_title_ending)
 
-# lims = [np.min([np.min([np.min(np.power(np.abs(field_peaks_plane[i][j]),2)) for j in range(len(series[i]))]) for i in range(len(series))]), 
-#         np.max([np.max([np.max(np.power(np.abs(field_peaks_plane[i][j]),2)) for j in range(len(series[i]))]) for i in range(len(series))])] 
-lims = [2 * np.min([np.min([np.min(yzplane_taverage[i][j]) for j in range(len(series[i]))]) for i in range(len(series))]), 
-        2 * np.max([np.max([np.max(yzplane_taverage[i][j]) for j in range(len(series[i]))]) for i in range(len(series))])] 
+lims = [np.min([np.min([np.min(yzplane_taverage[i][j]) for j in range(len(series[i]))]) for i in range(len(series))]), 
+        np.max([np.max([np.max(yzplane_taverage[i][j]) for j in range(len(series[i]))]) for i in range(len(series))])] 
         
 l_meep = []
 l_cmos = []
@@ -1371,17 +1144,17 @@ for i in range(len(series)):
         axes[i][j].axvline(-r[i][j] * from_um_factor[i][j] * 1e3, 
                            color="k", linestyle="dotted")
         l_cm, = axes[i][j].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
-                                np.power(np.abs(zprofile_cm_theory[i][j]),2),
+                                np.power(np.abs(zprofile_cm_theory[i][j]), 2)/ 2,
                                 linestyle="solid", color=series_ind_colors[i][j], alpha=0.5,
                                 linewidth=2.8)
                                 # linestyle=(0, (5, 1)), color="darkorchid") # color=colors[i][j]
         l_ku, = axes[i][j].plot(rvec[i][j][:,-1]  * from_um_factor[i][j] * 1e3, 
-                                np.power(np.abs(zprofile_ku_theory[i][j]),2),
+                                np.power(np.abs(zprofile_ku_theory[i][j]), 2)/ 2,
                                 linestyle="dashed", color=series_ind_colors[i][j],
                                 linewidth=2.8) # color=colors[i][j]
                                 # linestyle=(0, (5, 3)), color="deeppink") # color=colors[i][j]
         l_mp, = axes[i][j].plot(z_plane_cropped[i][j] * from_um_factor[i][j] * 1e3, 
-                                2 * zprofile_taverage[i][j],
+                                zprofile_taverage[i][j],
                                 label=series_label[i](series[i][j]),
                                 color="k", linewidth=2, alpha=0.8) # color=colors[i][j]
         l_meep[-1].append(l_mp)
@@ -1397,16 +1170,14 @@ for i in range(len(series)):
             if j==len(series[i])-1:
                 axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if i==0:
-                axes[i][j].set_ylabel(trs.choose(r"Electric Field Intensity $|E_z|^2(y=z=0)$",
-                                                 r"Intensidad del campo eléctrico $|E_z|^2(y=z=0)$"))
+                axes[i][j].set_ylabel(trs.choose("Electric Field Intensity\n" + r"$|E_z|^2(y=z=0)$",
+                                                 "Intensidad del campo eléctrico\n"+r"$|E_z|^2(y=z=0)$"))
         else:
             if i==len(series)-1:
                 axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if j==0:
-                axes[i][j].set_ylabel(trs.choose(r"Electric Field Intensity $|E_z|^2(y=z=0)$",
-                                                 r"Intensidad del campo eléctrico $|E_z|^2(y=z=0)$"))
-        # else:
-        #     axes[i][j].set_ytick_labels([])
+                axes[i][j].set_ylabel(trs.choose("Electric Field Intensity\n" + r"$|E_z|^2(y=z=0)$",
+                                                 "Intensidad del campo eléctrico\n"+r"$|E_z|^2(y=z=0)$"))
         
         axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
@@ -1425,22 +1196,10 @@ for i in range(len(series)):
             elif i==len(series)-1:
                 axes[i][j].set_title(series_legend[i] + " " + series_label[i](series[i][j]), y = -.25)
         
-        if vertical_plot:
-            ax_field = vp.add_subplot_axes(axes[i][j], 
-                                            field_area)
-                                            # [field_area[0] - .10*field_area[2]/2,
-                                            #  field_area[1] - .10*field_area[3]/2,
-                                            #  1.15*field_area[2],
-                                            #  1.15*field_area[3]])
-                                            # [field_area[0] + .18*field_area[2]/2,
-                                             # field_area[1] + .18*field_area[3]/2,
-                                             # .82*field_area[2],
-                                             # .82*field_area[3]])
-        else:
-            ax_field = vp.add_subplot_axes(axes[i][j], field_area)
+        ax_field = vp.add_subplot_axes(axes[i][j], intensity_area)
         axes_field[-1].append(ax_field)
         
-        ims = ax_field.imshow(2 * yzplane_taverage[i][j], #np.power(np.abs(field_peaks_plane[i][j]),2).T
+        ims = ax_field.imshow(yzplane_taverage[i][j], #np.power(np.abs(field_peaks_plane[i][j]),2).T
                               cmap=plab.cm.jet, #interpolation='spline36', "Reds"
                               vmin=lims[0], vmax=lims[1], alpha=0.8,
                               # norm=LogNorm(vmin=lims[0], vmax=lims[1]),
@@ -1457,8 +1216,8 @@ for i in range(len(series)):
             cax = axes[i][j].inset_axes([1.04, 0, 0.07, ncax], #[1.04, 0, 0.07, 1], 
                                         transform=axes[i][j].transAxes)
             cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-            cbar.set_label(trs.choose(r"Electric Field Intensity $|E_z|^2(y=z=0)$",
-                                      r"Intensidad del campo eléctrico $|E_z|^2(y=z=0)$"))
+            cbar.set_label(trs.choose(r"Electric Field Intensity $<|E_z|^2(y=z=0)>$",
+                                      r"Intensidad del campo eléctrico $<|E_z|^2(y=z=0)>$"))
             cbar.ax.minorticks_on()
         
 axes_field = np.array(axes_field)
@@ -1537,7 +1296,7 @@ def make_pic_line(k):
             axes[i][j].clear()
             axes[i][j].plot(z_plane[i][j] * from_um_factor[i][j] * 1e3, 
                             zprofile_results[i][j][:, kij],
-                            color=colors[i][j])
+                            color=series_ind_colors[i][j])
             axes[i][j].axhline(zprofile_max[i][j][kij] ,
                                linestyle="dashed", color=colors[i][j])
             axes[i][j].axhline(0, linewidth=1, color="k")
@@ -1582,13 +1341,13 @@ nframes_period = int(nframes/np.max(time_period_factor))
 
 iref = -1
 jref = 0
-label_function = lambda k : trs.choose('Time: {:.1f} of period',
-                                       'Tiempo: {:.1f} del período').format(
+label_function = lambda k : trs.choose('     Time:\n{:.1f} of period',
+                                       '     Tiempo:\n{:.1f} del período').format(
                                            t_line[iref][jref][k]/period_results[iref][jref])
 
 # Animation base
 fig = plt.figure(figsize=(m*subfig_size, n*subfig_size))
-axes = fig.subplots(ncols=m, nrows=n)
+axes = fig.subplots(ncols=m, nrows=n, gridspec_kw={"hspace":0.1, "wspace":0.1})
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
 lims = [np.min([np.min([np.min(results_plane[i][j]) for j in range(len(series[i]))]) for i in range(len(series))]),
@@ -1629,39 +1388,47 @@ def set_frame_numbers(i, j):
     return frames_index
 frames_index = [[set_frame_numbers(i, j) for j in range(len(series[i]))] for i in range(len(series))]
 
-def make_pic_line(k):
+def make_pic_plane(k):
     for i in range(len(series)):
         for j in range(len(series[i])):
             kij = frames_index[i][j][k]
             axes[i][j].clear()
-            axes[i][j].imshow(results_plane[i][j][...,kij].T,
-                              cmap='RdBu', #interpolation='spline36', 
-                              vmin=lims[0], vmax=lims[1],
-                              extent=[min(y_plane[i][j]) * from_um_factor[i][j] * 1e3,
-                                      max(y_plane[i][j]) * from_um_factor[i][j] * 1e3,
-                                      min(z_plane[i][j]) * from_um_factor[i][j] * 1e3,
-                                      max(z_plane[i][j]) * from_um_factor[i][j] * 1e3])
+            ims = axes[i][j].imshow(results_plane[i][j][...,kij].T,
+                                    cmap='RdBu', #interpolation='spline36', 
+                                    vmin=lims[0], vmax=lims[1],
+                                    extent=[min(y_plane[i][j]) * from_um_factor[i][j] * 1e3,
+                                            max(y_plane[i][j]) * from_um_factor[i][j] * 1e3,
+                                            min(z_plane[i][j]) * from_um_factor[i][j] * 1e3,
+                                            max(z_plane[i][j]) * from_um_factor[i][j] * 1e3])
+            if i!=len(series)-1:
+                axes[i][j].set_xticks([])
+            if j!=0:
+                axes[i][j].set_yticks([])
+            axes[i][j].grid(False)
             if i==len(series)-1:
                 axes[i][j].set_xlabel(trs.choose("Position $Y$ [nm]", "Posición $Y$ [nm]"))
             if j==0:
                 axes[i][j].set_ylabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
-            if j==len(series[i])-1:
-                cax = axes[i][j].inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
-                                            transform=axes[i][j].transAxes)
-                cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-                cbar.set_label(trs.choose("Electric field $E_z$",
-                                          "Campo eléctrico $E_z$"))
             if i==len(series)-1 and j==0:
                 axes[i][j].text(-.2, -.2, label_function(kij), 
                                 transform=axes[i][j].transAxes)
+            if i==len(series)-1 and j==len(series[i])-1:
+                cax = axes[i][j].inset_axes([1.04, 0, 0.07, n+.1], #[1.04, 0, 0.07, 1], 
+                                            transform=axes[i][j].transAxes)
+                cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
+                cbar.set_label(trs.choose(r"Electric Field Intensity $|E_z|^2(y=z=0)$",
+                                          r"Intensidad del campo eléctrico $|E_z|^2(y=z=0)$"))
+                cbar.ax.minorticks_on()
+                
             draw_pml_box(i, j)
-            plt.show()
+            
+    plt.show()
     return axes
 
 def make_gif_line(gif_filename):
     pics = []
     for k in range(nframes):
-        axes = make_pic_line(k)
+        axes = make_pic_plane(k)
         plt.savefig('temp_pic.png') 
         pics.append(mim.imread('temp_pic.png')) 
         print(str(k+1)+'/'+str(nframes))
@@ -2022,126 +1789,6 @@ def make_gif_line(gif_filename):
     mim.mimsave(gif_filename+'.gif', pics, fps=5)
     os.remove('temp_pic.png')
     print('Saved gif')  
-
-#%% MAKE ALL GIF
-
-# if make_gifs and pm.assign(0):
-    
-#     # What should be parameters
-#     nframes = min(maxnframes, results_plane.shape[-1])
-#     nframes = int( vu.round_to_multiple(nframes, params["time_period_factor"] ) )
-#     nframes_period = int(nframes/np.max(params["time_period_factor"]))
-    
-#     cut_points = []
-#     for k in range(int(params["time_period_factor"])):
-#         cut_points.append( np.argmin(np.abs(t_line / period - (k + 1))) )
-#     cut_points = [0, *cut_points]
-    
-#     frames_index = []
-#     for k in range(len(cut_points)):
-#         if k < len(cut_points)-1:
-#             intermediate_frames = np.linspace(
-#                 cut_points[k],
-#                 cut_points[k+1],
-#                 nframes_period+1)[:-1]
-#             intermediate_frames = [int(fr) for fr in intermediate_frames]
-#             frames_index = [*frames_index, *intermediate_frames]
-    
-#     # Animation base
-#     fig = plt.figure()                
-#     plot_grid = gridspec.GridSpec(ncols=5, nrows=1, figure=fig, 
-#                                   wspace=.7)
-#     line_ax = fig.add_subplot(plot_grid[:,:3])
-#     plane_ax = fig.add_subplot(plot_grid[:,-2:])
-#     fig.set_size_inches([13.96,  4.8])
-    
-#     # fig, [line_ax, plane_ax] = plt.subplots(ncols=2)
-#     # fig.set_size_inches([ 4.65, 10])
-    
-#     line_ax_lims = (np.min(results_line), np.max(results_line))
-    
-#     plane_ax.set_aspect('equal')
-#     plane_ax.grid(False)
-#     plane_ax_lims = (np.min(results_plane), np.max(results_plane))
-#     plane_ax_lims = max([abs(l) for l in plane_ax_lims])
-#     plane_ax_lims = [-plane_ax_lims, plane_ax_lims]
-    
-#     def make_pic(k):
-#         line_ax.clear()
-#         plane_ax.clear()
-        
-#         line_ax.plot(x_line, results_line[...,k], linewidth=2)
-#         line_ax.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
-#         line_ax.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
-#         line_ax.axhline(0, color="k", linewidth=.5)
-#         line_ax.axvline(0, color="k", linewidth=1, linestyle="dotted")
-    
-#         line_ax.set_xlabel(trs.choose("Position $X$ [MPu]", "Posición $X$ [uMP]"))
-#         line_ax.set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
-#                                       r"Campo eléctrico $E_z(y=z=0)$"))
-#         line_ax.set_xlim(min(x_line), max(x_line))
-        
-#         ims = plane_ax.imshow(results_plane[...,k].T,
-#                               cmap='RdBu', #interpolation='spline36', 
-#                               vmin=plane_ax_lims[0], vmax=plane_ax_lims[1],
-#                               extent=[min(y_plane), max(y_plane),
-#                                       min(z_plane), max(z_plane)])
-#         plane_ax.axhline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
-#         plane_ax.axhline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
-#         plane_ax.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
-#         plane_ax.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
-#         plane_ax.axhline(0, color="k", linewidth=1, linestyle="dotted")
-#         plane_ax.axvline(0, color="k", linewidth=1, linestyle="dotted")
-        
-#         plane_ax.set_xlabel(trs.choose("Position $Y$ [MPu]", "Posición $Y$ [uMP]"))
-#         plane_ax.set_ylabel(trs.choose("Position $Z$ [MPu]", "Posición $Z$ [uMP]"))
-        
-#         # if units:
-#         #     plane_ax.set_title(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
-#         #                                   f"1 uMP = {from_um_factor * 1e3:.0f} nm"))
-#         # else:
-#         #     plane_ax.set_title(trs.choose(r"1 MPu = $\lambda$",
-#         #                                   r"1 uMP = $\lambda$"))
-#         # line_ax.set_title(trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
-#         #                              f'Tiempo: {t_line[k]/period:.1f} uMP'))
-
-#         line_ax.text(-.07, -.11, trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
-#                                             f'Tiempo: {t_line[k]/period:.1f} uMP'), 
-#                       transform=line_ax.transAxes)
-#         if units:
-#             plt.annotate(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
-#                                           f"1 uMP = {from_um_factor * 1e3:.0f} nm"),
-#                               (910, 9), xycoords='figure points') # 50, 300
-#         else:
-#             plt.annotate(trs.choose(r"1 MPu = $\lambda$",
-#                                           r"1 uMP = $\lambda$"),
-#                               (910, 9), xycoords='figure points') # 50, 310
-#         line_ax.set_ylim(*line_ax_lims)
-        
-#         cax = plane_ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
-#                                   transform=plane_ax.transAxes)
-#         cbar = fig.colorbar(ims, ax=plane_ax, cax=cax)
-#         cbar.set_label(trs.choose("Electric Field $E_z$",
-#                                   "Campo eléctrico $E_z$"))
-        
-#         plt.show()
-#         return line_ax, plane_ax
-    
-#     def make_gif(gif_filename):
-#         pics = []
-#         for ik, k in enumerate(frames_index):
-#             line_ax, plane_ax = make_pic(k)
-#             plt.savefig('temp_pic.png') 
-#             pics.append(mim.imread('temp_pic.png')) 
-#             print(str(ik+1)+'/'+str(nframes))
-#         mim.mimsave(gif_filename+'.gif', pics, fps=5)
-#         os.remove('temp_pic.png')
-#         print('Saved gif')
-    
-#     make_gif(sa.file("All"))
-#     plt.close(fig)
-#     # del fig, ax, lims, nframes_step, nframes, call_series, label_function
-
 
 make_gif_line(plot_file("All2"))
 plt.close(fig)
