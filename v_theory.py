@@ -262,10 +262,10 @@ def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
         surrounding_N = [*[surrounding_N]*len(wlen)]
     
     sigma_abs = np.array([ps.MieQ(
-        iN, wl, 2*r, sN, asCrossSection=not(asEffiency))[2] 
+        iN, wl, 2*r, nMedium=sN, asCrossSection=not(asEffiency))[2]
             for wl, iN, sN in zip(wlen, inner_N, surrounding_N)])
     
-    if len(sigma_scatt)>1:
+    if len(sigma_abs)>1:
         return sigma_abs
     else:
         return sigma_abs[0]
