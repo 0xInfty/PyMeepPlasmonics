@@ -23,8 +23,8 @@ vp.set_style()
 #%% PARAMETERS
 
 """
-# series = "ResWlen50" # Para MonochAdvancingFields
-series = "ResWlen10" # Para MonochNormalizationPlot
+series = "ResWlen50" # Para MonochAdvancingFields
+# series = "ResWlen10" # Para MonochNormalizationPlot
 folder = "Field/Sources/MonochPlanewave/TestRes/Not Centered/Vacuum"
 
 hfield = False
@@ -54,7 +54,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
     
     trs = vu.BilingualManager(english=english)
     
-    #%%
+    #%% EXIT IF NOTHING TO BE DONE
     
     if not make_plots and not make_gifs:
         return
@@ -119,7 +119,7 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
     z_plane_cropped = z_plane[:z_plane_index(cell_width/2 - pml_width)+1]
     z_plane_cropped = z_plane_cropped[z_plane_index(-cell_width/2 + pml_width):]
     
-    #%%
+    #%% DATA EXTRACTION
     
     source_results = vma.get_source_from_line(results_line, x_line_index, source_center)
     
@@ -414,10 +414,10 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
             plane_ax.clear()
             
             line_ax.plot(x_line, results_line[...,k], linewidth=2)
-            line_ax.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
-            line_ax.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
-            line_ax.axhline(0, color="k", linewidth=.5)
-            line_ax.axvline(0, color="k", linewidth=1, linestyle="dotted")
+            line_ax.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1.2)
+            line_ax.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1.2)
+            line_ax.axhline(0, color="k", linewidth=1) #linestyle="dotted")
+            line_ax.axvline(0, color="k", linewidth=1)
         
             line_ax.set_xlabel(trs.choose("Position $X$ [MPu]", "Posición $X$ [uMP]"))
             line_ax.set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
@@ -429,24 +429,16 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
                                   vmin=plane_ax_lims[0], vmax=plane_ax_lims[1],
                                   extent=[min(y_plane), max(y_plane),
                                           min(z_plane), max(z_plane)])
-            plane_ax.axhline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
-            plane_ax.axhline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
-            plane_ax.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
-            plane_ax.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
-            plane_ax.axhline(0, color="k", linewidth=1, linestyle="dotted")
-            plane_ax.axvline(0, color="k", linewidth=1, linestyle="dotted")
+            plane_ax.axhline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1.2)
+            plane_ax.axhline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1.2)
+            plane_ax.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1.2)
+            plane_ax.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1.2)
+            plane_ax.axhline(0, color="k", linewidth=1) #linestyle="dotted")
+            plane_ax.axvline(0, color="k", linewidth=1) #linestyle="dotted")
             
             plane_ax.set_xlabel(trs.choose("Position $Y$ [MPu]", "Posición $Y$ [uMP]"))
             plane_ax.set_ylabel(trs.choose("Position $Z$ [MPu]", "Posición $Z$ [uMP]"))
-            
-            # if units:
-            #     plane_ax.set_title(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
-            #                                   f"1 uMP = {from_um_factor * 1e3:.0f} nm"))
-            # else:
-            #     plane_ax.set_title(trs.choose(r"1 MPu = $\lambda$",
-            #                                   r"1 uMP = $\lambda$"))
-            # line_ax.set_title(trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
-            #                              f'Tiempo: {t_line[k]/period:.1f} uMP'))
+            plane_ax.grid(False, axis="both")
 
             line_ax.text(-.07, -.11, trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
                                                 f'Tiempo: {t_line[k]/period:.1f} uMP'), 
@@ -480,6 +472,18 @@ def plots_monoch_field(series, folder, units=False, hfield=False,
             mim.mimsave(gif_filename+'.gif', pics, fps=5)
             os.remove('temp_pic.png')
             print('Saved gif')
+
+        """
+        from matplotlib import use as use_backend
+        
+        for k in [500, 512, 524, 535]:
+            line_ax, plane_ax = make_pic(535)
+            use_backend("Agg")
+            fig.dpi = 200
+            plt.savefig(sa.file(f"AdvancingFields{k}.png"))
+            use_backend("Qt5Agg")
+        
+        """
         
         make_gif(sa.file("All"))
         plt.close(fig)

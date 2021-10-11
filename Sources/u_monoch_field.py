@@ -267,15 +267,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
 
     params = {}
     for p in params_list: params[p] = eval(p)
-
-    # stable, max_courant = vm.check_stability(params)
-    # if stable:
-    #     pm.log("As a whole, the simulation should be stable")
-    # else:
-    #     pm.log("As a whole, the simulation could not be stable")
-    #     pm.log(f"Recommended maximum courant factor is {max_courant}")
-    # del stable, max_courant
-
+    
     if pm.assign(0):
         
         plot_np_planewave_cell(params, series, folder, 
@@ -283,6 +275,14 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
                                english=trs.english)
     
     #%% INITIALIZE
+    
+    # stable, max_courant = vm.check_stability(params)
+    # if stable:
+    #     pm.log("As a whole, the simulation should be stable")
+    # else:
+    #     pm.log("As a whole, the simulation could not be stable")
+    #     pm.log(f"Recommended maximum courant factor is {max_courant}")
+    # del stable, max_courant
     
     rm.measure_ram()
     

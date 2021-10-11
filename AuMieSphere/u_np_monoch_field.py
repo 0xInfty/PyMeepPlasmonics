@@ -353,15 +353,16 @@ def main(from_um_factor, resolution, courant,
     else:
     
         #% % FIRST RUN: PLOT CELL
-    
-        plot_np_planewave_cell(params, series, folder, 
-                               with_line=True, with_plane=False, 
-                               with_nanoparticle=False, english=trs.english)
-        
-        #% % FIRST RUN: INITIALIZE
         
         params = {}
         for p in params_list: params[p] = eval(p)
+    
+        if pm.assign(0):
+            plot_np_planewave_cell(params, series, folder, 
+                                   with_line=True, with_plane=False, 
+                                   with_nanoparticle=False, english=trs.english)
+        
+        #% % FIRST RUN: INITIALIZE
         
         # stable, max_courant = vm.check_stability(params)
         # if stable:
@@ -491,16 +492,17 @@ def main(from_um_factor, resolution, courant,
         sim.reset_meep()
     
     #%% SECOND RUN: PLOT CELL
-
-    plot_np_planewave_cell(params, series, folder, 
-                           with_line=True, with_plane=True, 
-                           with_nanoparticle=True, english=trs.english)
-    
-    #%% SECOND RUN: INITIALIZE
     
     params = {}
     for p in params_list: params[p] = eval(p)
     params["norm_path"] = norm_path
+    
+    if pm.assign(0):
+        plot_np_planewave_cell(params, series, folder, 
+                               with_line=True, with_plane=True, 
+                               with_nanoparticle=True, english=trs.english)
+    
+    #%% SECOND RUN: INITIALIZE
     
     # stable, max_courant = vm.check_stability(params)
     # if stable:

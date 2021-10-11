@@ -24,7 +24,7 @@ vp.set_style()
 
 """
 series = "DTest532"
-folder = "Field/NPMonoch/AuSphere/VacWatTest/DefinitiveTest/Water"
+folder = "Field/NPMonoch/AuSphere/VacWatTest/DefinitiveTest/Vacuum"
 
 hfield = False
 
@@ -56,7 +56,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
     
     trs = vu.BilingualManager(english=english)
     
-    #%%
+    #%% EXIT IF NOTHING TO BE DONE
     
     if not make_plots and not make_gifs:
         return
@@ -186,15 +186,25 @@ def plots_np_monoch_field(series, folder, hfield=False,
                                                                   cell_width, 
                                                                   pml_width)[0]
     
-    field_peaks_results = vma.get_single_field_peak_from_yzplanes(results_plane,
-                                                                  y_plane_index, 
-                                                                  z_plane_index, 
-                                                                  cell_width, 
-                                                                  pml_width)
+    field_peaks_results = vma.get_mean_field_peak_from_yzplanes(results_plane,
+                                                                y_plane_index, 
+                                                                z_plane_index, 
+                                                                cell_width, 
+                                                                pml_width)
     field_peaks_single_index = field_peaks_results[0]
     field_peaks_zprofile = field_peaks_results[2]
     field_peaks_plane = field_peaks_results[3]
     del field_peaks_results
+    
+    zprofile_cropped = vma.crop_field_zprofile(zprofile_results,
+                                               z_plane_index,
+                                               cell_width,
+                                               pml_width)
+    results_plane_cropped = vma.crop_field_yzplane(results_plane, 
+                                                   y_plane_index, 
+                                                   z_plane_index,
+                                                   cell_width,
+                                                   pml_width)
     
     #%% SHOW SOURCE AND FOURIER USED FOR NORMALIZATION
     
@@ -299,7 +309,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
                               r"Máximo del campo eléctrico $max[ E_z(z) ]$"))
         
         plt.savefig(sa.file("Maximum.png"))
-        
+               
     #%% PLOT MAXIMUM INTENSIFICATION PROFILE
         
     if make_plots and pm.assign(1): 
@@ -550,9 +560,9 @@ def plots_np_monoch_field(series, folder, hfield=False,
     
     #%% MAKE ALL GIF
     
-    if make_gifs and pm.assign(0):
+    if make_gifs and pm.assign(1):
         
-        # What should be parameters
+       # What should be parameters
         nframes = min(maxnframes, results_plane.shape[-1])
         nframes = int( vu.round_to_multiple(nframes, params["time_period_factor"] ) )
         nframes_period = int(nframes/np.max(params["time_period_factor"]))
@@ -580,13 +590,9 @@ def plots_np_monoch_field(series, folder, hfield=False,
         plane_ax = fig.add_subplot(plot_grid[:,-2:])
         fig.set_size_inches([13.96,  4.8])
         
-        # fig, [line_ax, plane_ax] = plt.subplots(ncols=2)
-        # fig.set_size_inches([ 4.65, 10])
-        
         line_ax_lims = (np.min(results_line), np.max(results_line))
         
         plane_ax.set_aspect('equal')
-        plane_ax.grid(False)
         plane_ax_lims = (np.min(results_plane), np.max(results_plane))
         plane_ax_lims = max([abs(l) for l in plane_ax_lims])
         plane_ax_lims = [-plane_ax_lims, plane_ax_lims]
@@ -598,8 +604,10 @@ def plots_np_monoch_field(series, folder, hfield=False,
             line_ax.plot(x_line, results_line[...,k], linewidth=2)
             line_ax.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
             line_ax.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
-            line_ax.axhline(0, color="k", linewidth=.5)
-            line_ax.axvline(0, color="k", linewidth=1, linestyle="dotted")
+            line_ax.axhline(0, color="k", linewidth=1)
+            line_ax.axvline(0, color="k", linewidth=1)
+            line_ax.axvline(r, color="k", linestyle="dotted", linewidth=1)
+            line_ax.axvline(-r, color="k", linestyle="dotted", linewidth=1)
         
             line_ax.set_xlabel(trs.choose("Position $X$ [MPu]", "Posición $X$ [uMP]"))
             line_ax.set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
@@ -615,26 +623,22 @@ def plots_np_monoch_field(series, folder, hfield=False,
             plane_ax.axhline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
             plane_ax.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed", linewidth=1)
             plane_ax.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed", linewidth=1)
-            plane_ax.axhline(0, color="k", linewidth=1, linestyle="dotted")
-            plane_ax.axvline(0, color="k", linewidth=1, linestyle="dotted")
+            plane_ax.axhline(0, color="k", linewidth=1)
+            plane_ax.axvline(0, color="k", linewidth=1)
+            plane_ax.axhline(r, color="k", linestyle="dotted", linewidth=1)
+            plane_ax.axhline(-r, color="k", linestyle="dotted", linewidth=1)
+            plane_ax.axvline(r, color="k", linestyle="dotted", linewidth=1)
+            plane_ax.axvline(-r, color="k", linestyle="dotted", linewidth=1)
             
+            plane_ax.grid(False)
             plane_ax.set_xlabel(trs.choose("Position $Y$ [MPu]", "Posición $Y$ [uMP]"))
             plane_ax.set_ylabel(trs.choose("Position $Z$ [MPu]", "Posición $Z$ [uMP]"))
-            
-            # if units:
-            #     plane_ax.set_title(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
-            #                                   f"1 uMP = {from_um_factor * 1e3:.0f} nm"))
-            # else:
-            #     plane_ax.set_title(trs.choose(r"1 MPu = $\lambda$",
-            #                                   r"1 uMP = $\lambda$"))
-            # line_ax.set_title(trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
-            #                              f'Tiempo: {t_line[k]/period:.1f} uMP'))
 
             line_ax.text(-.07, -.11, trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
                                                 f'Tiempo: {t_line[k]/period:.1f} uMP'), 
                           transform=line_ax.transAxes)
-            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
+            plt.annotate(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 uMP = {from_um_factor * 1e3:.0f} nm"),
                          (910, 9), xycoords='figure points')
             line_ax.set_ylim(*line_ax_lims)
             
@@ -657,7 +661,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
             mim.mimsave(gif_filename+'.gif', pics, fps=5)
             os.remove('temp_pic.png')
             print('Saved gif')
-        
+                
         make_gif(sa.file("All"))
         plt.close(fig)
         # del fig, ax, lims, nframes_step, nframes, call_series, label_function
@@ -705,9 +709,9 @@ def plots_np_monoch_field(series, folder, hfield=False,
             plt.xlabel(trs.choose("Position Z [MPu]", "Position Z [uMP]"))
             plt.ylabel(trs.choose(r"Electric Field $E_z(x=y=0)$",
                                   r"Campo eléctrico $E_z(x=y=0)$"))
-            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
-                         (300, 11), xycoords='figure points')
+            plt.annotate(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 uMP = {from_um_factor * 1e3:.0f} nm"),
+                         (345, 11), xycoords='figure points')
             plt.ylim(*lims)
             
             plt.show()
@@ -730,7 +734,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
         
     #%% MAKE ABSOLUTE PROFILE GIF
     
-    if make_gifs and pm.assign(0):
+    if make_gifs and pm.assign(1):
         
         # What should be parameters
         nframes = min(maxnframes, results_plane.shape[-1])
@@ -771,9 +775,9 @@ def plots_np_monoch_field(series, folder, hfield=False,
             plt.xlabel(trs.choose("Position Z [MPu]", "Position Z [uMP]"))
             plt.ylabel(trs.choose(r"Electric Field $|E_z|(x=y=0)$",
                                   r"Campo eléctrico $|E_z|(x=y=0)$"))
-            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
-                         (300, 11), xycoords='figure points')
+            plt.annotate(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 uMP = {from_um_factor * 1e3:.0f} nm"),
+                         (345, 11), xycoords='figure points')
             plt.ylim(*lims)
             
             plt.show()
@@ -792,6 +796,124 @@ def plots_np_monoch_field(series, folder, hfield=False,
         
         make_gif_line(sa.file("AxisZAbs"))
         plt.close(fig)
+        
+    #%% MAKE MEANINGFUL ALL GIF
+    
+    if make_gifs and pm.assign(0):
+        
+        # What should be parameters
+        nframes = min(maxnframes, results_plane_cropped.shape[-1])
+        nframes = int( vu.round_to_multiple(nframes, params["time_period_factor"] ) )
+        nframes_period = int(nframes/np.max(params["time_period_factor"]))
+        
+        cut_points = []
+        for k in range(int(params["time_period_factor"])):
+            cut_points.append( np.argmin(np.abs(t_line / period - (k + 1))) )
+        cut_points = [0, *cut_points]
+        
+        frames_index = []
+        for k in range(len(cut_points)):
+            if k < len(cut_points)-1:
+                intermediate_frames = np.linspace(
+                    cut_points[k],
+                    cut_points[k+1],
+                    nframes_period+1)[:-1]
+                intermediate_frames = [int(fr) for fr in intermediate_frames]
+                frames_index = [*frames_index, *intermediate_frames]
+        
+        # Animation base
+        fig = plt.figure()                
+        plot_grid = gridspec.GridSpec(ncols=5, nrows=1, figure=fig, 
+                                      wspace=.7)
+        line_ax = fig.add_subplot(plot_grid[:,:3])
+        plane_ax = fig.add_subplot(plot_grid[:,-2:])
+        fig.set_size_inches([13.96,  4.8])
+        
+        # fig, [line_ax, plane_ax] = plt.subplots(ncols=2)
+        # fig.set_size_inches([ 4.65, 10])
+        
+        line_ax_lims = (np.min(zprofile_cropped), np.max(zprofile_cropped))
+        
+        plane_ax.set_aspect('equal')
+        plane_ax.grid(False)
+        plane_ax_lims = (np.min(results_plane_cropped), np.max(results_plane_cropped))
+        plane_ax_lims = max([abs(l) for l in plane_ax_lims])
+        plane_ax_lims = [-plane_ax_lims, plane_ax_lims]
+        
+        def make_pic(k):
+            line_ax.clear()
+            plane_ax.clear()
+            
+            line_ax.plot(z_plane_cropped, zprofile_cropped[...,k], linewidth=2)
+            line_ax.axvline(-r, color="dimgrey", linestyle="dashed", linewidth=1.2)
+            line_ax.axvline(r, color="dimgrey", linestyle="dashed", linewidth=1.2)
+            line_ax.axhline(0, color="dimgrey", linewidth=1)
+            line_ax.axvline(0, color="dimgrey", linewidth=1)
+        
+            line_ax.set_xlabel(trs.choose("Position $Z$ [MPu]", "Posición $Z$ [uMP]"))
+            line_ax.set_ylabel(trs.choose(r"Electric Field $E_z(x=y=0)$",
+                                          r"Campo eléctrico $E_z(x=y=0)$"))
+            line_ax.set_xlim(min(z_plane_cropped), max(z_plane_cropped))
+            
+            ims = plane_ax.imshow(results_plane_cropped[...,k].T,
+                                  cmap='RdBu', #interpolation='spline36', 
+                                  vmin=plane_ax_lims[0], vmax=plane_ax_lims[1],
+                                  extent=[min(y_plane_cropped), max(y_plane_cropped),
+                                          min(z_plane_cropped), max(z_plane_cropped)])
+            plane_ax.axhline(-r, color="dimgrey", linestyle="dashed", linewidth=1.2)
+            plane_ax.axhline(r, color="dimgrey", linestyle="dashed", linewidth=1.2)
+            plane_ax.axvline(-r, color="dimgrey", linestyle="dashed", linewidth=1.2)
+            plane_ax.axvline(r, color="dimgrey", linestyle="dashed", linewidth=1.2)
+            plane_ax.axhline(0, color="dimgrey", linewidth=1)
+            plane_ax.axvline(0, color="dimgrey", linewidth=1)
+            
+            plane_ax.set_xlabel(trs.choose("Position $Y$ [MPu]", "Posición $Y$ [uMP]"))
+            plane_ax.set_ylabel(trs.choose("Position $Z$ [MPu]", "Posición $Z$ [uMP]"))
+            plane_ax.grid(False, axis="both")
+
+            line_ax.text(-.07, -.11, trs.choose(f'Time: {t_line[k]/period:.1f} MPu',
+                                                f'Tiempo: {t_line[k]/period:.1f} uMP'), 
+                          transform=line_ax.transAxes)
+            plt.annotate(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
+                                    f"1 uMP = {from_um_factor * 1e3:.0f} nm"),
+                         (910, 9), xycoords='figure points')
+            line_ax.set_ylim(*line_ax_lims)
+            
+            cax = plane_ax.inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
+                                      transform=plane_ax.transAxes)
+            cbar = fig.colorbar(ims, ax=plane_ax, cax=cax)
+            cbar.set_label(trs.choose("Electric Field $E_z(x=0,y,z)$",
+                                      "Campo eléctrico $E_z(x=0,y,z)$"))
+            
+            plt.show()
+            return line_ax, plane_ax
+        
+        def make_gif(gif_filename):
+            pics = []
+            for ik, k in enumerate(frames_index):
+                line_ax, plane_ax = make_pic(k)
+                plt.savefig('temp_pic.png') 
+                pics.append(mim.imread('temp_pic.png')) 
+                print(str(ik+1)+'/'+str(nframes))
+            mim.mimsave(gif_filename+'.gif', pics, fps=5)
+            os.remove('temp_pic.png')
+            print('Saved gif')
+                
+        """
+        from matplotlib import use as use_backend
+        
+        use_backend("Agg")
+        for k in [490, 515, 550, 575]:
+            line_ax, plane_ax = make_pic(535)
+            fig.dpi = 200
+            plt.savefig(sa.file(f"AdvancingFields{k}.png"))
+        use_backend("Qt5Agg")
+        
+        """ 
+           
+        make_gif(sa.file("AllSignificant"))
+        plt.close(fig)
+        # del fig, ax, lims, nframes_step, nframes, call_series, label_function
         
     #%%
     
