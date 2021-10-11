@@ -615,7 +615,7 @@ def find_zpeaks_zprofile(zprofile_field, z_plane_index,
     max_z_values_right = cropped_zprofile[abs_max_z_index_right, ...]
     
     max_z_values = np.mean(np.array([max_z_values_left,max_z_values_right]), axis=0)
-    abs_max_z_index = (max_z_values_left, max_z_values_right)
+    abs_max_z_index = (abs_max_z_index_left, abs_max_z_index_right)
     
     return abs_max_z_index, max_z_values
 
