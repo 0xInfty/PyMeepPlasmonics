@@ -745,6 +745,22 @@ def wlen_range(material, surrounding_index):
     else:
         raise ValueError("Please, expand this function.")
 
+wlen_theory = np.linspace(450, 800, 200)
+
+scatt_theory = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
+                                      material[i][j], 
+                                      paper[i][j], 
+                                      wlen_theory,
+                                      surrounding_index=index[i][j])
+                          for j in range(len(series[i]))] for i in range(len(series))]
+
+abs_theory = [[vmt.sigma_abs_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
+                                  material[i][j], 
+                                  paper[i][j], 
+                                  wlen_theory,
+                                  surrounding_index=index[i][j])
+                          for j in range(len(series[i]))] for i in range(len(series))]
+
 scatt_max_wlen_theory = [[vmt.max_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
                                              material[i][j], 
                                              paper[i][j], 
@@ -755,13 +771,103 @@ scatt_max_wlen_theory = [[vmt.max_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e
 
 scatt_max_wlen_predict = [wlen[i][np.argmin(np.abs([wlen[i][j] * from_um_factor[i][j] * 1e3 - scatt_max_wlen_theory[i][j] for j in range(len(series[i]))]))] for i in range(len(series))]
 
+#%% PLOT SCATTERING THEORY <<
+
+plot_for_display = True
+split_plot = False
+split_legend = False
+
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure(figsize=(n*subfig_size, subfig_size))
+if split_plot:
+    axes = fig.subplots(nrows=len(series), sharex=True, gridspec_kw={"wspace":0, "hspace":0})
+    second_axes = [plt.twinx(ax) for ax in axes]
+else:
+    ax = plt.subplot()
+    second_ax = plt.twinx(ax)
+    axes = [ax]*len(series)
+    second_axes = [second_ax]*len(series)
+if plot_for_display: fig.dpi = 200
+
+axes[0].set_title(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
+                  plot_title_ending)
+
+lines = []
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        l_scatt, = axes[i].plot(wlen_theory, 
+                                scatt_theory[i][j],
+                                color=colors[i][j], #linestyle="dashed",
+                                alpha=0.5)
+        l_abs, = second_axes[i].plot(wlen_theory, 
+                                     abs_theory[i][j],
+                                     color=colors[i][j], linestyle="dashed",
+                                     alpha=0.5)
+        
+        if split_legend:
+            l_scatt.set_label(trs.choose(r"$\sigma_{scatt}$", r"$\sigma_{disp}$") + " " + series_legend[i] + " " + series_label[i](series[i][j]))
+            l_abs.set_label(r"$\sigma_{abs}$" + " " + series_legend[i] + " " + series_label[i](series[i][j]))
+        else:
+            l_scatt.set_label(trs.choose(r"$\sigma_{scatt}$", r"$\sigma_{disp}$") + " " + series_legend[i])
+            l_abs.set_label(r"$\sigma_{abs}$" + " " + series_legend[i])
+            
+        if j==len(series[i])-1 or split_legend:
+            lines.append(l_scatt)
+            lines.append(l_abs)
+                
+        axes[i].set_xlim(np.min(wlen_theory), np.max(wlen_theory))
+    
+    axes[0].set_xlabel(trs.choose("Wavelength [nm]", "Longitud de onda [nm]"))
+    axes[0].set_ylabel(trs.choose(r"Scattering cross section $\sigma_{scatt}$ [nm]", 
+                                  r"Sección eficaz de dispersión $\sigma_{disp}$ [nm]"))
+    second_axes[0].set_ylabel(trs.choose(r"Absorption cross section $\sigma_{abs}$ [nm]", 
+                                         r"Sección eficaz de absorción $\sigma_{abs}$ [nm]"))
+       
+# if split_plot: lims = [axes[i].get_ylim() for i in range(len(series))]
+# else: lims = [axes[0].get_ylim()]*len(series)
+    
+# for i in range(len(series)):
+#     for j in range(len(series[i])):
+#         axes[i].vlines(scatt_max_wlen_theory[i][j], lims[i][0], 
+#                        scatt_theory[i][j][ np.argmin(np.abs(wlen_theory - scatt_max_wlen_theory[i][j])) ],
+#                        linestyle="solid", alpha=0.5,
+#                        color=colors[i][j])
+#         axes[i].set_ylim(lims[i])
+    
+# if split_plot:
+#     box_axes = axes
+# else:
+#     box_axes = [axes[0]]
+# for ax in box_axes:
+#     box = ax.get_position()
+#     if split_legend:
+#         box.x1 = box.x1 - .35 * ( box.x1 - box.x0 )
+#         bbox_to_anchor = (1.7,.5)
+#     else:
+#         box.x1 = box.x1 - .2 * ( box.x1 - box.x0 )
+#         bbox_to_anchor = (1.4,.5)
+#     ax.set_position(box)
+
+# plt.legend(lines, [l.get_label() for l in lines],
+#            bbox_to_anchor=bbox_to_anchor, loc="center right",
+#            bbox_transform=axes[0].transAxes)
+
+plt.savefig(plot_file("ScattTheory.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
+
+
 #%% GET THEORY (FIELD) <<
+
+cropped_zprofile = [[vma.crop_field_zprofile(zprofile_results[i][j], z_plane_index[i][j], cell_width[i][j], pml_width[i][j]) 
+                     for j in range(len(series[i]))] for i in range(len(series))]
 
 rvec = []
 for i in range(len(series)):
     rvec.append([])
     for j in range(len(series[i])):
-        naux = zprofile_results[i][j].shape[-1]
+        naux = cropped_zprofile[i][j].shape[0]
         aux = np.zeros((naux, 3))
         aux[:,2] = np.linspace(-cell_width[i][j]/2 + pml_width[i][j], 
                                 cell_width[i][j]/2 - pml_width[i][j], 
@@ -858,9 +964,14 @@ if plot_for_display: use_backend("Qt5Agg")
 
 #%% PLOT MAXIMUM INTENSIFICATION PROFILE (THEORY) <<
 
+plot_for_display = True
+
+if plot_for_display: use_backend("Agg")
+
 fig = plt.figure(figsize=(n*subfig_size, subfig_size))
 axes = fig.subplots(ncols=len(series), sharex=True, sharey=True,
                     gridspec_kw={"wspace":0, "hspace":0})
+if plot_for_display: fig.dpi = 200
 
 plt.suptitle(trs.choose('Monochromatic source on ', 'Fuente monocromática sobre ') + 
              plot_title_ending)
@@ -873,6 +984,11 @@ for i in range(len(series)):
         axes[i].axvline(r[i][j] * from_um_factor[i][j] * 1e3, 
                         color="k", linestyle="dotted", linewidth=.8)
         axes[i].axvline(-r[i][j] * from_um_factor[i][j] * 1e3, 
+                        color="k", linestyle="dotted", linewidth=.8)
+        
+        axes[i].axvline(empty_r_factor[i][j] * r[i][j] * from_um_factor[i][j] * 1e3, 
+                        color="k", linestyle="dotted", linewidth=.8)
+        axes[i].axvline(-empty_r_factor[i][j] * r[i][j] * from_um_factor[i][j] * 1e3, 
                         color="k", linestyle="dotted", linewidth=.8)
         
         l_cm, = axes[i].plot(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3, 
@@ -895,13 +1011,15 @@ for i in range(len(series)):
         if i == 0 and j == int(len(series[0])/2):
             l_origin = [l_cm, l_ku]
         axes[i].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+        axes[i].set_xlim(np.min(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3),
+                         np.max(rvec[i][j][:,-1] * from_um_factor[i][j] * 1e3))
         
         axes[i].xaxis.set_minor_locator(AutoMinorLocator())
         axes[i].yaxis.set_minor_locator(AutoMinorLocator())
         axes[i].grid(True, axis="y", which="both", alpha=.3)
         
-axes[0].set_ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$",
-                              r"Campo eléctrico $E_z(y=z=0)$"))
+axes[0].set_ylabel(trs.choose(r"Electric Field $|E_z|(y=z=0)$",
+                              r"Campo eléctrico $|E_z|(y=z=0)$"))
 
 for ax in axes:
     box = ax.get_position()
@@ -921,6 +1039,8 @@ second_legend = axes[0].legend(
 axes[0].add_artist(first_legend)
 
 plt.savefig(plot_file("FieldProfileTheory.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% PLOT MAXIMUM INTENSIFICATION PROFILE (DATA SUBPLOTS)
 
@@ -1170,14 +1290,14 @@ for i in range(len(series)):
             if j==len(series[i])-1:
                 axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if i==0:
-                axes[i][j].set_ylabel(trs.choose("Electric Field Intensity\n" + r"$|E_z|^2(y=z=0)$",
-                                                 "Intensidad del campo eléctrico\n"+r"$|E_z|^2(y=z=0)$"))
+                axes[i][j].set_ylabel(trs.choose("Electric Field Intensity\n" + r"$\langle\,|E_z|^2\,\rangle(y=z=0)$",
+                                                 "Intensidad del campo eléctrico\n"+r"$\langle\,|E_z|^2\,\rangle(y=z=0)$"))
         else:
             if i==len(series)-1:
                 axes[i][j].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
             if j==0:
-                axes[i][j].set_ylabel(trs.choose("Electric Field Intensity\n" + r"$|E_z|^2(y=z=0)$",
-                                                 "Intensidad del campo eléctrico\n"+r"$|E_z|^2(y=z=0)$"))
+                axes[i][j].set_ylabel(trs.choose("Electric Field Intensity\n" + r"$|\langle\,|E_z|^2\,\rangle(y=z=0)$",
+                                                 "Intensidad del campo eléctrico\n"+r"$\langle\,|E_z|^2\,\rangle(y=z=0)$"))
         
         axes[i][j].xaxis.set_minor_locator(AutoMinorLocator())
         axes[i][j].yaxis.set_minor_locator(AutoMinorLocator())
@@ -1216,8 +1336,8 @@ for i in range(len(series)):
             cax = axes[i][j].inset_axes([1.04, 0, 0.07, ncax], #[1.04, 0, 0.07, 1], 
                                         transform=axes[i][j].transAxes)
             cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-            cbar.set_label(trs.choose(r"Electric Field Intensity $<|E_z|^2(y=z=0)>$",
-                                      r"Intensidad del campo eléctrico $<|E_z|^2(y=z=0)>$"))
+            cbar.set_label(trs.choose(r"Electric Field Intensity $\langle\,|E_z|^2\,\rangley=z=0)>$",
+                                      r"Intensidad del campo eléctrico $\langle\,|E_z|^2\,\rangle(y=z=0)>$"))
             cbar.ax.minorticks_on()
         
 axes_field = np.array(axes_field)
@@ -1237,6 +1357,281 @@ else:
 plt.savefig(plot_file("AllSubplotsMeanTime.png"))
 
 if vertical_plot: use_backend("Qt5Agg")
+
+#%% QUANTIFY CONTRAST WITH THEORY <<
+
+taverage_msqdiff_cm = [[np.mean(np.power(zprofile_taverage[i][j] - np.power(np.abs(zprofile_cm_theory[i][j]), 2)/ 2, 2))
+                        for j in range(len(series[i]))] for i in range(len(series))]
+taverage_msqdiff_ku = [[np.mean(np.power(zprofile_taverage[i][j] - np.power(np.abs(zprofile_ku_theory[i][j]), 2)/ 2, 2))
+                        for j in range(len(series[i]))] for i in range(len(series))]
+
+zprofile_max_index = [[vma.find_zpeaks_zprofile(zprofile_results[i][j], z_plane_index[i][j], cell_width[i][j], pml_width[i][j])[0] 
+                       for j in range(len(series[i]))] for i in range(len(series))]
+zprofile_in_index = [[np.arange(zprofile_max_index[i][j][0], zprofile_max_index[i][j][1]+1) for j in range(len(series[i]))] for i in range(len(series))]
+zprofile_out_index = [[np.array([*np.arange(0, zprofile_max_index[i][j][0]),
+                                 *np.arange(zprofile_max_index[i][j][1]+1, cropped_zprofile[i][j].shape[0])]) for j in range(len(series[i]))] for i in range(len(series))]
+
+taverage_msqdiff_cm_in = [[np.mean(np.power(zprofile_taverage[i][j][zprofile_in_index[i][j]] - 
+                                            np.power(np.abs(zprofile_cm_theory[i][j][zprofile_in_index[i][j]]), 2)/ 2, 2))
+                        for j in range(len(series[i]))] for i in range(len(series))]
+taverage_msqdiff_cm_out = [[np.mean(np.power(zprofile_taverage[i][j][zprofile_out_index[i][j]] - 
+                                            np.power(np.abs(zprofile_cm_theory[i][j][zprofile_out_index[i][j]]), 2)/ 2, 2))
+                        for j in range(len(series[i]))] for i in range(len(series))]
+
+taverage_msqdiff_ku_in = [[np.mean(np.power(zprofile_taverage[i][j][zprofile_in_index[i][j]] - 
+                                            np.power(np.abs(zprofile_ku_theory[i][j][zprofile_in_index[i][j]]), 2)/ 2, 2))
+                        for j in range(len(series[i]))] for i in range(len(series))]
+taverage_msqdiff_ku_out = [[np.mean(np.power(zprofile_taverage[i][j][zprofile_out_index[i][j]] - 
+                                            np.power(np.abs(zprofile_ku_theory[i][j][zprofile_out_index[i][j]]), 2)/ 2, 2))
+                        for j in range(len(series[i]))] for i in range(len(series))]
+
+taverage_max_meep = [[np.max(zprofile_taverage[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+taverage_max_cm = [[np.max(np.power(np.abs(zprofile_cm_theory[i][j]), 2)/ 2) for j in range(len(series[i]))] for i in range(len(series))]
+taverage_max_ku = [[np.max(np.power(np.abs(zprofile_ku_theory[i][j]), 2)/ 2) for j in range(len(series[i]))] for i in range(len(series))]
+
+taverage_maxdiff_cm = [[taverage_max_meep[i][j] - taverage_max_cm[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+taverage_maxdiff_ku = [[taverage_max_meep[i][j] - taverage_max_ku[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+
+#%% PLOT MAXIMUM INTENSIFICATION MAX VALUE [ONE PLOT]
+
+plot_for_display = False
+
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+if plot_for_display: fig.dpi = 200
+    
+for i in range(len(series)):
+    plt.plot(test_param[i], taverage_maxdiff_cm[i],  
+             "o", color=series_colors[i], 
+             alpha=0.4, markersize=10, markeredgewidth=0,
+             label=series_legend[i] + " " + "MEEP - CM")
+    plt.plot(test_param[i], taverage_maxdiff_ku[i],
+             "D", color=series_colors[i], 
+             alpha=0.6, markersize=7, markeredgewidth=0,
+             label=series_legend[i] + " " + "MEEP - Ku")
+plt.axhline(color="k", linewidth=0.5)
+    
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Maximum Electric Field Intensity " + r"$\langle\,|E_z|^2\,\rangle$" + " Difference",
+                      "Diferencia en máxima intensidad\ndel campo eléctrico " + r"$\langle\,|E_z|^2\,\rangle$"))
+
+ax = fig.axes[0]
+ax.set_xticks(test_param[-1])
+ax.tick_params(axis="x", which="minor", width=0)
+ax.grid(True, axis="y", which="both")
+ax.set_xlim(np.min(test_param[i]) - .15*(np.max(test_param)-np.min(test_param)),
+            np.max(test_param[i]) + .15*(np.max(test_param)-np.min(test_param)))
+
+box = ax.get_position()
+box_height = box.y1 - box.y0
+box.y1 = box.y1 + .1 * box_height
+box.y0 = box.y0 + .15 * box_height
+ax.set_position(box)
+
+plt.legend(loc="lower center", frameon=False, 
+           bbox_to_anchor=(.5,-.25), bbox_transform=ax.transAxes, ncol=2)
+
+fig.set_size_inches([6.4, 6])
+
+plt.savefig(plot_file("IntensityMaxDiff.png"))
+    
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% PLOT MAXIMUM INTENSIFICATION MAX VALUE [TWO PLOTS] <<
+
+plot_for_display = False
+
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+axes = fig.subplots(ncols=2, sharex=True, gridspec_kw={"wspace":0.1})
+if plot_for_display: fig.dpi = 200
+    
+axes[0].set_title(trs.choose("Absolute Difference", "Diferencia absoluta"))
+axes[1].set_title(trs.choose("Percentual Difference", "Diferencia porcentual"))
+
+for i in range(len(series)):
+    axes[0].plot(test_param[i], taverage_maxdiff_cm[i],  
+                 "o", color=series_colors[i], 
+                 alpha=0.4, markersize=10, markeredgewidth=0,
+                 label=series_legend[i] + " " + "MEEP - CM")
+    axes[0].plot(test_param[i], taverage_maxdiff_ku[i],
+                 "D", color=series_colors[i], 
+                 alpha=0.6, markersize=7, markeredgewidth=0,
+                 label=series_legend[i] + " " + "MEEP - Ku")
+    axes[1].plot(test_param[i], 
+                 100 * np.asarray(taverage_maxdiff_cm[i]) / np.asarray(taverage_max_meep[i]),  
+                 "o", color=series_colors[i], 
+                 alpha=0.4, markersize=10, markeredgewidth=0,
+                 label=series_legend[i] + " " + "MEEP - CM")
+    axes[1].plot(test_param[i], 
+                 100 * np.asarray(taverage_maxdiff_ku[i]) / np.asarray(taverage_max_meep[i]),  
+                 "D", color=series_colors[i], 
+                 alpha=0.6, markersize=7, markeredgewidth=0,
+                 label=series_legend[i] + " " + "MEEP - Ku")
+
+axes[1].yaxis.tick_right()
+axes[1].yaxis.set_label_position("right")
+
+axes[0].set_ylabel(trs.choose("Maximum Electric Field Intensity " + r"$\langle\,|E_z|^2\,\rangle$" + " Difference",
+                             "Diferencia en máxima intensidad\ndel campo eléctrico " + r"$\langle\,|E_z|^2\,\rangle$"))
+
+axes[1].set_ylabel(trs.choose("Maximum Electric Field Intensity " + r"$\langle\,|E_z|^2\,\rangle$" + " Difference [%]",
+                              "Diferencia en máxima intensidad\ndel campo eléctrico " + r"$\langle\,|E_z|^2\,\rangle$ [%]"))
+
+for ax in axes:
+    ax.axhline(color="k", linewidth=0.5)
+    ax.set_xticks(test_param[-1])
+    ax.set_xlabel(test_param_label)
+    
+    
+    ax.tick_params(axis="x", which="minor", width=0)
+    ax.grid(True, axis="y", which="both")
+    ax.set_xlim(np.min(test_param[i]) - .15*(np.max(test_param)-np.min(test_param)),
+                np.max(test_param[i]) + .15*(np.max(test_param)-np.min(test_param)))
+    
+    box = ax.get_position()
+    box_height = box.y1 - box.y0
+    box.y1 = box.y1 + .1 * box_height
+    box.y0 = box.y0 + .15 * box_height
+    box_width = box.x1 - box.x0
+    if ax==axes[0]:
+        box.x1 = box.x1 + .1 * box_width
+        box.x0 = box.x0 + .12 * box_width
+    else:
+        box.x0 = box.x0 + .05 * box_width
+    box_width = box.x1 - box.x0
+    box.x1 = box.x1 - .12 * box_width
+    box.x0 = box.x0 - .12 * box_width
+    ax.set_position(box)
+
+plt.legend(loc="lower center", frameon=False, 
+           bbox_to_anchor=(-.1,-.25), bbox_transform=ax.transAxes, ncol=2)
+
+
+fig.set_size_inches([5.4, 6])
+
+plt.savefig(plot_file("IntensityMaxDiff.png"))
+    
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% PLOT MAXIMUM INTENSIFICATION MEAN SQUARED DIFFERENCE [ONE PLOT]
+
+plot_for_display = False
+
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+if plot_for_display: fig.dpi = 200
+    
+for i in range(len(series)):
+    plt.plot(test_param[i], taverage_msqdiff_cm_out[i], "o", color=series_colors[i], 
+             alpha=0.4, markersize=10, markeredgewidth=0,
+             label=series_legend[i] + " " + "MEEP - CM")
+    plt.plot(test_param[i], taverage_msqdiff_ku_out[i], "D", color=series_colors[i], 
+             alpha=0.6, markersize=7, markeredgewidth=0,
+             label=series_legend[i] + " " + "MEEP - Ku")
+plt.axhline(color="k", linewidth=0.5)
+    
+plt.xlabel(test_param_label)
+plt.ylabel(trs.choose("Mean Squared Difference in Electric Field Intensity " + r"$\langle\,|E_z|^2\,\rangle(z)$",
+                      "Diferencia cuadrática media en \nintensidad del campo eléctrico " + r"$\langle\,|E_z|^2\,\rangle(z)$"))
+
+ax = fig.axes[0]
+ax.set_xticks(test_param[-1])
+ax.yaxis.tick_right()
+ax.yaxis.set_label_position("right")
+ax.tick_params(axis="x", which="minor", width=0)
+ax.grid(True, axis="y", which="both")
+ax.set_xlim(np.min(test_param[i]) - .15*(np.max(test_param)-np.min(test_param)),
+            np.max(test_param[i]) + .15*(np.max(test_param)-np.min(test_param)))
+
+box = ax.get_position()
+box_height = box.y1 - box.y0
+box.y1 = box.y1 + .1 * box_height
+box.y0 = box.y0 + .15 * box_height
+box_width = box.x1 - box.x0
+box.x1 = box.x1 - .1 * box_width
+box.x0 = box.x0 - .1 * box_width
+ax.set_position(box)
+
+plt.legend(loc="lower center", frameon=False, 
+           bbox_to_anchor=(.5,-.25), bbox_transform=ax.transAxes, ncol=2)
+
+fig.set_size_inches([6.4, 6])
+
+plt.savefig(plot_file("IntensityMSD.png"))
+    
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% PLOT MAXIMUM INTENSIFICATION MEAN SQUARED DIFFERENCE [TWO PLOTS]
+
+plot_for_display = True
+
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+axes = fig.subplots(ncols=2, sharex=True, gridspec_kw={"wspace":0.1})
+if plot_for_display: fig.dpi = 200
+
+axes[0].set_title("Dentro")
+axes[1].set_title("Fuera")
+
+for i in range(len(series)):
+    axes[0].plot(test_param[i], taverage_msqdiff_cm_in[i], "o", color=series_colors[i], 
+                 alpha=0.4, markersize=10, markeredgewidth=0,
+                 label=series_legend[i] + " " + "MEEP - CM in")
+    axes[0].plot(test_param[i], taverage_msqdiff_ku_in[i], "D", color=series_colors[i], 
+                 alpha=0.6, markersize=7, markeredgewidth=0,
+                 label=series_legend[i] + " " + "MEEP - Ku in")
+    axes[1].plot(test_param[i], taverage_msqdiff_cm_out[i], "o", color=series_colors[i], 
+                 alpha=0.4, markersize=10, markeredgewidth=0,
+                 label=series_legend[i] + " " + "MEEP - CM out")
+    axes[1].plot(test_param[i], taverage_msqdiff_ku_out[i], "D", color=series_colors[i], 
+                 alpha=0.6, markersize=7, markeredgewidth=0,
+                 label=series_legend[i] + " " + "MEEP - Ku out")
+
+
+axes[1].yaxis.tick_right()
+axes[1].yaxis.set_label_position("right")
+
+for ax in axes:
+    ax.axhline(color="k", linewidth=0.5)
+    ax.set_xticks(test_param[-1])
+    ax.set_xlabel(test_param_label)
+    ax.set_ylabel(trs.choose("Mean Squared Difference in Electric Field Intensity " + r"$\langle\,|E_z|^2\,\rangle(z)$",
+                          "Diferencia cuadrática media en \nintensidad del campo eléctrico " + r"$\langle\,|E_z|^2\,\rangle(z)$"))
+    
+    
+    ax.tick_params(axis="x", which="minor", width=0)
+    ax.grid(True, axis="y", which="both")
+    ax.set_xlim(np.min(test_param[i]) - .15*(np.max(test_param)-np.min(test_param)),
+                np.max(test_param[i]) + .15*(np.max(test_param)-np.min(test_param)))
+    
+    box = ax.get_position()
+    box_height = box.y1 - box.y0
+    box.y1 = box.y1 + .1 * box_height
+    box.y0 = box.y0 + .15 * box_height
+    box_width = box.x1 - box.x0
+    if ax==axes[0]:
+        box.x1 = box.x1 + .05 * box_width
+        box.x0 = box.x0 + .1 * box_width
+    else:
+        box.x0 = box.x0 + .05 * box_width
+    box_width = box.x1 - box.x0
+    box.x1 = box.x1 - .1 * box_width
+    box.x0 = box.x0 - .1 * box_width
+    ax.set_position(box)
+
+plt.legend(loc="lower center", frameon=False, 
+           bbox_to_anchor=(-.1,-.25), bbox_transform=ax.transAxes, ncol=2)
+
+fig.set_size_inches([6.4, 6])
+
+plt.savefig(plot_file("IntensityMSDInOut.png"))
+    
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% MAKE PROFILE GIF
 
@@ -1416,8 +1811,8 @@ def make_pic_plane(k):
                 cax = axes[i][j].inset_axes([1.04, 0, 0.07, n+.1], #[1.04, 0, 0.07, 1], 
                                             transform=axes[i][j].transAxes)
                 cbar = fig.colorbar(ims, ax=axes[i][j], cax=cax)
-                cbar.set_label(trs.choose(r"Electric Field Intensity $|E_z|^2(y=z=0)$",
-                                          r"Intensidad del campo eléctrico $|E_z|^2(y=z=0)$"))
+                cbar.set_label(trs.choose(r"Electric Field Intensity $\langle\,|E_z|^2\,\rangle(y=z=0)$",
+                                          r"Intensidad del campo eléctrico $\langle\,|E_z|^2\,\rangle(y=z=0)$"))
                 cbar.ax.minorticks_on()
                 
             draw_pml_box(i, j)
