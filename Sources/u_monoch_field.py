@@ -27,6 +27,8 @@ import os
 import v_meep as vm
 import v_meep_analysis as vma
 import v_utilities as vu
+
+from np_planewave_cell_plot import plot_np_planewave_cell
 from monoch_field_plot import plots_monoch_field
 
 rm = vm.ResourcesMonitor()
@@ -263,101 +265,9 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     #%% PLOT CELL
 
-    if pm.assign(0) and make_plots:
-        
-        fig, ax = plt.subplots()
-        
-        # PML borders
-        pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
-                                       cell_width, cell_width,
-                                       fill=False, edgecolor="m", linestyle="dashed",
-                                       hatch='/', 
-                                       zorder=-20,
-                                       label=trs.choose("PML borders", "Bordes PML"))
-        pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
-                                        -cell_width/2+pml_width), 
-                                       cell_width - 2*pml_width, cell_width - 2*pml_width,
-                                       facecolor="white", edgecolor="m", 
-                                       linestyle="dashed", linewidth=1, zorder=-10)
-       
-        # Surrounding medium
-        if submerged_index != 1:
-            surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
-                                               cell_width, cell_width,
-                                               color="blue", alpha=.1, zorder=-6,
-                                               label=trs.choose(fr"Medium $n$={submerged_index}",
-                                                                fr"Medio $n$={submerged_index}"))
-            
-        # Surface medium
-        if surface_index != submerged_index:
-            surface_square = plt.Rectangle((0, -cell_width/2),
-                                           cell_width/2,  cell_width,
-                                           edgecolor="navy", hatch=r"\\", 
-                                           fill=False, zorder=-3,
-                                           label=trs.choose(fr"Surface $n$={surface_index}",
-                                                            fr"Superficie $n$={surface_index}"))
-            
-        # Source
-        ax.vlines(source_center, -cell_width/2, cell_width/2,
-                  color="r", linestyle="dashed", zorder=5, 
-                  label=trs.choose("Planewave Source", "Fuente de ondas plana"))
-        
-        # Sampling line
-        ax.hlines(0, -cell_width/2, cell_width/2,
-                  color="limegreen", linestyle=":", zorder=7, 
-                  label=trs.choose("Sampling Line", "Línea de muestreo"))
-        
-        
-        
-        # Sampling plane
-        ax.vlines(0, -cell_width/2, cell_width/2,
-                  color="limegreen", linestyle="dashed", zorder=7, 
-                  label=trs.choose("Sampling Plane", "Plano de muestreo"))
-        
-        if submerged_index!=1: ax.add_patch(surrounding_square)
-        if surface_index!=submerged_index: ax.add_patch(surface_square)
-        ax.add_patch(pml_out_square)
-        ax.add_patch(pml_inn_square)
-        
-        # General configuration
-        box = ax.get_position()
-        box.x0 = box.x0 - .26 * (box.x1 - box.x0)
-        # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
-        box.y1 = box.y1 + .10 * (box.y1 - box.y0)
-        ax.set_position(box)           
-        plt.legend(bbox_to_anchor=trs.choose( (1.47, 0.5), (1.54, 0.5) ), 
-                   loc="center right", frameon=False)
-        
-        fig.set_size_inches(7.5, 4.8)
-        ax.set_aspect("equal")
-        plt.xlim(-cell_width/2, cell_width/2)
-        plt.ylim(-cell_width/2, cell_width/2)
-        plt.xlabel(trs.choose("Position X [MPu]", "Posición X [uMP]"))
-        plt.ylabel(trs.choose("Position Z [MPu]", "Posición Z [uMP]"))
-        
-        if units:
-            plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                                    f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
-                         (5, 5), xycoords='figure points')
-            plt.annotate(fr"$\lambda$ = {wlen * from_um_factor * 1e3:.0f} nm",
-                         (410, 120), xycoords='figure points')
-        else:
-            plt.annotate(trs.choose(r"1 Meep Unit = $\lambda$",
-                                    r"1 Unidad de Meep = $\lambda$"),
-                         (5, 5), xycoords='figure points')
-        
-        plt.savefig(sa.file("SimBox.png"))
-        
-        del pml_inn_square, pml_out_square
-        if submerged_index!=1: del surrounding_square
-        if surface_index!=submerged_index: del surface_square
-        del fig, box, ax
-    
-    #%% INITIALIZE
-    
     params = {}
     for p in params_list: params[p] = eval(p)
-    
+
     # stable, max_courant = vm.check_stability(params)
     # if stable:
     #     pm.log("As a whole, the simulation should be stable")
@@ -365,6 +275,14 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     #     pm.log("As a whole, the simulation could not be stable")
     #     pm.log(f"Recommended maximum courant factor is {max_courant}")
     # del stable, max_courant
+
+    if pm.assign(0):
+        
+        plot_np_planewave_cell(params, series, folder, 
+                               with_line=True, with_plane=True, 
+                               english=trs.english)
+    
+    #%% INITIALIZE
     
     rm.measure_ram()
     
