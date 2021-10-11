@@ -32,6 +32,8 @@ import v_meep as vm
 import v_save as vs
 import v_utilities as vu
 
+from np_planewave_cell_plot import plot_np_planewave_cell
+
 rm = vm.ResourcesMonitor()
 rm.measure_ram()
 
@@ -306,105 +308,18 @@ def main(from_um_factor, resolution, courant,
     
     #%% PLOT CELL
 
-    if make_plots and pm.assign(0):
-        fig, ax = plt.subplots()
+    params = {}
+    for p in params_list: params[p] = eval(p)
+
+    if pm.assign(0):
         
-        # PML borders
-        pml_out_square = plt.Rectangle((-cell_width/2, -cell_width/2), 
-                                       cell_width, cell_width,
-                                       fill=False, edgecolor="m", linestyle="dashed",
-                                       hatch='/', 
-                                       zorder=-20,
-                                       label=trs.choose("PML borders", "Bordes PML"))
-        pml_inn_square = plt.Rectangle((-cell_width/2+pml_width,
-                                        -cell_width/2+pml_width), 
-                                       cell_width - 2*pml_width, cell_width - 2*pml_width,
-                                       facecolor="white", edgecolor="m", 
-                                       linestyle="dashed", linewidth=1, zorder=-10)
-       
-        # Surrounding medium
-        if submerged_index != 1:
-            surrounding_square = plt.Rectangle((-cell_width/2, -cell_width/2),
-                                               cell_width, cell_width,
-                                               color="blue", alpha=.1, zorder=-6,
-                                               label=trs.choose(fr"Medium $n$={submerged_index}",
-                                                                fr"Medio $n$={submerged_index}"))
-    
-        # Surface medium
-        if surface_index != submerged_index:
-            surface_square = plt.Rectangle((r - overlap, -cell_width/2),
-                                           cell_width/2 - r + overlap, 
-                                           cell_width,
-                                           edgecolor="navy", hatch=r"\\", 
-                                           fill=False, zorder=-3,
-                                           label=trs.choose(fr"Surface $n$={surface_index}",
-                                                            fr"Superficie $n$={surface_index}"))
-    
-        # Nanoparticle
-        if material=="Au":
-            circle_color = "gold"
-        elif material=="Ag":
-            circle_color="silver"
-        else:
-            circle_color="peru"
-        circle = plt.Circle((0,0), r, color=circle_color, linewidth=1, alpha=.4, 
-                            zorder=0, label=trs.choose(f"{material} Nanoparticle",
-                                                       f"Nanopartícula de {material}"))
-        
-        # Source
-        ax.vlines(source_center, -cell_width/2, cell_width/2,
-                  color="r", linestyle="dashed", zorder=5, 
-                  label=trs.choose("Planewave Source", "Fuente de ondas plana"))
-        
-        # Flux box
-        flux_square = plt.Rectangle((-flux_box_size/2,-flux_box_size/2), 
-                                    flux_box_size, flux_box_size,
-                                    linewidth=1, edgecolor="limegreen", linestyle="dashed",
-                                    fill=False, zorder=10, 
-                                    label=trs.choose("Flux box", "Caja de flujo"))
-        
-        ax.add_patch(circle)
-        if submerged_index!=1: ax.add_patch(surrounding_square)
-        if surface_index!=submerged_index: ax.add_patch(surface_square)
-        ax.add_patch(flux_square)
-        ax.add_patch(pml_out_square)
-        ax.add_patch(pml_inn_square)
-        
-        # General configuration
-        
-        box = ax.get_position()
-        box.x0 = box.x0 - .15 * (box.x1 - box.x0)
-        # box.x1 = box.x1 - .05 * (box.x1 - box.x0)
-        box.y1 = box.y1 + .10 * (box.y1 - box.y0)
-        ax.set_position(box)
-        plt.legend(bbox_to_anchor=trs.choose( (1.47, 0.5), (1.54, 0.5) ), 
-                   loc="center right", frameon=False)
-        
-        fig.set_size_inches(7.5, 4.8)
-        ax.set_aspect("equal")
-        plt.xlim(-cell_width/2, cell_width/2)
-        plt.ylim(-cell_width/2, cell_width/2)
-        plt.xlabel(trs.choose("Position X [MPu]", "Posición X [uMP]"))
-        plt.ylabel(trs.choose("Position Z [MPu]", "Posición Z [uMP]"))
-        
-        plt.annotate(trs.choose(f"1 Meep Unit = {from_um_factor * 1e3:.0f} nm",
-                                f"1 Unidad de Meep = {from_um_factor * 1e3:.0f} nm"),
-                     (5, 5),
-                     xycoords='figure points')
-        
-        plt.savefig(sa.file("SimBox.png"))
-        
-        del pml_inn_square, pml_out_square, flux_square, circle, circle_color
-        if submerged_index!=1: del surrounding_square
-        if surface_index!=submerged_index: del surface_square
-        del fig, box, ax
+        plot_np_planewave_cell(params, series, folder,
+                               with_box=True, with_nanoparticle=False, 
+                               english=trs.english)
         
     #%% FIRST RUN
     
     rm.measure_ram()
-    
-    params = {}
-    for p in params_list: params[p] = eval(p)
     
     stable, max_courant = vm.check_stability(params)
     if stable:
@@ -700,6 +615,16 @@ def main(from_um_factor, resolution, courant,
         separate_simulations_needed = True
         
         # rm.used_ram.append(rm.used_ram[-1])
+        
+    #%% SECOND RUN: PLOT CELL
+    
+    for p in params_list: params[p] = eval(p)
+    params["flux_path"] = flux_path
+    
+    if pm.assign(0):
+        plot_np_planewave_cell(params, series, folder,
+                               with_box=True, with_nanoparticle=True, 
+                               english=trs.english)
 
     #%% SECOND RUN: INITIALIZE
     

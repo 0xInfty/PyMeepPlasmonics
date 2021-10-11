@@ -8,6 +8,7 @@ Routines/np_monoch_field
 """
 
 import matplotlib.pyplot as plt
+import numpy as np
 import v_meep as vm
 import v_plot as vp
 import v_utilities as vu
@@ -20,13 +21,12 @@ vp.set_style()
 series = "DTest532"
 folder = "Field/NPMonoch/AuSphere/VacWatTest/DefinitiveTest/Vacuum"
 
-hfield = False
-
-make_plots = True
-make_gifs = True
+with_line = True
+with_plane = True
+with_box = False
+with_nanoparticle = True
 
 english = False
-maxnframes = 300
 """
 
 #%%
@@ -50,6 +50,12 @@ def plot_np_planewave_cell(params, series, folder,
     params = dict(f["Ez"].attrs)
     """
     
+    """
+    import v_save as vs
+    
+    params = vs.retrieve_footer(sa.file("Results.txt"))
+    """
+    
     #%% DATA EXTRACTION
     
     from_um_factor = params["from_um_factor"]
@@ -67,8 +73,14 @@ def plot_np_planewave_cell(params, series, folder,
     except:
         r = 0
         material = "none"
+        with_nanoparticle = False
     
-    wlen = params["wlen"]
+    try:
+        wlen = params["wlen"]
+    except:
+        wlen_range = params["wlen_range"]
+        wlen_center = np.mean(wlen_range)
+        wlen_width = float(np.diff(wlen_range))
     source_center = params["source_center"]
     
     submerged_index = params["submerged_index"]
@@ -77,6 +89,12 @@ def plot_np_planewave_cell(params, series, folder,
         overlap = params["overlap"]
     except:
         overlap = 0
+
+    try:        
+        flux_box_size = params["flux_box_size"]
+    except:
+        flux_box_size = 0
+        with_box = False
     
     #%% PLOT
     
@@ -141,10 +159,19 @@ def plot_np_planewave_cell(params, series, folder,
         ax.vlines(0, -cell_width/2, cell_width/2,
                   color="blue", linestyle="dashed", zorder=7, 
                   label=trs.choose("Sampling Plane", "Plano de muestreo"))
+        
+    # Flux box
+    if with_box:
+        flux_square = plt.Rectangle((-flux_box_size/2, -flux_box_size/2), 
+                                    flux_box_size, flux_box_size,
+                                    linewidth=1, edgecolor="limegreen", linestyle="dashed",
+                                    fill=False, zorder=10, 
+                                    label=trs.choose("Flux box", "Caja de flujo"))
     
     if with_nanoparticle: ax.add_patch(circle)
     if submerged_index!=1: ax.add_patch(surrounding_square)
-    if surface_index!=submerged_index: ax.add_patch(surface_square)
+    if surface_index!=submerged_index and surface_index!=1: ax.add_patch(surface_square)
+    if with_box: ax.add_patch(flux_square)
     ax.add_patch(pml_out_square)
     ax.add_patch(pml_inn_square)
     
@@ -168,14 +195,26 @@ def plot_np_planewave_cell(params, series, folder,
         plt.annotate(trs.choose(f"1 MPu = {from_um_factor * 1e3:.0f} nm",
                                 f"1 uMP = {from_um_factor * 1e3:.0f} nm"),
                      (5, 5), xycoords='figure points')
-        plt.annotate(fr"$\lambda$ = {wlen * from_um_factor * 1e3:.0f} nm",
-                     (350, 5), xycoords='figure points', color="r")
+        try:
+            plt.annotate(fr"$\lambda$ = {wlen * from_um_factor * 1e3:.0f} nm",
+                         (350, 5), xycoords='figure points', color="r")
+        except:
+            plt.annotate(fr"$\lambda_0$ = {wlen_center * from_um_factor * 1e3:.0f} nm" + 
+                         ", " +
+                         fr"$\Delta\lambda$ = {wlen_width * from_um_factor * 1e3:.0f} nm",
+                         (345, 5), xycoords='figure points', color="r")
     else:
         plt.annotate(trs.choose(r"1 MPu = $\lambda$",
                                 r"1 uMP = $\lambda$"),
                      (5, 5), xycoords='figure points')
-        plt.annotate("$\lambda$ = 1 " + trs.choose("MPu", "uMP"),
-                     (350, 5), xycoords='figure points', color="r")
+        try:
+            plt.annotate(r"$\lambda$ = 1 " + trs.choose("MPu", "uMP"),
+                         (350, 5), xycoords='figure points', color="r")
+        except:
+            plt.annotate(r"$\lambda_0$ = 1 " + trs.choose("MPu", "uMP") + 
+                         ", " +
+                         fr"$\Delta\lambda$ = {wlen_width}" + trs.choose("MPu", "uMP"),
+                         (345, 5), xycoords='figure points', color="r")
     
     if with_nanoparticle or material=="none":
         plt.savefig(sa.file("SimBox.png"))
