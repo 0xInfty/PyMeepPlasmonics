@@ -178,7 +178,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         else:
             wlen = submerged_index * 1 # Wavelength in medium wlen/index is 1 Meep unit
         resolution = resolution_wlen # Divide wlen in vacuum in resolution_wlen pieces
-        from_um_factor = 1e3
+        from_um_factor = 1e-3
         if wlen_in_vacuum:
             log_text = "vacuum"
         else:

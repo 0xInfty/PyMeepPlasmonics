@@ -20,6 +20,7 @@ else:
 
 import sys
 sys.path.append(syshome)
+sys.path.append(syshome+"/PlotRoutines")
 
 import click as cli
 import meep as mp
@@ -314,7 +315,7 @@ def main(from_um_factor, resolution, courant,
     if pm.assign(0):
         
         plot_np_planewave_cell(params, series, folder,
-                               with_box=True, with_nanoparticle=False, 
+                               with_flux_box=True, with_nanoparticle=False, 
                                english=trs.english)
         
     #%% FIRST RUN
@@ -623,7 +624,7 @@ def main(from_um_factor, resolution, courant,
     
     if pm.assign(0):
         plot_np_planewave_cell(params, series, folder,
-                               with_box=True, with_nanoparticle=True, 
+                               with_flux_box=True, with_nanoparticle=True, 
                                english=trs.english)
 
     #%% SECOND RUN: INITIALIZE
