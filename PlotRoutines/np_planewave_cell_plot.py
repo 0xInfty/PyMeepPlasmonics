@@ -23,7 +23,7 @@ folder = "Field/NPMonoch/AuSphere/VacWatTest/DefinitiveTest/Vacuum"
 
 with_line = True
 with_plane = True
-with_box = False
+with_flux_box = False
 with_nanoparticle = True
 
 english = False
@@ -33,7 +33,8 @@ english = False
 
 def plot_np_planewave_cell(params, series, folder, 
                            with_line=False, with_plane=False,
-                           with_box=False, with_nanoparticle=False, 
+                           with_flux_box=False, with_flux_wall=False,
+                           with_nanoparticle=False, 
                            english=False):
     
     #%% SETUP
@@ -94,7 +95,7 @@ def plot_np_planewave_cell(params, series, folder,
         flux_box_size = params["flux_box_size"]
     except:
         flux_box_size = 0
-        with_box = False
+        with_flux_box = False
     
     #%% PLOT
     
@@ -161,17 +162,23 @@ def plot_np_planewave_cell(params, series, folder,
                   label=trs.choose("Sampling Plane", "Plano de muestreo"))
         
     # Flux box
-    if with_box:
+    if with_flux_box:
         flux_square = plt.Rectangle((-flux_box_size/2, -flux_box_size/2), 
                                     flux_box_size, flux_box_size,
                                     linewidth=1, edgecolor="limegreen", linestyle="dashed",
                                     fill=False, zorder=10, 
                                     label=trs.choose("Flux box", "Caja de flujo"))
+
+    # Flux wall
+    if with_flux_wall:
+        ax.vlines(0, -cell_width/2, cell_width/2,
+                  color="limegreen", linestyle="dashed", zorder=10, 
+                  label=trs.choose("Flux wall", "Pared de flujo"))
     
     if with_nanoparticle: ax.add_patch(circle)
     if submerged_index!=1: ax.add_patch(surrounding_square)
     if surface_index!=submerged_index and surface_index!=1: ax.add_patch(surface_square)
-    if with_box: ax.add_patch(flux_square)
+    if with_flux_box: ax.add_patch(flux_square)
     ax.add_patch(pml_out_square)
     ax.add_patch(pml_inn_square)
     
@@ -208,12 +215,14 @@ def plot_np_planewave_cell(params, series, folder,
                                 r"1 uMP = $\lambda$"),
                      (5, 5), xycoords='figure points')
         try:
-            plt.annotate(r"$\lambda$ = 1 " + trs.choose("MPu", "uMP"),
+            plt.annotate(fr"$\lambda$ = {wlen * from_um_factor * 1e3:.2f} " + 
+                         trs.choose("MPu", "uMP"),
                          (350, 5), xycoords='figure points', color="r")
         except:
-            plt.annotate(r"$\lambda_0$ = 1 " + trs.choose("MPu", "uMP") + 
-                         ", " +
-                         fr"$\Delta\lambda$ = {wlen_width}" + trs.choose("MPu", "uMP"),
+            plt.annotate(fr"$\lambda_0$ = {wlen_center * from_um_factor * 1e3:.2f} " + 
+                         trs.choose("MPu", "uMP") + ", " +
+                         fr"$\Delta\lambda$ = {wlen_width * from_um_factor * 1e3:.2f} " + 
+                         trs.choose("MPu", "uMP"),
                          (345, 5), xycoords='figure points', color="r")
     
     if with_nanoparticle or material=="none":

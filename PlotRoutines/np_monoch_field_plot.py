@@ -495,7 +495,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
     if make_gifs and pm.assign(0):
         
         # What should be parameters
-        nframes = min(maxnframes, results_plane.shape[-1])
+        nframes = min(maxnframes, results_line.shape[-1])
         nframes = int( vu.round_to_multiple(nframes, params["time_period_factor"] ) )
         nframes_period = int(nframes/np.max(params["time_period_factor"]))
         
