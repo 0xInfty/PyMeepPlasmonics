@@ -117,20 +117,20 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         
         # Source configuration
         if units: wlen_range = (450, 600)
-        else: wlen_range = (.85, 1.15)
+        else: wlen_range = (.95, 1.05)
         nfreq = 100
         
         # Box spatial dimensions
         wlen_in_vacuum = True
-        pml_wlen_factor = 0.38
-        empty_wlen_factor = 0.25
+        pml_wlen_factor = 0.15
+        empty_wlen_factor = 5
         
         # Sim temporal dimension
-        time_factor_cell = 1.2
+        time_factor_cell = 1.35
         
         # Files configuration
-        series = "TestPulseField"
-        folder = "Test"
+        series = "JustATest"
+        folder = "Test/TestPulseFollowMean"
         
         # Run configuration
         parallel = False
@@ -142,7 +142,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         # Routine configuration
         hfield = False
         make_plots = True
-        make_gifs = True
+        make_gifs = False
         
         print("Loaded Spyder parameters")
     
@@ -152,8 +152,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     cutoff = 3.5
     
     # Field Measurements
-    n_period_line = 100
-    n_period_plane = 100
+    n_period_line = 10
     
     # Routine configuration
     english = False
@@ -174,9 +173,9 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     if units:
         wlen_range = wlen_range / ( from_um_factor * 1e3 ) # Wavelength from nm to Meep units
         if wlen_in_vacuum:
-            resolution_wlen = min(wlen_range) * resolution
+            resolution_wlen = np.mean(wlen_range) * resolution
         else:
-            resolution_wlen = min(wlen_range) * resolution / submerged_index
+            resolution_wlen = np.mean(wlen_range) * resolution / submerged_index
         pm.log(f"Running with units: {resolution:.0f} points in a Meep Unit of " + 
                f"{from_um_factor*1e3:.0f} nm with "+
                f"{wlen_range[0] * from_um_factor * 1e3}-{wlen_range[1] * from_um_factor * 1e3} nm wavelength")
@@ -189,8 +188,9 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
             wlen_range = np.array([1 - float(np.diff(wlen_range))/2, 
                                    1 + float(np.diff(wlen_range))/2]) * submerged_index
             # Central wavelength in medium wlen/index is 1 Meep unit
-        resolution = int( resolution_wlen * np.mean(wlen_range)  / min(wlen_range) )
-        # Divide minimum wavelength in vacuum in resolution_wlen pieces
+        # resolution = int( resolution_wlen * np.mean(wlen_range)  / min(wlen_range) )
+        resolution = resolution_wlen
+        # Divide mean wavelength in vacuum in resolution_wlen pieces
         from_um_factor = 1e-3
         if wlen_in_vacuum:
             log_text = "vacuum"
@@ -206,10 +206,10 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     # Space configuration    
     if units:
         if wlen_in_vacuum:
-            pml_width = pml_wlen_factor * min(wlen_range) # Multiples of vacuum wavelength
+            pml_width = pml_wlen_factor * np.mean(wlen_range) # Multiples of vacuum wavelength
         else:
-            pml_width = pml_wlen_factor * min(wlen_range) / submerged_index # Multiples of medium wavelength
-        empty_width = empty_wlen_factor * min(wlen_range)
+            pml_width = pml_wlen_factor * np.mean(wlen_range) / submerged_index # Multiples of medium wavelength
+        empty_width = empty_wlen_factor * np.mean(wlen_range)
     else:
         pml_width = pml_wlen_factor # Multiples of reference wavelength, which is 1 Meep unit
         if wlen_in_vacuum:
@@ -222,7 +222,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     until_after_sources = time_factor_cell * cell_width
     # Enough time for the pulse to pass through all the cell
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
-    period_line = min(period_range) / n_period_line # Now I want a certain number of instants in the period of the source
+    period_line = np.mean(period_range) / n_period_line # Now I want a certain number of instants in the period of the source
     
     # Saving directories
     sa = vm.SavingAssistant(series, folder)
@@ -303,6 +303,8 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     rm.measure_ram()
     
+    # symmetries = [mp.Mirror(mp.Y), mp.Mirror(mp.Z, phase=-1)]
+    
     sim = mp.Simulation(resolution=resolution,
                         Courant=courant,
                         geometry=geometry,
@@ -310,6 +312,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
                         k_point=mp.Vector3(),
                         default_material=mp.Medium(index=submerged_index),
                         cell_size=cell_size,
+                        # symmetries=symmetries,
                         boundary_layers=pml_layers,
                         output_single_precision=True,
                         split_chunks_evenly=split_chunks_evenly)
@@ -378,19 +381,6 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     x, y, z, more = sim.get_array_metadata(vol=sampling_line)
     del more
     
-    # Reconstruct source, position and time
-    f = pm.hdf_file(sa.file("Field-Lines.h5"), "r")
-    
-    results_line = f["ez"]
-    t_line = np.arange(0, f["ez"].shape[-1] * period_line, period_line)
-    x_line = x
-    
-    x_line_index = vma.def_index_function(x_line)
-    
-    source_results = vma.get_source_from_line(results_line, x_line_index, source_center)
-    
-    f.close()
-    
     # Save metadata    
     if pm.assign(0):
         
@@ -400,7 +390,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
             f[newk] = f[oldk]
             del f[oldk]
 
-        f["T"] = t_line
+        f["T"] = np.arange(0, f["Ez"].shape[-1]) * period_line
         for k, array in zip(["X","Y","Z"], [x, y, z]): 
             f[k] = array
         
@@ -420,7 +410,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
                 fh[newk] = fh[oldk]
                 del fh[oldk]
     
-            fh["T"] = t_line
+            fh["T"] = np.arange(0, fh["Ez"].shape[-1]) * period_line
             for k, array in zip(["X","Y","Z"], [x, y, z]): 
                 fh[k] = array
             
@@ -446,6 +436,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     data_base = np.array([flux_freqs, flux_data]).T
     header_base = [r"Frecuencia f [u.a.]", "Flujo [u.a.]"]
     
+    # Save flux data
     if pm.assign(0):
         vs.savetxt(sa.file("Results.txt"), data, 
                    header=header, footer=params)

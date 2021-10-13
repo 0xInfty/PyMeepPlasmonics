@@ -6,6 +6,17 @@ Created on Wed Oct  7 14:34:09 2020
 @author: luciana, 0xInfty
 """
 
+from socket import gethostname
+if "Nano" in gethostname():
+    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+elif "vall" in gethostname():
+    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+else:
+    raise ValueError("Your PC must be registered at the top of this code")
+
+import sys
+sys.path.append(syshome)
+
 import imageio as mim
 import meep as mp
 # from matplotlib import animation
@@ -15,14 +26,43 @@ import os
 from scipy.stats import norm
 import v_save as vs
 
+home = vs.get_home()
+
 #%% PARAMETERS
+
+# freq_center = 1
+# freq_width = 0.1
+# source_cutoff = 5
+# # 3.5-4 seems to work and reduces computation time compared to default 5.
+
+# pml_width = round(.15 / (freq_center-freq_width/2) , 2) 
+# # For 1, 0.1 source parameters, 0.4 to be sure but 0.39 doesn't look bad.
+# # So: 35% or 40% of larger wavelength apparently works OK.
+
+# cell_width = 12
+# resolution = 10
+
+# period_line = 1/10
+# period_plane = 1
+
+# time_is_after_source = False
+# run_time = 100
+
+# plane_center = [0,0,0]
+# line_center = [0,0,0]
+
+# plane_size = [0, cell_width, cell_width]
+# line_size = [cell_width, 0, 0]
+
+# series = "OldPulseTestCutoff5PML0.15"
+# folder = "Test"
 
 freq_center = 1
 freq_width = 0.1
 source_cutoff = 3.5
 # 3.5-4 seems to work and reduces computation time compared to default 5.
 
-pml_width = round(.38 / (freq_center-freq_width/2) , 2) 
+pml_width = round(.15 / (freq_center-freq_width/2) , 2) 
 # For 1, 0.1 source parameters, 0.4 to be sure but 0.39 doesn't look bad.
 # So: 35% or 40% of larger wavelength apparently works OK.
 
@@ -33,7 +73,7 @@ period_line = 1/10
 period_plane = 1
 
 time_is_after_source = False
-run_time = 100
+run_time = 70
 
 plane_center = [0,0,0]
 line_center = [0,0,0]
@@ -41,9 +81,8 @@ line_center = [0,0,0]
 plane_size = [0, cell_width, cell_width]
 line_size = [cell_width, 0, 0]
 
-series = "Cutoff{}".format(source_cutoff)
-folder = "CutoffResults"
-home = r"/home/vall/Documents/Thesis/ThesisPython/GaussianResults"
+series = "OldPulseTestCutoff3.5PML0.15NoSym"
+folder = "Test"
 
 #%% LAYOUT CONFIGURATION
 
@@ -60,7 +99,7 @@ sources = [mp.Source(mp.GaussianSource(freq_center,
                      size=mp.Vector3(0, cell_width, cell_width),
                      component=mp.Ez)]
 
-symmetries = [mp.Mirror(mp.Y), mp.Mirror(mp.Z, phase=-1)]
+# symmetries = [mp.Mirror(mp.Y), mp.Mirror(mp.Z, phase=-1)]
 
 results_plane = []
 results_line = []
@@ -82,16 +121,16 @@ to_do_while_running = [mp.at_beginning(get_slice_line),
                        mp.at_every(period_line, get_slice_line),
                        mp.at_every(period_plane, get_slice_plane)]
 
-path = os.path.join(home, folder, "{}Results".format(series))
+path = os.path.join(home, folder, series)
 prefix = "{}Results".format(series)
-if not os.path.isdir(path): vs.new_dir(path)
+if not os.path.isdir(path): os.makedirs(path)
 file = lambda f : os.path.join(path, f)
 
 sim = mp.Simulation(resolution=resolution,
                     cell_size=cell_size,
                     boundary_layers=boundary_layers,
-                    sources=sources,
-                    symmetries=symmetries)
+                    sources=sources)#,
+                    # symmetries=symmetries)
 
 #%% INITIALIZE
 
@@ -109,7 +148,7 @@ results_plane = np.asarray(results_plane)
 
 #%% SAVE DATA!
 
-footer=dict(
+params=dict(
     freq_center=freq_center,
     freq_width=freq_width,
     source_cutoff=source_cutoff,
@@ -128,8 +167,7 @@ footer=dict(
     home=home
     )
 
-vs.savetxt(file("Lines.txt"), results_line, footer=footer, overwrite=True)
-del footer
+vs.savetxt(file("Lines.txt"), results_line, footer=params, overwrite=True)
 
 #%% SHOW ALL LINES IN COLOR MAP
 
