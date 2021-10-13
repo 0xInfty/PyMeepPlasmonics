@@ -65,7 +65,8 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
     t_line = np.array(f["T"])
     x_line = np.array(f["X"])
     
-    flux_wlens, flux_intensity = np.loadtxt(sa.file("Results.txt"), unpack=True)
+    data  = np.loadtxt(sa.file("Results.txt"))
+    flux_wlens, flux_intensity_c, flux_intensity_f = data.T
     
     params = dict(f["Ez"].attrs)
     
@@ -112,6 +113,7 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
     source_results = vma.get_source_from_line(results_line, x_line_index, source_center)
     
     center_results = results_line[x_line_index(0),:]
+    side_results = results_line[x_line_index(cell_width/2 - pml_width),:]
         
     results_cropped_line = vma.crop_field_xprofile(results_line, x_line_index,
                                                    cell_width, pml_width)
@@ -169,7 +171,10 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
     if make_plots and pm.assign(1):
         
         plt.figure()
-        plt.plot(flux_wlens, flux_intensity)
+        plt.plot(flux_wlens, flux_intensity_c, color="C0", alpha=0.4, 
+                 linewidth=2, label=trs.choose("Center", "Centro"))
+        plt.plot(flux_wlens, flux_intensity_f, color="C0", linewidth=1.5,
+                 label=trs.choose("Side", "Lateral"))
         
         if units:
             plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
@@ -179,13 +184,18 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
                               r"Flujo electromagnético $\frac{1}{A} \int_A \langle\,S_x\,\rangle \,dx\,dy$ [ua]"))
         
         if units:
-            plt.annotate(trs.choose(f"Maximum at {flux_wlens[np.argmax(flux_intensity)]:.2f} nm",
-                                    f"Máximo en {flux_wlens[np.argmax(flux_intensity)]:.2f} nm"),
+            plt.annotate(trs.choose("Maximum at ", "Máximo en ") + 
+                         f"{flux_wlens[np.argmax(flux_intensity_c)]:.2f} & " + 
+                         f"{flux_wlens[np.argmax(flux_intensity_f)]:.2f} nm",
                          (5, 5), xycoords='figure points')
         else:
-            plt.annotate(trs.choose(f"Maximum at {flux_wlens[np.argmax(flux_intensity)]:.2f} MPu",
-                                    f"Máximo en {flux_wlens[np.argmax(flux_intensity)]:.2f} uMP"),
+            plt.annotate(trs.choose("Maximum at ", "Máximo en ") + 
+                         f"{flux_wlens[np.argmax(flux_intensity_c)]:.2f} & " + 
+                         f"{flux_wlens[np.argmax(flux_intensity_f)]:.2f} " + 
+                         trs.choose("MPu", "uMP"),
                          (5, 5), xycoords='figure points') 
+        
+        plt.legend()
                 
         plt.savefig(sa.file("Flux.png"))
         
@@ -196,8 +206,10 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
         plt.figure()
         plt.plot(t_line, source_results, color="C0", alpha=0.4, linewidth=2,
                  label=trs.choose("Source", "Fuente"))
-        plt.plot(t_line, center_results, color="C0", linewidth=1.5,
-                 label=trs.choose("Flux wall", "Pared de flujo"))
+        plt.plot(t_line, center_results, color="C0", linewidth=1.5, alpha=0.6,
+                 label=trs.choose("Central flux wall", "Pared de flujo central"))
+        plt.plot(t_line, side_results, color="C0", linewidth=1,
+                 label=trs.choose("Side flux wall", "Pared de flujo lateral"))
         plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$ [au]", 
                               r"Campo eléctrico $E_z(y=z=0)$ [ua]"))
@@ -212,6 +224,7 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
         plt.figure()
         T, X = np.meshgrid(t_line, x_line_cropped)
         plt.contourf(T, X, results_cropped_line, 100, cmap='RdBu')
+        plt.axhline(color="k", linewidth=1)
         plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose("Position $X$ [MPu]", "Posición  $X$ [uMP]"))
         plt.grid(False)
@@ -221,10 +234,9 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
         plt.figure()
         T, X = np.meshgrid(t_line, x_line)
         plt.contourf(T, X, results_line, 100, cmap='RdBu')
-        xlims = plt.xlim()
-        plt.hlines(-cell_width/2 + pml_width, *xlims, color="k", linestyle="dashed")
-        plt.hlines(cell_width/2 - pml_width, *xlims, color="k", linestyle="dashed")
-        plt.xlim(*xlims)
+        plt.axhline(color="k", linewidth=1)
+        plt.axhline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
+        plt.axhline(cell_width/2 - pml_width, color="k", linestyle="dashed")
         plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
         plt.ylabel(trs.choose("Position $X$ [MPu]", "Posición  $X$ [uMP]"))
         plt.grid(False)

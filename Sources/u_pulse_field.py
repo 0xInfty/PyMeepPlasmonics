@@ -117,20 +117,20 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         
         # Source configuration
         if units: wlen_range = (450, 600)
-        else: wlen_range = (.95, 1.05)
+        else: wlen_range = (.94, 1.06)
         nfreq = 100
         
         # Box spatial dimensions
         wlen_in_vacuum = True
         pml_wlen_factor = 0.15
-        empty_wlen_factor = 5
+        empty_wlen_factor = 0.675
         
         # Sim temporal dimension
         time_factor_cell = 1.35
         
         # Files configuration
         series = "JustATest"
-        folder = "Test/TestPulseFollowMean"
+        folder = "Test"
         
         # Run configuration
         parallel = False
@@ -152,7 +152,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     cutoff = 3.5
     
     # Field Measurements
-    n_period_line = 10
+    n_period_line = 100
     
     # Routine configuration
     english = False
@@ -352,11 +352,16 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     #%% ADD FLUX WALL
     
-    flux_wall = sim.add_flux(freq_center, freq_width, nfreq, 
-                             mp.FluxRegion(center=mp.Vector3(x=0),
-                                           size=mp.Vector3(0,
-                                                           cell_width-2*pml_width,
-                                                           cell_width-2*pml_width)))
+    flux_wall_c = sim.add_flux(freq_center, freq_width, nfreq, 
+                               mp.FluxRegion(center=mp.Vector3(x=0),
+                                             size=mp.Vector3(0,
+                                                             cell_width-2*pml_width,
+                                                             cell_width-2*pml_width)))
+    flux_wall_f = sim.add_flux(freq_center, freq_width, nfreq, 
+                               mp.FluxRegion(center=mp.Vector3(x=cell_width/2-pml_width),
+                                             size=mp.Vector3(0,
+                                                             cell_width-2*pml_width,
+                                                             cell_width-2*pml_width)))
     
     rm.measure_ram()
     
@@ -423,25 +428,28 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
             del fh, keys, oldk, newk, k, kpar, array
 
     # Get flux data
-    flux_freqs = np.asarray(mp.get_flux_freqs(flux_wall))
+    flux_freqs = np.asarray(mp.get_flux_freqs(flux_wall_c))
     flux_wlens = 1e3 * from_um_factor / flux_freqs
-    flux_data = np.asarray(mp.get_fluxes(flux_wall))
-    flux_intensity = flux_data/(cell_width - 2*pml_width)**2 # Flux / Área
+    flux_data_c = np.asarray(mp.get_fluxes(flux_wall_c))
+    flux_data_f = np.asarray(mp.get_fluxes(flux_wall_f))
+    flux_intensity_c = flux_data_c/(cell_width - 2*pml_width)**2 # Flux / Área
+    flux_intensity_f = flux_data_f/(cell_width - 2*pml_width)**2 # Flux / Área
     
     # Organize flux data
-    data = np.array([flux_wlens, flux_intensity]).T
+    data = np.array([flux_wlens, flux_intensity_c, flux_intensity_f]).T
     header = [r"Longitud de onda $\lambda$ [nm]", 
-              "Intensidad del Flujo [u.a.]"]
+              "Intensidad del Flujo Xc [u.a.]",
+              "Intensidad del Flujo Xf [u.a.]"]
     
-    data_base = np.array([flux_freqs, flux_data]).T
-    header_base = [r"Frecuencia f [u.a.]", "Flujo [u.a.]"]
+    data_base = np.array([flux_freqs, flux_data_c, flux_data_f]).T
+    header_base = [r"Frecuencia f [u.a.]", "Flujo Xc [u.a.]", "Flujo Xf [u.a.]"]
     
     # Save flux data
     if pm.assign(0):
         vs.savetxt(sa.file("Results.txt"), data, 
-                   header=header, footer=params)
+                   header=header, footer=params, overwrite=True)
         vs.savetxt(sa.file("BaseResults.txt"), data_base, 
-                   header=header_base, footer=params)
+                   header=header_base, footer=params, overwrite=True)
     del data
     
     # Save resources control
