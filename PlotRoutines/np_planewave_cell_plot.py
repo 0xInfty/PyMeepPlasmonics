@@ -33,7 +33,7 @@ english = False
 
 def plot_np_planewave_cell(params, series, folder, 
                            with_line=False, with_plane=False,
-                           with_flux_box=False, with_flux_wall=False,
+                           with_flux_box=False, with_flux_walls=False,
                            with_nanoparticle=False, 
                            english=False):
     
@@ -96,6 +96,12 @@ def plot_np_planewave_cell(params, series, folder,
     except:
         flux_box_size = 0
         with_flux_box = False
+        
+    try:
+        flux_wall_positions = params["flux_wall_positions"]
+    except:
+        flux_wall_positions = []
+        with_flux_walls = False
     
     #%% PLOT
     
@@ -170,10 +176,11 @@ def plot_np_planewave_cell(params, series, folder,
                                     label=trs.choose("Flux box", "Caja de flujo"))
 
     # Flux wall
-    if with_flux_wall:
-        ax.vlines(0, -cell_width/2, cell_width/2,
-                  color="limegreen", linestyle="dashed", zorder=10, 
-                  label=trs.choose("Flux wall", "Pared de flujo"))
+    if with_flux_walls:
+        for flux_x in flux_wall_positions:
+            l = ax.vlines(flux_x, -cell_width/2+pml_width, cell_width/2-pml_width,
+                          color="limegreen", linestyle="dashed", zorder=10)
+        l.set_label(trs.choose("Flux walls", "Paredes de flujo"))
     
     if with_nanoparticle: ax.add_patch(circle)
     if submerged_index!=1: ax.add_patch(surrounding_square)

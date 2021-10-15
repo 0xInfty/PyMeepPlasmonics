@@ -104,6 +104,8 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     if any('SPYDER' in name for name in os.environ):
     
+        rm.reset()    
+    
         # Sim configuration
         units = False
         resolution_wlen = 10
@@ -112,18 +114,18 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         courant = 0.5
         
         # Cell configuration
-        submerged_index = 1 # 1.33 for water
+        submerged_index = 1.33 # 1.33 for water
         surface_index = None # 1.54 for glass
         
         # Source configuration
         if units: wlen_range = (450, 600)
-        else: wlen_range = (.94, 1.06)
+        else: wlen_range = (.9, 1.1)#(.9,1.1) #(.95,1.05)
         nfreq = 100
         
         # Box spatial dimensions
         wlen_in_vacuum = True
-        pml_wlen_factor = 0.15
-        empty_wlen_factor = 0.675
+        pml_wlen_factor = 0.18
+        empty_wlen_factor = 5#0.77 #0.67
         
         # Sim temporal dimension
         time_factor_cell = 1.35
@@ -153,6 +155,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     # Field Measurements
     n_period_line = 100
+    n_flux_walls = 30
     
     # Routine configuration
     english = False
@@ -238,6 +241,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
                    "cell_width", "pml_width", "empty_width", "source_center", "wlen_in_vacuum", 
                    "until_after_sources", "time_factor_cell", 
                    "n_period_line", "period_line", 
+                   "n_flux_walls", "flux_wall_positions",
                    "parallel", "n_processes", "n_cores", "n_nodes",
                    "split_chunks_evenly", "hfield", "units",
                    "script", "sysname", "path"]
@@ -280,6 +284,10 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     # The planewave source extends into the PML 
     # ==> is_integrated=True must be specified
     
+    flux_wall_positions = np.linspace(-cell_width/2+pml_width, 
+                                      cell_width/2-pml_width, 
+                                      n_flux_walls+2)[1:-1]
+    
     #%% PLOT CELL
 
     params = {}
@@ -288,7 +296,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     if pm.assign(0):
         
         plot_np_planewave_cell(params, series, folder, 
-                               with_line=True, with_flux_wall=True, 
+                               with_line=True, with_flux_walls=True, 
                                english=trs.english)
     
     #%% INITIALIZE
@@ -350,19 +358,17 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
                            mp.at_beginning(step_ram_function), 
                            mp.at_end(step_ram_function)]
     
-    #%% ADD FLUX WALL
+    #%% ADD FLUX WALLS
     
-    flux_wall_c = sim.add_flux(freq_center, freq_width, nfreq, 
-                               mp.FluxRegion(center=mp.Vector3(x=0),
-                                             size=mp.Vector3(0,
-                                                             cell_width-2*pml_width,
-                                                             cell_width-2*pml_width)))
-    flux_wall_f = sim.add_flux(freq_center, freq_width, nfreq, 
-                               mp.FluxRegion(center=mp.Vector3(x=cell_width/2-pml_width),
-                                             size=mp.Vector3(0,
-                                                             cell_width-2*pml_width,
-                                                             cell_width-2*pml_width)))
-    
+    flux_walls = []
+    for flux_x in flux_wall_positions:
+        flux_walls.append( sim.add_flux(freq_center, freq_width, nfreq, 
+                                        mp.FluxRegion(center=mp.Vector3(x=flux_x),
+                                                      size=mp.Vector3(
+                                                          0,
+                                                          cell_width-2*pml_width,
+                                                          cell_width-2*pml_width))) )
+        
     rm.measure_ram()
     
     #%% RUN!
@@ -428,21 +434,20 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
             del fh, keys, oldk, newk, k, kpar, array
 
     # Get flux data
-    flux_freqs = np.asarray(mp.get_flux_freqs(flux_wall_c))
+    flux_freqs = np.asarray(mp.get_flux_freqs(flux_walls[0]))
     flux_wlens = 1e3 * from_um_factor / flux_freqs
-    flux_data_c = np.asarray(mp.get_fluxes(flux_wall_c))
-    flux_data_f = np.asarray(mp.get_fluxes(flux_wall_f))
-    flux_intensity_c = flux_data_c/(cell_width - 2*pml_width)**2 # Flux / Área
-    flux_intensity_f = flux_data_f/(cell_width - 2*pml_width)**2 # Flux / Área
+    flux_data = np.array([np.asarray(mp.get_fluxes(fw)) for fw in flux_walls])
+    flux_intensity = np.array([fd/(cell_width - 2*pml_width)**2 for fd in flux_data])
+    # Flux / Área
     
     # Organize flux data
-    data = np.array([flux_wlens, flux_intensity_c, flux_intensity_f]).T
+    data = np.array([flux_wlens, *flux_intensity]).T
     header = [r"Longitud de onda $\lambda$ [nm]", 
-              "Intensidad del Flujo Xc [u.a.]",
-              "Intensidad del Flujo Xf [u.a.]"]
-    
-    data_base = np.array([flux_freqs, flux_data_c, flux_data_f]).T
-    header_base = [r"Frecuencia f [u.a.]", "Flujo Xc [u.a.]", "Flujo Xf [u.a.]"]
+              *[f"Intensidad del Flujo X{i} [u.a.]" for i in range(1,n_flux_walls+1)]]
+
+    data_base = np.array([flux_freqs, *flux_data]).T
+    header_base = [r"Frecuencia f $\lambda$ [uMP]", 
+                   *[f"Flujo X{i} [u.a.]" for i in range(1,n_flux_walls+1)]]
     
     # Save flux data
     if pm.assign(0):
@@ -450,14 +455,14 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
                    header=header, footer=params, overwrite=True)
         vs.savetxt(sa.file("BaseResults.txt"), data_base, 
                    header=header_base, footer=params, overwrite=True)
-    del data
+    del data, data_base, header, header_base
     
     # Save resources control
     rm.save(sa.file("Resources.h5"), params)
     
     mp.all_wait()
     
-    #%% GET READY TO LOAD DATA
+    #%% ANALYSE AND PLOT DATA
     
     if make_plots or make_gifs:
         

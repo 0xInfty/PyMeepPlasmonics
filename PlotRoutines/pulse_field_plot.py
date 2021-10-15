@@ -10,6 +10,7 @@ Routines/pulse_field
 
 import imageio as mim
 import matplotlib.pyplot as plt
+import matplotlib.pylab as plab
 import matplotlib.gridspec as gridspec
 import numpy as np
 import os
@@ -65,8 +66,13 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
     t_line = np.array(f["T"])
     x_line = np.array(f["X"])
     
+    if hfield:
+            fh = pm.hdf_file(sa.file("Field-HLines.h5"), "r+")
+            results_hline = f["Ez"]
+    
     data  = np.loadtxt(sa.file("Results.txt"))
-    flux_wlens, flux_intensity_c, flux_intensity_f = data.T
+    flux_wlens = data[:,0]
+    flux_intensity = data[:,1:]
     
     params = dict(f["Ez"].attrs)
     
@@ -80,7 +86,8 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
     
     until_after_sources = params["until_after_sources"]
     period_line = params["period_line"]
-    # period = submerged_index * wlen
+    flux_wall_positions = params["flux_wall_positions"]
+    n_flux_walls = params["n_flux_walls"]
 
     units = params["units"]
     
@@ -112,11 +119,12 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
     
     source_results = vma.get_source_from_line(results_line, x_line_index, source_center)
     
-    center_results = results_line[x_line_index(0),:]
-    side_results = results_line[x_line_index(cell_width/2 - pml_width),:]
+    walls_results = [results_line[x_line_index(fx),:] for fx in flux_wall_positions]
         
     results_cropped_line = vma.crop_field_xprofile(results_line, x_line_index,
                                                    cell_width, pml_width)
+    
+    flux_max_intensity = [np.max(flux_intensity[:,k]) for k in range(n_flux_walls)]
     
     #%% SHOW SOURCE AND FOURIER
     
@@ -125,7 +133,7 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
         plt.figure()        
         plt.title(plot_title_base)
         plt.plot(t_line, source_results)
-        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
+        plt.xlabel(trs.choose(r"Time $T$ [MPu]", r"Tiempo $T$ [uMP]"))
         plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$ [au]", 
                               r"Campo eléctrico $E_z(y=z=0)$ [ua]"))
         
@@ -142,11 +150,13 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
         plt.figure()
         plt.title(plot_title_base)
         plt.plot(fourier_wlen, fourier)
+        
         if units:
-            plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+            plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", 
+                                  r"Longitud de onda $\lambda$ [nm]"))
         else:
-            plt.xlabel(trs.choose("Wavelength [MPu]", "Longitud de onda [uMP]"))
-
+            plt.xlabel(trs.choose(r"Wavelength $\lambda/n$ [$\lambda$]", 
+                                  r"Longitud de onda $\lambda/n$ [$\lambda$]"))
         plt.ylabel(trs.choose(r"Electric Field Fourier $\mathcal{F}\;(E_z)$ [ua]",
                               r"Transformada del campo eléctrico $\mathcal{F}\;(E_z)$ [ua]"))
         
@@ -155,8 +165,8 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
                                     f"Máximo en {fourier_max_wlen:.2f} nm"),
                          (5, 5), xycoords='figure points')
         else:
-            plt.annotate(trs.choose(f"Maximum at {fourier_max_wlen:.2f}",
-                                    f"Máximo en {fourier_max_wlen:.2f}"),
+            plt.annotate(trs.choose(fr"Maximum at {fourier_max_wlen:.2f} $\lambda$",
+                                    fr"Máximo en {fourier_max_wlen:.2f} $\lambda$"),
                          (5, 5), xycoords='figure points') 
         
         plt.savefig(sa.file("SourceFFT.png"))
@@ -170,50 +180,60 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
     
     if make_plots and pm.assign(1):
         
+        colors = plab.cm.Greens(np.linspace(0,1,n_flux_walls+2)[2:])
+        
         plt.figure()
-        plt.plot(flux_wlens, flux_intensity_c, color="C0", alpha=0.4, 
-                 linewidth=2, label=trs.choose("Center", "Centro"))
-        plt.plot(flux_wlens, flux_intensity_f, color="C0", linewidth=1.5,
-                 label=trs.choose("Side", "Lateral"))
+        for k in range(n_flux_walls):
+            plt.plot(flux_wlens, flux_intensity[:,k], color=colors[k], 
+                     alpha=0.7, linewidth=2)
         
         if units:
-            plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+            plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", 
+                                  r"Longitud de onda $\lambda$ [nm]"))
         else:
-            plt.xlabel(trs.choose("Wavelength [MPu]", "Longitud de onda [uMP]"))
-        plt.ylabel(trs.choose(r"Electromagnetic Flux $\frac{1}{A} \int_A \langle\,S_x\,\rangle \,dx\,dy$ [au]",
-                              r"Flujo electromagnético $\frac{1}{A} \int_A \langle\,S_x\,\rangle \,dx\,dy$ [ua]"))
+            plt.xlabel(trs.choose(r"Wavelength $\lambda/n$ [$\lambda$]", 
+                                  r"Longitud de onda $\lambda/n$ [$\lambda$]"))
+        plt.ylabel(trs.choose(r"Electromagnetic Flux $P(\lambda)$ [au]",
+                              r"Flujo electromagnético $P(\lambda)$ [ua]"))
         
         if units:
-            plt.annotate(trs.choose("Maximum at ", "Máximo en ") + 
-                         f"{flux_wlens[np.argmax(flux_intensity_c)]:.2f} & " + 
-                         f"{flux_wlens[np.argmax(flux_intensity_f)]:.2f} nm",
-                         (5, 5), xycoords='figure points')
+            plt.legend([f"x = {fw * 1e3 * from_um_factor:0f} nm" for fw in flux_wall_positions])
         else:
-            plt.annotate(trs.choose("Maximum at ", "Máximo en ") + 
-                         f"{flux_wlens[np.argmax(flux_intensity_c)]:.2f} & " + 
-                         f"{flux_wlens[np.argmax(flux_intensity_f)]:.2f} " + 
-                         trs.choose("MPu", "uMP"),
-                         (5, 5), xycoords='figure points') 
-        
-        plt.legend()
+            plt.legend([fr"x = {fw * 1e3 * from_um_factor:.2f} $\lambda$" for fw in flux_wall_positions])
                 
         plt.savefig(sa.file("Flux.png"))
+        
+        plt.figure()
+        plt.plot(flux_wall_positions, flux_max_intensity, "o-")
+        plt.axvline(linewidth=1, color="k")
+        plt.axvline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
+        plt.axvline(cell_width/2 - pml_width, color="k", linestyle="dashed")
+        
+        plt.xlabel(trs.choose("Position $X$ [MPu]", "Posición  $X$ [uMP]"))
+        plt.ylabel(trs.choose(r"Electromagnetic Flux Maximum $P_{max}(\lambda)$ [au]",
+                              r"Máximo flujo electromagnético $P_{max}(\lambda)$ [ua]"))
+        
+        plt.savefig(sa.file("FluxMaximum.png"))
         
     #%% SHOW FIELD AT FLUX WALL
     
     if make_plots and pm.assign(0):
         
+        colors = plab.cm.Greens(np.linspace(0,1,n_flux_walls+2)[2:])
+        
         plt.figure()
-        plt.plot(t_line, source_results, color="C0", alpha=0.4, linewidth=2,
-                 label=trs.choose("Source", "Fuente"))
-        plt.plot(t_line, center_results, color="C0", linewidth=1.5, alpha=0.6,
-                 label=trs.choose("Central flux wall", "Pared de flujo central"))
-        plt.plot(t_line, side_results, color="C0", linewidth=1,
-                 label=trs.choose("Side flux wall", "Pared de flujo lateral"))
-        plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
+        for k in range(n_flux_walls):
+            plt.plot(t_line, walls_results[k], color=colors[k], 
+                     alpha=0.7, linewidth=2)
+        
+        plt.xlabel(trs.choose(r"Time $T$ [MPu]", r"Tiempo $T$ [uMP]"))
         plt.ylabel(trs.choose(r"Electric Field $E_z(y=z=0)$ [au]", 
                               r"Campo eléctrico $E_z(y=z=0)$ [ua]"))
-        plt.legend()
+
+        if units:
+            plt.legend([f"x = {fw * 1e3 * from_um_factor:0f} nm" for fw in flux_wall_positions])
+        else:
+            plt.legend([fr"x = {fw * 1e3 * from_um_factor:.2f} $\lambda$" for fw in flux_wall_positions])
         
         plt.savefig(sa.file("FluxWallField.png"))        
             
@@ -224,9 +244,11 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
         plt.figure()
         T, X = np.meshgrid(t_line, x_line_cropped)
         plt.contourf(T, X, results_cropped_line, 100, cmap='RdBu')
+        # for fx in flux_wall_positions:
+        #     plt.axhline(fx, color="limegreen", alpha=0.4, linewidth=2.5)
         plt.axhline(color="k", linewidth=1)
         plt.xlabel(trs.choose("Time [MPu]", "Tiempo [uMP]"))
-        plt.ylabel(trs.choose("Position $X$ [MPu]", "Posición  $X$ [uMP]"))
+        plt.ylabel(trs.choose("Position $X$ [MPu]", "Posición  $X$ [uMP]")) 
         plt.grid(False)
         
         plt.savefig(sa.file("CroppedXAxis.png"))
@@ -234,6 +256,8 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
         plt.figure()
         T, X = np.meshgrid(t_line, x_line)
         plt.contourf(T, X, results_line, 100, cmap='RdBu')
+        # for fx in flux_wall_positions:
+        #     plt.axhline(fx, color="limegreen", alpha=0.4, linewidth=2.5)
         plt.axhline(color="k", linewidth=1)
         plt.axhline(-cell_width/2 + pml_width, color="k", linestyle="dashed")
         plt.axhline(cell_width/2 - pml_width, color="k", linestyle="dashed")
@@ -303,3 +327,4 @@ def plots_pulse_field(series, folder, units=False, hfield=False,
     #%%
     
     f.close()
+    if hfield: fh.close()
