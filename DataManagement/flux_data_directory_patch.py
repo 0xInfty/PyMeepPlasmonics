@@ -73,11 +73,25 @@ n = len(flux_dir[keys[0]])
 flux_dir["n_cores"] = []
 for i in range(n):
     flux_dir["n_cores"].append( min([4, flux_dir["n_processes"][i]]) )
-    
+
+flux_dir["n_nodes"] = [1]*n
+flux_dir["split_chunks_evenly"] = [True]*n
+flux_dir["near2far"] = [False]*n
+
 #%%
 
+flux_dir["overlap"] = [0]*n
+
+r = [*[51.5]*12, 24, 32, 40, *[51.5]*n][:n]
+r = [r[i] / (1e3 * flux_dir["from_um_factor"][i]) for i in range(n)]
+flux_dir["flux_box_size"] = [2 * r[i] for i in range(n)]
+
+#%%
+
+backup = dict(**flux_dir)
+
 for k in keys:
-    flux_dir[k] = flux_dir[k][-1:]
+    flux_dir[k] = [*flux_dir[k][:32], *flux_dir[k][33:]]
 
 #%%
 
