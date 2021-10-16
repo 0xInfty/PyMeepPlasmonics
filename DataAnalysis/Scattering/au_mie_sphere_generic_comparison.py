@@ -94,7 +94,7 @@ elif test_param_in_params:
 else:
     raise ValueError("Test parameter is nowhere to be found")
 
-#%%
+#%% LOAD PARAMETERS AND CONTROL VARIABLES <<
 
 # Get the RAM and elapsed time data
 loaded_ram = True
@@ -143,28 +143,22 @@ second_time_factor = [[params[i][j]["second_time_factor"] for j in range(len(ser
 try: sysname = [[params[i][j]["sysname"] for j in range(len(series[i]))] for i in range(len(series))]
 except: print("Sysname needs manual assignment"); needs_fixing = True
 
-if test_param_in_params:
-    test_param = [[p[test_param_string] for p in par] for par in params]
-else:
-    test_param = [[vu.find_numbers(s)[test_param_position] for s in ser] for ser in series]
+# Determine some other parameters, calculating them from others
+empty_r_factor = [[empty_width[i][j] / r[i][j] for j in range(len(series[i]))] for i in range(len(series))]
 
-#%% FIX AREA IF NEEDED BY TOUCHING THIS BLOCK <<
+# Guess some more parameters, calculating them from others
+minor_division = [[from_um_factor[i][j] * 1e3 / resolution[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+mindiv_diameter_factor = [[minor_division[i][j] / (2 * 1e3 * from_um_factor[i][j] * r[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+width_points = [[int(cell_width[i][j] * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+grid_points = [[width_points[i][j]**3 for j in range(len(series[i]))] for i in range(len(series))]
+memory_B = [[2 * 12 * grid_points[i][j] * 32 for j in range(len(series[i]))] for i in range(len(series))]
+
+#%% FIX PARAMETERS IF NEEDED BY TOUCHING THIS BLOCK <<
 
 if needs_fixing:
     
     index = [[1]*len(series[0]), [1.33]*len(series[1])]
     sysname = [["SC"]*len(series[0]), ["SC"]*len(series[1])]
-
-#%% CALCULATE ADDITIONAL DATA
-
-minor_division = [[from_um_factor[i][j] * 1e3 / resolution[i][j] for j in range(len(series[i]))] for i in range(len(series))]
-width_points = [[int(cell_width[i][j] * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
-grid_points = [[width_points[i][j]**3 for j in range(len(series[i]))] for i in range(len(series))]
-memory_B = [[2 * 12 * grid_points[i][j] * 32 for j in range(len(series[i]))] for i in range(len(series))]
-
-empty_r_factor = [[empty_width[i][j] / r[i][j] for j in range(len(series[i]))] for i in range(len(series))]
-
-mindiv_diameter_factor = [[minor_division[i][j] / (2 * 1e3 * from_um_factor[i][j] * r[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 #%% GENERAL PLOT CONFIGURATION <<
 
@@ -222,43 +216,7 @@ msq_diff_right = [[np.mean(np.square(data[i][j][np.argmax(theory[i][j])+1:, seri
                                      theory[i][j][np.argmax(theory[i][j])+1:])) 
                   for j in range(len(series[i]))] for i in range(len(series))]
 
-#%% DIFFERENCE PLOT
-
-fig, [ax1, ax2] = plt.subplots(nrows=2, sharex=True, gridspec_kw={"hspace":0})
-
-plt.suptitle(trs.choose("Difference in scattering for ", 
-                        "Diferencia en dispersión para ") + plot_title_ending)
-
-ax1.set_ylabel(trs.choose("Difference\n", 
-                          "Diferencia\n") + 
-               "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
-for i in range(len(series)):
-    ax1.plot(test_param[i], max_wlen_diff[i], color=series_colors[i], 
-             marker=series_markers[i], markersize=series_markersizes[i], 
-             alpha=0.4, markeredgewidth=0)
-ax1.set_xticks(test_param[ np.argmax([len(data) for data in test_param]) ])
-ax1.legend(series_legend)
-
-ax2.set_ylabel(trs.choose("Mean squared difference\n",
-                          "Diferencia cuadrática media\n") 
-               + "MSD( $C^{MEEP} - C^{MIE}$ )")
-for i in range(len(series)):
-    ax2.plot(test_param[i], msq_diff[i], color=series_colors[i], 
-             marker=series_markers[i], markersize=series_markersizes[i], 
-             alpha=0.4, markeredgewidth=0)
-ax2.grid(True)
-ax1.set_xticks(test_param[ np.argmax([len(data) for data in test_param]) ])
-ax2.legend(series_legend)
-
-plt.xlabel(test_param_label)
-# plt.figlegend(bbox_to_anchor=(.95, 0.7), bbox_transform=ax2.transAxes)
-# ax2.legend()
-plt.tight_layout()
-plt.show()
-
-vs.saveplot(plot_file("TheoryDiff.png"), overwrite=True)
-
-#%% DIFFERENCE IN SCATTERING MAXIMUM WAVELENGTH PLOT
+#%% DIFFERENCE IN SCATTERING MAXIMUM WAVELENGTH PLOT <<
 
 if plot_for_display: use_backend("Agg")
 
@@ -283,25 +241,7 @@ vs.saveplot(plot_file("WLenDiff.png"), overwrite=True)
 
 if plot_for_display: use_backend("Qt5Agg")
 
-fig = plt.figure()
-plt.suptitle(trs.choose("Difference in scattering for ", 
-                        "Diferencia en dispersión para ") + plot_title_ending)
-plt.axhline(color="k", linewidth=.5)
-for i in range(len(series)):
-    plt.plot(mindiv_diameter_factor[i], max_wlen_diff[i], color=series_colors[i], 
-             marker=series_markers[i], markersize=series_markersizes[i], 
-             alpha=0.4, markeredgewidth=0)
-plt.legend(fig.axes[0].lines[1:], series_legend)
-plt.xlabel(trs.choose(r"Minimum spatial division $\Delta r$ [$d$]",
-                      r"Mínima división espacial $\Delta r$ [$d$]"))
-plt.ylabel(trs.choose("Difference in wavelength ", 
-                      "Diferencia en longitud de onda ") + 
-           "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
-fig.set_size_inches([6 , 4.32])
-fig.tight_layout()
-vs.saveplot(plot_file("WLenDiffFactor.png"), overwrite=True)
-
-#%% DIFFERENCE IN SCATTERING MAXIMUM PLOT
+#%% DIFFERENCE IN SCATTERING MAXIMUM PLOT <<
 
 if plot_for_display: use_backend("Agg")
 
@@ -331,44 +271,8 @@ vs.saveplot(plot_file("MaxScattDiff.png"), overwrite=True)
 
 if plot_for_display: use_backend("Qt5Agg")
 
-fig = plt.figure()
-plt.suptitle(trs.choose("Difference in scattering for ", 
-                        "Diferencia en dispersión para ") + plot_title_ending)
-plt.axhline(color="k", linewidth=.5)
-for i in range(len(series)):
-    plt.plot(mindiv_diameter_factor[i], 
-             [np.max(data[i][j][:,series_column[i]]) - np.max(theory_plot[i][j]) for j in range(len(series[i]))], 
-             color=series_colors[i], 
-             marker=series_markers[i], markersize=series_markersizes[i], 
-             alpha=0.4, markeredgewidth=0)
-plt.legend(fig.axes[0].lines[1:], series_legend)
-plt.xlabel(trs.choose(r"Minimum spatial division $\Delta r$ [$d$]",
-                      r"Mínima división espacial $\Delta r$ [$d$]"))
-plt.ylabel(trs.choose("Difference in scattering efficiency ", 
-                      "Diferencia en eficiencia de dispersión ") + 
-           "$C_{max}^{MEEP}-C_{max}^{MIE}$")
-fig.set_size_inches([6 , 4.32])
-fig.tight_layout()
-vs.saveplot(plot_file("MaxScattDiffFactor.png"), overwrite=True)
-
-#%% MEAN RESIDUAL PLOT
-
-plt.figure()
-plt.suptitle(trs.choose("Difference in scattering for ", 
-                        "Diferencia en dispersión para ") + plot_title_ending)
-for i in range(len(series)):
-    plt.plot(test_param[i], msq_diff[i], color=series_colors[i], 
-             marker=series_markers[i], markersize=series_markersizes[i], 
-             alpha=0.4, markeredgewidth=0)
-plt.legend(series_legend)
-plt.xlabel(test_param_label)
-plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
-plt.ylabel(trs.choose("Mean squared difference ",
-                      "Diferencia cuadrática media ") 
-           + "MSD( $C^{MEEP} - C^{MIE}$ )")
-vs.saveplot(plot_file("QuaDiffJoint.png"), overwrite=True)
-
-#%% MEAN RESIDUAL LEFT AND RIGHT PLOT
+#%% MEAN RESIDUAL LEFT AND RIGHT PLOT <<
+%% MEAN RESIDUAL LEFT AND RIGHT PLOT
 
 if plot_for_display: use_backend("Agg")
 
@@ -420,27 +324,6 @@ vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
 if plot_for_display: use_backend("Qt5Agg")
 
-#%% MEAN RESIDUAL SUBPLOTS PLOT
-
-fig, axes = plt.subplots(2, sharex=True, gridspec_kw={"hspace":0})
-plt.suptitle(trs.choose("Difference in scattering for ", 
-                        "Diferencia en dispersión para ") + plot_title_ending)
-for i in range(len(axes)):
-    axes[i].plot(test_param[i], msq_diff[i], "k", 
-                 marker=series_markers[i], markersize=series_markersizes[i], 
-                 linestyle="")
-    axes[i].grid(True)
-    axes[i].legend([series_legend[i]])
-    axes[i].set_ylabel(trs.choose("Mean squared difference\n",
-                                  "Diferencia cuadrática media\n") 
-                       + "MSD( $C^{MEEP} - C^{MIE}$ )")
-axes[1].yaxis.tick_right()
-axes[1].yaxis.set_label_position("right")
-plt.xlabel(test_param_label)
-plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
-plt.tight_layout()
-vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
-
 #%% MEAN RESIDUAL SUBPLOTS LEFT AND RIGHT PLOT
 
 if plot_for_display: use_backend("Agg")
@@ -481,6 +364,76 @@ plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.tight_layout()
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% DIAMETER DISCRETIZATION
+
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+if plot_for_display: fig.dpi = 200
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
+for i in range(len(series)):
+    plt.plot(test_param[i], 
+             mindiv_diameter_factor[i], 
+             color=series_colors[i], 
+             marker=series_markers[i], markersize=series_markersizes[i], 
+             alpha=0.4, markeredgewidth=0)
+if plot_for_display:
+    fig.axes[0].yaxis.tick_right()
+    fig.axes[0].yaxis.set_label_position("right")
+plt.legend(series_legend)
+plt.xlabel(test_param_label)
+plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
+plt.ylabel(trs.choose(r"Minimum spatial division $\Delta r$ [$d$]",
+                      r"Mínima división espacial $\Delta r$ [$d$]"))
+fig.set_size_inches([6 , 4.32])
+fig.tight_layout()
+vs.saveplot(plot_file("MinDivDiam.png"), overwrite=True)
+
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% RELATIONS WITH DIAMETER DISCRETIZATION
+
+fig = plt.figure()
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
+plt.axhline(color="k", linewidth=.5)
+for i in range(len(series)):
+    plt.plot(mindiv_diameter_factor[i], max_wlen_diff[i], color=series_colors[i], 
+             marker=series_markers[i], markersize=series_markersizes[i], 
+             alpha=0.4, markeredgewidth=0)
+plt.legend(fig.axes[0].lines[1:], series_legend)
+plt.xlabel(trs.choose(r"Minimum spatial division $\Delta r$ [$d$]",
+                      r"Mínima división espacial $\Delta r$ [$d$]"))
+plt.ylabel(trs.choose("Difference in wavelength ", 
+                      "Diferencia en longitud de onda ") + 
+           "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
+fig.set_size_inches([6 , 4.32])
+fig.tight_layout()
+vs.saveplot(plot_file("WLenDiffFactor.png"), overwrite=True)
+
+fig = plt.figure()
+plt.suptitle(trs.choose("Difference in scattering for ", 
+                        "Diferencia en dispersión para ") + plot_title_ending)
+plt.axhline(color="k", linewidth=.5)
+for i in range(len(series)):
+    plt.plot(mindiv_diameter_factor[i], 
+             [np.max(data[i][j][:,series_column[i]]) - np.max(theory_plot[i][j]) for j in range(len(series[i]))], 
+             color=series_colors[i], 
+             marker=series_markers[i], markersize=series_markersizes[i], 
+             alpha=0.4, markeredgewidth=0)
+plt.legend(fig.axes[0].lines[1:], series_legend)
+plt.xlabel(trs.choose(r"Minimum spatial division $\Delta r$ [$d$]",
+                      r"Mínima división espacial $\Delta r$ [$d$]"))
+plt.ylabel(trs.choose("Difference in scattering efficiency ", 
+                      "Diferencia en eficiencia de dispersión ") + 
+           "$C_{max}^{MEEP}-C_{max}^{MIE}$")
+fig.set_size_inches([6 , 4.32])
+fig.tight_layout()
+vs.saveplot(plot_file("MaxScattDiffFactor.png"), overwrite=True)
+
 fig, axes = plt.subplots(2, sharex=True, gridspec_kw={"hspace":0})
 plt.suptitle(trs.choose("Difference in scattering for ", 
                         "Diferencia en dispersión para ") + plot_title_ending)
@@ -510,36 +463,6 @@ plt.xlabel(trs.choose(r"Minimum spatial division $\Delta r$ [$d$]",
                       r"Mínima división espacial $\Delta r$ [$d$]"))
 plt.tight_layout()
 vs.saveplot(plot_file("QuaDiffFactor.png"), overwrite=True)
-
-if plot_for_display: use_backend("Qt5Agg")
-
-#%% MINIMUM DIVISION VS DIAMETER
-
-if plot_for_display: use_backend("Agg")
-
-fig = plt.figure()
-if plot_for_display: fig.dpi = 200
-plt.suptitle(trs.choose("Difference in scattering for ", 
-                        "Diferencia en dispersión para ") + plot_title_ending)
-for i in range(len(series)):
-    plt.plot(test_param[i], 
-             mindiv_diameter_factor[i], 
-             color=series_colors[i], 
-             marker=series_markers[i], markersize=series_markersizes[i], 
-             alpha=0.4, markeredgewidth=0)
-if plot_for_display:
-    fig.axes[0].yaxis.tick_right()
-    fig.axes[0].yaxis.set_label_position("right")
-plt.legend(series_legend)
-plt.xlabel(test_param_label)
-plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
-plt.ylabel(trs.choose(r"Minimum spatial division $\Delta r$ [$d$]",
-                      r"Mínima división espacial $\Delta r$ [$d$]"))
-fig.set_size_inches([6 , 4.32])
-fig.tight_layout()
-vs.saveplot(plot_file("MinDivDiam.png"), overwrite=True)
-
-if plot_for_display: use_backend("Qt5Agg")
 
 #%% GET ELAPSED TIME COMPARED <<
 
