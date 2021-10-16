@@ -10,12 +10,15 @@ import numpy as np
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
+from matplotlib import use as use_backend
 import os
 import PyMieScatt as ps
 import v_materials as vmt
-import v_theory as vt
 import v_save as vs
 import v_utilities as vu
+import v_plot as vp
+
+vp.set_style()
 
 #%% PARAMETERS
 
@@ -26,6 +29,18 @@ glassnwater_folder = "Scattering/AuSphere/GlassNWater"
 marian_folder = "Scattering/AuSphere/AllVacTest/7)Diameters/Marians"
 
 home = vs.get_home()
+
+plot_folder = "DataAnalysis/Scattering/AuSphere/VacWatFullComparison"
+plot_make_big = True
+plot_for_display = True
+plot_english = False
+
+#%% PLOT CONFIGURATION
+
+plot_file = lambda n : os.path.join(home, plot_folder, n)
+if not os.path.isdir(plot_file("")): os.mkdir(plot_file(""))
+
+trs = vu.BilingualManager(english=plot_english)
 
 #%% LOAD VACUUM DATA
 
@@ -113,7 +128,7 @@ pms_r_mie_data = []
 for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
     wlens = wd[:,0]
     freqs = 1e3*fuf/wlens
-    medium = vmt.import_medium("Au", fuf)
+    medium = vmt.import_medium("Au", from_um_factor=fuf)
     scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
                                 1e3*fuf/f,
                                 d,
@@ -129,7 +144,7 @@ pms_jc_meep_mie_data = []
 for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
     wlens = np.linspace(400, 800, len(wd[:,0]))
     epsilon_function = vmt.epsilon_function_from_meep(paper="JC")
-    medium = vmt.import_medium("Au", fuf, paper="JC")
+    medium = vmt.import_medium("Au", from_um_factor=fuf, paper="JC")
     scatt_eff_theory = [ps.MieQ(np.sqrt(epsilon_function(wl)), 
                                 wl,
                                 d,
@@ -170,28 +185,35 @@ pms_jc_rinfo_mie_max = [pms_jc_rinfo_mie_data[i][np.argmax(pms_jc_rinfo_mie_data
 #%% 1st PLOT ALL: VACUUM, WATER, MARIAN EXPERIMENTAL, MARIAN MIE
 # This makes up the first figures I've made, the ones that confused me
 
-colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+colors = ["C0", "C1", "C2", "C3"]
 
-plt.figure()
+fig = plt.figure()
 for vdt, d, c in zip(vacuum_data, diameters, colors):
     plt.plot(vdt[:,0], vdt[:,1] / max(vdt[:,1]), #* np.pi * (d**2) / 4
-             linestyle='solid', color=c, label=f"Meep Vacío {d} nm")
+             linestyle='solid', color=c, 
+             label=trs.choose(f"MEEP Vacuum {d} nm",f"MEEP Vacío {d} nm"))
 for wdt, d, c in zip(water_data, diameters, colors):
     plt.plot( wdt[:,0], wdt[:,1] / max(wdt[:,1]), 
-             linestyle='dashdot', color=c, label=f"Meep Agua {d} nm")
-plt.style.use('default')
+             linestyle='dashdot', color=c,
+             label=trs.choose(f"MEEP Water {d} nm",f"MEEP Agua {d} nm"))
 for mdt, d, c in zip(marian_exp_data, diameters, colors):
     plt.plot(mdt[:,0], mdt[:,1] / max(mdt[:,1]), 
-             linestyle='dashed', color=c, label=f"Marian Exp {d} nm")
-plt.style.use('default')
+             linestyle='dashed', color=c, label=f"Barella Experimental {d} nm")
 for mdt, d, c in zip(marian_mie_data, diameters, colors):
     plt.plot(mdt[:,0], mdt[:,1] / max(mdt[:,1]), 
-             linestyle="dotted", color=c, label=f"Marian Mie {d} nm")
-plt.xlabel(r"Wavelength $\lambda$ [nm]")
-plt.ylabel("Normalized Scattering [a.u.]")
+             linestyle="dotted", color=c,
+             label=trs.choose(f"Barella Mie Water {d} nm",f"Barella Mie Agua {d} nm"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+plt.ylabel(trs.choose("Normalized Scattering Cross Section " + 
+                      r"$\sigma_{scatt}/\sigma_{scatt}^{max}$",
+                      "Sección eficaz de dispersión normalizada " +
+                      r"$\sigma_{disp}/\sigma_{scatt}^{disp}$"))
 plt.xlim([450, 650])
-plt.legend(ncol=4, framealpha=1)
-vs.saveplot(water_file("", "AllScatt.png"), overwrite=True)
+plt.legend(ncol=4)
+
+if plot_make_big: fig.set_size_inches([19.2 ,  9.61])
+
+vs.saveplot(plot_file("AllScatt.png"), overwrite=True)
 
 #%% 1st: PLOT 103 nm ALL: VACUUM, WATER, MARIAN EXPERIMENTAL, MARIAN MIE
 # This makes up the first figures I've made, the ones that confused me
@@ -199,114 +221,62 @@ vs.saveplot(water_file("", "AllScatt.png"), overwrite=True)
 colors = (c for c in plab.cm.Reds(np.linspace(0,1,2+5))[2:])
 
 plt.figure()
-plt.title("Scattering of Au sphere (103 nm diameter)")
+plt.title(trs.choose("Scattering of Au sphere (103 nm diameter)",
+                     "Dispersión de NP esférica de Au (103 nm de diámetro)"))
 scatt = vacuum_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
 plt.plot(vacuum_data[-1][:,0], scatt/max(scatt),
-         linestyle="solid", color=next(colors), label="Vacuum")
+         linestyle="solid", color=next(colors), 
+         label=trs.choose("Vacuum", "Vacío"))
 scatt = water_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
 plt.plot(water_data[-1][:,0], scatt/max(scatt),
-         linestyle="dashdot", color=next(colors), label="Water")
+         linestyle="dashdot", color=next(colors), 
+         label=trs.choose("Water", "Agua"))
 # scatt = glassnwater_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
 # plt.plot(glassnwater_data[0][:,0], scatt/max(scatt),
 #          linestyle="dashed", color=next(colors), label="Glass+Water")
 plt.plot(marian_exp_data[-1][:,0], 
          marian_exp_data[-1][:,1] / max(marian_exp_data[-1][:,1]), 
-         linestyle="dotted", color=next(colors), label="Experimental")
+         linestyle="dotted", color=next(colors), 
+         label="Experimental")
 plt.plot(marian_mie_data[-1][:,0], 
          marian_mie_data[-1][:,1] / max(marian_mie_data[-1][:,1]), 
-         linestyle="dotted", color=next(colors), label="Marian Mie Water")
-plt.xlabel(r"Wavelength $\lambda$ [nm]")
-plt.ylabel("Normalized Scattering [a.u.]")
+         linestyle="dotted", color=next(colors), 
+         label=trs.choose("Barella Mie Water", "Barella Mie Agua"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+plt.ylabel(trs.choose("Normalized Scattering Cross Section " + 
+                      r"$\sigma_{scatt}/\sigma_{scatt}^{max}$",
+                      "Sección eficaz de dispersión normalizada " +
+                      r"$\sigma_{disp}/\sigma_{scatt}^{disp}$"))
 plt.xlim([450, 650])
-plt.legend(framealpha=1)
-vs.saveplot(os.path.join(home, "DataAnalysis/AllWater103Comparison1st.png"), overwrite=True)
+plt.legend()
+vs.saveplot(plot_file("AllWater103Comparison1st.png"), overwrite=True)
 
 #%% 2nd: WATER VS MARIAN THEORY 103 nm
 # This makes up the figure I used when posting on Meep's Github
 
 plt.figure()
-plt.title("Scattering of Au sphere with 103 nm diameter submerged in water")
+plt.title(trs.choose("Scattering of Au sphere with 103 nm diameter submerged in water",
+                     "Dispersión de nanoesfera de Au con diámetro 103 nm en agua"))
 scatt = water_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
 plt.plot(water_data[-1][:,0], scatt/max(scatt),
-         linestyle="solid", color='#1f77b4', label="Meep")
+         linestyle="solid", color='C0', label="MEEP")
 scatt = glassnwater_data[-1][:,1] #* np.pi * (diameters[-1]**2) / 4
 plt.plot(marian_mie_data[-1][:,0], 
          marian_mie_data[-1][:,1] / max(marian_mie_data[-1][:,1]), 
-         linestyle="dashed", color='#1f77b4', label="Mie")
-plt.xlabel(r"Wavelength $\lambda$ [nm]")
-plt.ylabel("Normalized Scattering Cross Section [a.u.]")
+         linestyle="dashed", color='C0', label="Mie")
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+plt.ylabel(trs.choose("Normalized Scattering Cross Section " + 
+                      r"$\sigma_{scatt}/\sigma_{scatt}^{max}$",
+                      "Sección eficaz de dispersión normalizada " +
+                      r"$\sigma_{disp}/\sigma_{scatt}^{disp}$"))
 plt.xlim([500, 650])
-plt.legend(framealpha=1)
-plt.grid()
-vs.saveplot(os.path.join(home, "DataAnalysis/AllWater103Comparison.png"), 
-            overwrite=True)
+plt.legend()
+vs.saveplot(plot_file("AllWater103Comparison.png"), overwrite=True)
 
-#%% 3rd: WATER VS ALL WATER MIE THEORIES 1 DIAMETER
-
-for d in diameters:
-    index = np.argmin(np.abs(np.array(diameters)-d))
-    
-    fig = plt.figure()
-    plt.title(f"Scattering of Au sphere with {d} nm diameter submerged in water")
-    scatt = water_data[index][:,1] #* np.pi * (diameters[index]**2) / 4
-    plt.plot(water_data[index][:,0], scatt/max(scatt),
-             linestyle="solid", color='r', label="Meep's R Simulated Data")
-    plt.plot(marian_mie_data[index][:,0], 
-             marian_mie_data[index][:,1] / max(marian_mie_data[index][:,1]), 
-             linestyle="solid", color='#e377c2', label="Marian's JC Mie")
-    plt.plot(pms_jc_meep_mie_data[index][:,0], 
-             pms_jc_meep_mie_data[index][:,1] / max(pms_jc_meep_mie_data[index][:,1]), 
-             linestyle="dashed", color='#e377c2', label="PyMieScatt+Meep's JC Mie")
-    plt.plot(pms_jc_rinfo_mie_data[index][:,0], 
-             pms_jc_rinfo_mie_data[index][:,1] / max(pms_jc_rinfo_mie_data[index][:,1]), 
-             linestyle="dotted", color='k', label="PyMieScatt+RI.info's JC Mie")
-    plt.plot(pms_r_mie_data[index][:,0], 
-             pms_r_mie_data[index][:,1] / max(pms_r_mie_data[index][:,1]), 
-             linestyle="dashed", color='#1f77b4', label="PyMieScatt+Meep's R Mie")
-    plt.xlabel(r"Wavelength $\lambda$ [nm]")
-    plt.ylabel("Normalized Scattering Cross Section [a.u.]")
-    plt.xlim([400, 800])
-    plt.legend(framealpha=1)
-    plt.grid()
-    fig.set_size_inches([7.71, 4.8 ])
-    vs.saveplot(os.path.join(home, f"DataAnalysis/AllWater{d}Comparison.png"), 
-                overwrite=True)
-
-#%% 3rd: WATER VS WATER MIE THEORIES 1 DIAMETER NOT NORMALIZED
-
-for d in diameters:
-    index = np.argmin(np.abs(np.array(diameters)-d))
-    
-    fig = plt.figure()
-    plt.title(f"Scattering of Au sphere with {d} nm diameter submerged in water")
-    scatt = water_data[index][:,1]
-    plt.plot(water_data[index][:,0], scatt,
-             linestyle="solid", color='r', label="Meep's R Simulated Data")
-    plt.plot(pms_jc_meep_mie_data[index][:,0], 
-             pms_jc_meep_mie_data[index][:,1], 
-             linestyle="dashed", color='#e377c2', label="PyMieScatt+Meep's JC Mie")
-    plt.plot(pms_jc_rinfo_mie_data[index][:,0], 
-             pms_jc_rinfo_mie_data[index][:,1], 
-             linestyle="dotted", color='k', label="PyMieScatt+RI.info's JC Mie")
-    plt.plot(pms_r_mie_data[index][:,0], 
-             pms_r_mie_data[index][:,1], 
-             linestyle="dashed", color='#1f77b4', label="PyMieScatt+Meep's R Mie")
-    plt.xlabel(r"Wavelength $\lambda$ [nm]")
-    plt.ylabel("Scattering Effienciency [a.u.]")
-    plt.xlim([400, 800])
-    plt.legend(framealpha=1)
-    plt.grid()
-    fig.set_size_inches([7.71, 4.8 ])
-    vs.saveplot(os.path.join(home, "DataAnalysis/AllWater103Comparison.png"), 
-                overwrite=True)
-
-# CANNOT PLOT MARIAN'S WITHOUT NORMALIZATION
-# Marian's data is already normalized :(
-
-#%% 3rd: ONE HUGE PLOT
+#%% 3rd: WATER VS WATER MIE THEORIES 1 DIAMETER
 
 fig = plt.figure()
-plot_grid = gridspec.GridSpec(ncols=2, nrows=2, hspace=0.3, wspace=0.1, figure=fig)
+plot_grid = gridspec.GridSpec(ncols=2, nrows=2, hspace=0.4, wspace=0.2, figure=fig)
 
 plot_list = [plot_grid[0,0], plot_grid[0,1], plot_grid[1,0], plot_grid[1,1]]
 axes_list = []
@@ -318,30 +288,33 @@ for d, ax in zip(diameters, axes_list):
     ax.set_title(f"Diámetro {d} nm")
     ax.plot(water_data[index][:,0], 
             water_data[index][:,1]/max(water_data[index][:,1]),
-             linestyle="solid", color='r', label="Meep's R Simulated Data")
+             linestyle="solid", color='r', 
+             label="MEEP R " + trs.choose("Simulated Data", "Simulación"))
     ax.plot(pms_jc_meep_mie_data[index][:,0], 
              pms_jc_meep_mie_data[index][:,1]/max(pms_jc_meep_mie_data[index][:,1]), 
-             linestyle="dashed", color='#e377c2', label="PyMieScatt+Meep's JC Mie")
+             linestyle="dashed", color='#e377c2', 
+             label="PyMieScatt + MEEP JC Mie")
     ax.plot(pms_jc_rinfo_mie_data[index][:,0], 
              pms_jc_rinfo_mie_data[index][:,1]/max(pms_jc_rinfo_mie_data[index][:,1]), 
-             linestyle="dotted", color='k', label="PyMieScatt+RI.info's JC Mie")
+             linestyle="dotted", color='k', label="PyMieScatt+RIInfo JC Mie")
     ax.plot(pms_r_mie_data[index][:,0], 
              pms_r_mie_data[index][:,1]/max(pms_r_mie_data[index][:,1]), 
-             linestyle="dashed", color='#1f77b4', label="PyMieScatt+Meep's R Mie")
-    ax.xaxis.set_label_text(r"Wavelength $\lambda$ [nm]")
-    ax.yaxis.set_label_text("Scattering Effienciency [a.u.]")
+             linestyle="dashed", color='#1f77b4', label="PyMieScatt+MEEP R Mie")
+    ax.xaxis.set_label_text(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+    ax.yaxis.set_label_text(trs.choose("Normalized Scattering Cross Section\n" +
+                                       r"$\sigma_{scatt}/\sigma_{scatt}^{max}$",
+                                       "Sección eficaz de dispersión normalizada\n" +
+                                       r"$\sigma_{disp}/\sigma_{disp}^{max}$"))
     ax.set_xlim([400, 800])
-    ax.grid()
     
 fig.set_size_inches([19.2 ,  8.39])
-plt.legend(framealpha=1)
-vs.saveplot(os.path.join(home, "DataAnalysis/AllWaterFullComparison.png"), 
-            overwrite=True)
+plt.legend()
+vs.saveplot(plot_file("AllWaterFullComparison.png"), overwrite=True)
 
-#%% 3rd: ONE HUGE PLOT NOT NORMALIZED
+#%% 3rd: WATER VS WATER MIE THEORIES 1 DIAMETER NOT NORMALIZED
 
 fig = plt.figure()
-plot_grid = gridspec.GridSpec(ncols=2, nrows=2, hspace=0.3, wspace=0.1, figure=fig)
+plot_grid = gridspec.GridSpec(ncols=2, nrows=2, hspace=0.4, wspace=0.1, figure=fig)
 
 plot_list = [plot_grid[0,0], plot_grid[0,1], plot_grid[1,0], plot_grid[1,1]]
 axes_list = []
@@ -363,12 +336,46 @@ for d, ax in zip(diameters, axes_list):
     ax.plot(pms_r_mie_data[i][:,0], 
              pms_r_mie_data[i][:,1], 
              linestyle="dashed", color='#1f77b4', label="PyMieScatt+Meep's R Mie")
-    ax.xaxis.set_label_text(r"Wavelength $\lambda$ [nm]")
-    ax.yaxis.set_label_text("Scattering Effienciency [a.u.]")
+    ax.xaxis.set_label_text(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+    ax.yaxis.set_label_text(trs.choose(r"Scattering Efficiency $C_{scatt}$", 
+                                       "Eficiencia de dispersión $C_{disp}$"))
     ax.set_xlim([400, 800])
-    ax.grid()
     
 fig.set_size_inches([19.2 ,  8.39])
-plt.legend(framealpha=1)
-vs.saveplot(os.path.join(home, "DataAnalysis/AllWaterFullComparisonEff.png"), 
-            overwrite=True)
+plt.legend()
+vs.saveplot(plot_file("AllWaterFullComparisonEff.png"), overwrite=True)
+
+# CANNOT PLOT MARIAN'S WITHOUT NORMALIZATION
+# Marian's data is already normalized :(
+
+#%% JUST MARIAN'S DATA, TO REPRODUCE HIS PAPER'S DATA
+
+if plot_for_display: use_backend("Agg")
+
+colors = ["C0", "C1", "C2", "C3"]
+
+fig = plt.figure()
+if plot_for_display: fig.dpi = 200
+for mdt, d, c in zip(marian_exp_data, diameters, colors):
+    plt.plot(mdt[:,0], mdt[:,1] / max(mdt[:,1]), 
+             linestyle='solid', color=c, 
+             label=trs.choose(f"Experimental {d} nm",
+                              f"Experimental {d} nm"))
+for mdt, d, c in zip(marian_mie_data, diameters, colors):
+    plt.plot(mdt[:,0], mdt[:,1] / max(mdt[:,1]), 
+             linestyle="dashed", color=c,
+             label=trs.choose(f"Mie Theory {d} nm",
+                              f"Teoría de Mie {d} nm"))
+plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+plt.ylabel(trs.choose("Normalized Scattering Cross Section " + 
+                      r"$\sigma_{scatt}/\sigma_{scatt}^{max}$", 
+                      "Sección eficaz de dispersión normalizada " + 
+                      r"$\sigma_{disp}/\sigma_{disp}^{max}$"))
+plt.xlim([500, 720])
+plt.legend(ncol=2)
+
+if plot_make_big: fig.set_size_inches([10.6,  5.5])
+
+vs.saveplot(plot_file("Barella.png"), overwrite=True)
+
+if plot_for_display: use_backend("Qt5Agg")
