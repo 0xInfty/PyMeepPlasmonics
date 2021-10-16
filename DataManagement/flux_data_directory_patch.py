@@ -70,6 +70,12 @@ n = len(flux_dir[keys[0]])
 
 #%%
 
+last_five = {}
+for k in flux_dir.keys():
+    last_five[k] = flux_dir[k][-5:]
+
+#%%
+
 flux_dir["n_cores"] = []
 for i in range(n):
     flux_dir["n_cores"].append( min([4, flux_dir["n_processes"][i]]) )
@@ -79,6 +85,8 @@ flux_dir["split_chunks_evenly"] = [True]*n
 flux_dir["near2far"] = [False]*n
 
 #%%
+
+del flux_dir["displacement"]
 
 flux_dir["overlap"] = [0]*n
 
