@@ -61,65 +61,87 @@ plot_folder = "DataAnalysis/Scattering/AuSphere/VacWatDiameters"
 
 #%% LOAD DATA <<
 
+# First some useful definitions regarding directories
+def file_definer(path): return lambda s, n : os.path.join(path, s, n)
+path = [os.path.join(home, fold) for fold in folder]
+file = [file_definer(pa) for pa in path]
+
+# Now look for the series of data inside of each folder
+series = [[]] * len(path)
+for i in range(len(folder)):
+    series[i] = os.listdir(path[i])
+    series[i] = vu.filter_by_string_must(series[i], series_must[i])
+    if series_mustnt[i]!="": 
+        series[i] = vu.filter_by_string_must(series[i], series_mustnt[i], False)
+    series[i] = sorting_function[i](series[i])
+del i
+
+# Get the corresponding data
+data = [[np.loadtxt(file[i](series[i][j], "Results.txt")) for j in range(len(series[i]))] for i in range(len(series))]
+
+# Get the parameters of the simulations
+params = [[vs.retrieve_footer(file[i](series[i][j], "Results.txt")) for j in range(len(series[i]))] for i in range(len(series))]
+for i in range(len(series)):
+    for j in range(len(series[i])):
+        if not isinstance(params[i][j], dict): 
+            params[i][j] = vu.fix_params_dict(params[i][j])
+
+# Get the test parameter
+if test_param_in_series:
+    test_param = [[vu.find_numbers(series[i][j])[test_param_position] for j in range(len(series[i]))] for i in range(len(series))]
+elif test_param_in_params:
+    test_param = [[params[i][j][test_param_string] for j in range(len(series[i]))] for i in range(len(series))]
+else:
+    raise ValueError("Test parameter is nowhere to be found")
+
+#%%
+
+# Get the RAM and elapsed time data
 loaded_ram = True
-path = []
-file = []
-series = []
-data = []
-params = []
-header = []
-
-for f, sf, sm, smn in zip(folder, sorting_function, series_must, series_mustnt):
-
-    path.append( os.path.join(home, f) )
-    file.append( lambda f, s : os.path.join(path[-1], f, s) )
-    
-    series.append( os.listdir(path[-1]) )
-    series[-1] = vu.filter_by_string_must(series[-1], sm)
-    if smn!="": series[-1] = vu.filter_by_string_must(series[-1], smn, False)
-    series[-1] = sf(series[-1])
-    
-    data.append( [] )
-    params.append( [] )
-    for s in series[-1]:
-        data[-1].append(np.loadtxt(file[-1](s, "Results.txt")))
-        params[-1].append(vs.retrieve_footer(file[-1](s, "Results.txt")))
-    header.append( vs.retrieve_header(file[-1](s, "Results.txt")) )
-    
-    for i in range(len(params[-1])):
-        if not isinstance(params[-1][i], dict): 
-            params[-1][i] = vu.fix_params_dict(params[-1][i])
-            
-    for s, p in zip(series[-1], params[-1]):
+for i in range(len(series)):
+    for j in range(len(series[i])):
         try:
-            f = h5.File(file[-1](s, "RAM.h5"))
-            p["used_ram"] = np.array(f["RAM"])
-        except:
-            print(f"No RAM register found for {s}")
-            loaded_ram = False
-    
+            f = h5.File(file[i](series[i][j], "Resources.h5"))
+            params[i][j]["used_ram"] = np.array(f["RAM"])
+            params[i][j]["used_swap"] = np.array(f["SWAP"])
+            params[i][j]["elapsed"] = np.array(f["ElapsedTime"])
+        except FileNotFoundError:
+            try:
+                f = h5.File(file[i](series[i][j], "RAM.h5"))
+                params[i][j]["used_ram"] = np.array(f["RAM"])
+                params[i][j]["used_swap"] = np.array(f["SWAP"])
+            except:
+                print(f"No RAM data found for {series[i][j]}")
+                loaded_ram = False
+del i, j
+
+# Extract some other parameters from the parameters dict
 needs_fixing = False
-from_um_factor = []
-resolution = []
-r = []
-paper = []
-material = []
-index = []
-sysname = []
-for p in params:
-    from_um_factor.append( [pi["from_um_factor"] for pi in p] )
-    resolution.append( [pi["resolution"] for pi in p] )
-    r.append( [pi["r"] for pi in p] )
-    try: paper.append( [pi["paper"] for pi in p])
-    except: paper.append( ["R" for pi in p] )
-    try: material.append( [pi["material"] for pi in p] )
-    except: material.append( ["Au" for pi in p] )
-    try: index.append( [pi["submerged_index"] for pi in p] )
-    except:
-        try: index.append( [pi["index"] for pi in p] )
-        except: print("Index needs manual assignment"); needs_fixing = True
-    try: sysname.append( [pi["sysname"] for pi in p] )
-    except: print("Sysname needs manual assignment"); needs_fixing = True
+from_um_factor = [[params[i][j]["from_um_factor"] for j in range(len(series[i]))] for i in range(len(series))]
+resolution = [[params[i][j]["resolution"] for j in range(len(series[i]))] for i in range(len(series))]
+try: courant = [[params[i][j]["courant"] for j in range(len(series[i]))] for i in range(len(series))]
+except: courant = [[0.5 for j in range(len(series[i]))] for i in range(len(series))]
+r = [[params[i][j]["r"] for j in range(len(series[i]))] for i in range(len(series))]
+try: material = [[params[i][j]["material"] for j in range(len(series[i]))] for i in range(len(series))]
+except: material = [["Au" for j in range(len(series[i]))] for i in range(len(series))]
+try: paper = [[params[i][j]["paper"] for j in range(len(series[i]))] for i in range(len(series))]
+except: paper = [["R" for j in range(len(series[i]))] for i in range(len(series))]
+try: index = [[params[i][j]["submerged_index"] for j in range(len(series[i]))] for i in range(len(series))]
+except: 
+    try: index = [[params[i][j]["index"] for j in range(len(series[i]))] for i in range(len(series))]
+    except: print("Index needs manual assignment"); needs_fixing = True
+wlen_range = [[params[i][j]["wlen_range"] for j in range(len(series[i]))] for i in range(len(series))]
+pml_width = [[params[i][j]["pml_width"] for j in range(len(series[i]))] for i in range(len(series))]
+try: empty_width = [[params[i][j]["empty_width"] for j in range(len(series[i]))] for i in range(len(series))]
+except: empty_width = [[params[i][j]["air_width"] for j in range(len(series[i]))] for i in range(len(series))]
+try: cell_width = [[params[i][j]["cell_width"] for j in range(len(series[i]))] for i in range(len(series))]
+except: cell_width = [[2*(pml_width[i][j] + empty_width[i][j] + r[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+source_center = [[params[i][j]["source_center"] for j in range(len(series[i]))] for i in range(len(series))]
+until_after_sources = [[params[i][j]["until_after_sources"] for j in range(len(series[i]))] for i in range(len(series))]
+time_factor_cell = [[params[i][j]["time_factor_cell"] for j in range(len(series[i]))] for i in range(len(series))]
+second_time_factor = [[params[i][j]["second_time_factor"] for j in range(len(series[i]))] for i in range(len(series))]
+try: sysname = [[params[i][j]["sysname"] for j in range(len(series[i]))] for i in range(len(series))]
+except: print("Sysname needs manual assignment"); needs_fixing = True
 
 if test_param_in_params:
     test_param = [[p[test_param_string] for p in par] for par in params]
@@ -135,16 +157,14 @@ if needs_fixing:
 
 #%% CALCULATE ADDITIONAL DATA
 
-minor_division = [[fum * 1e3 / res for fum, res in zip(frum, reso)] for frum, reso in zip(from_um_factor, resolution)]
-try:
-    width_points = [[int(p["cell_width"] * p["resolution"]) for p in par] for par in params] 
-except:
-    width_points = [[int(2*(p["air_width"]+p["pml_width"]+p["r"]) * p["resolution"]) for p in par] for par in params] 
-grid_points = [[wp**3 for wp in wpoints] for wpoints in width_points]
-memory_B = [[2 * 12 * gp * 32 for p, gp in zip(par, gpoints)] for par, gpoints in zip(params, grid_points)] # in bytes
+minor_division = [[from_um_factor[i][j] * 1e3 / resolution[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+width_points = [[int(cell_width[i][j] * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+grid_points = [[width_points[i][j]**3 for j in range(len(series[i]))] for i in range(len(series))]
+memory_B = [[2 * 12 * grid_points[i][j] * 32 for j in range(len(series[i]))] for i in range(len(series))]
 
-mindiv_diameter_factor = [[minor_division[i][j] / (2 * 1e3 * from_um_factor[i][j] * r[i][j]) 
-                           for j in range(len(series[i]))] for i in range(len(series))]
+empty_r_factor = [[empty_width[i][j] / r[i][j] for j in range(len(series[i]))] for i in range(len(series))]
+
+mindiv_diameter_factor = [[minor_division[i][j] / (2 * 1e3 * from_um_factor[i][j] * r[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 
 #%% GENERAL PLOT CONFIGURATION <<
 
