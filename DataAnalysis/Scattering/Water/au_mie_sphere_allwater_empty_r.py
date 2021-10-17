@@ -26,31 +26,31 @@ vp.set_style()
 #%% PARAMETERS <<
 
 # Saving directories
-folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/FluxR"]
+folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR"]
 home = vs.get_home()
 
 # Parameter for the test
-test_param_string = "flux_r_factor"
-test_param_calculation = True
+test_param_string = "air_r_factor"
+test_param_calculation = False
 test_param_in_params = False
 test_param_in_series = True
-test_param_ij_expression = "2 * (1 + vu.find_numbers(series[i][j])[test_param_position])"
 test_param_position = 0
-test_param_name = trs.choose("Flux Box Size", "Tamaño de caja de flujo")
+test_param_ij_expression = ""
+test_param_name = trs.choose("Empty Layer Width", "Espesor de capa de agua")
 test_param_units = r"$r$" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = trs.choose([lambda s : rf"Flux Factor {vu.find_numbers(s)[test_param_position]:.2f} $r$"]*2,
-                          [lambda s : rf"Factor de flujo {vu.find_numbers(s)[test_param_position]:.2f} $r$"]*2)
-series_must = [""]*2 # leave "" per default
-series_mustnt = [["MoreAir", "0.50", "1.00", "2.00"], ""] # leave "" per default
+series_label = trs.choose([lambda s : rf"Empty Width {vu.find_numbers(s)[test_param_position]:.0f} $r$"]*2,
+                          [lambda s : rf"Espesor Agua {vu.find_numbers(s)[test_param_position]:.0f} $r$"]*2)
+series_must = [""] # leave "" per default
+series_mustnt = [""]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
 plot_title_ending = trs.choose("Au 103 nm NP in water", "NP de Au de 103 nm en agua")
 series_legend = trs.choose(["Data"], ["Datos"])
-series_colormaps = [plab.cm.winter, plab.cm.Purples]
+series_colormaps = [plab.cm.winter]
 series_ind_colors = [["C0", "C2", "C3"]]*2
 series_colors = ["k"]
 series_markers = ["o","o"]
@@ -59,7 +59,7 @@ series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_make_big = True
 plot_for_display = True
-plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/FluxR"
+plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/EmptyR"
 
 #%% LOAD DATA <<
 
@@ -445,7 +445,7 @@ if plot_for_display: use_backend("Qt5Agg")
 if len(series)==1:
     
     with_legend = False
-    needs_plot_fixing = False
+    needs_plot_fixing = True
     
     if plot_for_display: use_backend("Agg")
     

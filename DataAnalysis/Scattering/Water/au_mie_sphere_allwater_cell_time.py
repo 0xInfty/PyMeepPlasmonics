@@ -26,31 +26,31 @@ vp.set_style()
 #%% PARAMETERS <<
 
 # Saving directories
-folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/FluxR"]
+folder = ["Scattering/AuSphere/AllWatTest/10)TimeFactors/TimeFactorCell"]
 home = vs.get_home()
 
 # Parameter for the test
-test_param_string = "flux_r_factor"
-test_param_calculation = True
-test_param_in_params = False
+test_param_string = "time_factor_cell"
+test_param_calculation = False
+test_param_in_params = True
 test_param_in_series = True
-test_param_ij_expression = "2 * (1 + vu.find_numbers(series[i][j])[test_param_position])"
 test_param_position = 0
-test_param_name = trs.choose("Flux Box Size", "Tamaño de caja de flujo")
-test_param_units = r"$r$" # Leave "" by default
+test_param_ij_expression = "" # Leave "" by default
+test_param_name = trs.choose("Simulation additional normalization time relative to cell", 
+                              "Tiempo de simulación adicional relativo a la celda en normalización")
+test_param_units = "" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = trs.choose([lambda s : rf"Flux Factor {vu.find_numbers(s)[test_param_position]:.2f} $r$"]*2,
-                          [lambda s : rf"Factor de flujo {vu.find_numbers(s)[test_param_position]:.2f} $r$"]*2)
-series_must = [""]*2 # leave "" per default
-series_mustnt = [["MoreAir", "0.50", "1.00", "2.00"], ""] # leave "" per default
+series_label = [lambda s : rf"Time factor cell {vu.find_numbers(s)[test_param_position]:.2f}"]*2
+series_must = [""] # leave "" per default
+series_mustnt = [""]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
 plot_title_ending = trs.choose("Au 103 nm NP in water", "NP de Au de 103 nm en agua")
 series_legend = trs.choose(["Data"], ["Datos"])
-series_colormaps = [plab.cm.winter, plab.cm.Purples]
+series_colormaps = [plab.cm.summer.reversed()]
 series_ind_colors = [["C0", "C2", "C3"]]*2
 series_colors = ["k"]
 series_markers = ["o","o"]
@@ -58,8 +58,8 @@ series_markersizes = [8,8]
 series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_make_big = True
-plot_for_display = True
-plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/FluxR"
+plot_for_display = False
+plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/TimeFactorCell"
 
 #%% LOAD DATA <<
 
