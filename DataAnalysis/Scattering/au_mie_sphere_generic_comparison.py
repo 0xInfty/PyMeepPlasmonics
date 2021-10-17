@@ -26,23 +26,23 @@ vp.set_style()
 #%% PARAMETERS <<
 
 # Saving directories
-folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR"]
+folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/PMLWlen"]
 home = vs.get_home()
 
 # Parameter for the test
-test_param_string = "air_r_factor"
+test_param_string = "pml_wlen_factor"
 test_param_calculation = False
-test_param_in_params = False
+test_param_in_params = True
 test_param_in_series = True
-test_param_position = 0
 test_param_ij_expression = ""
-test_param_name = trs.choose("Empty Layer Width", "Espesor de capa de agua")
-test_param_units = r"$r$" # Leave "" by default
+test_param_position = 0
+test_param_name = trs.choose("PML Layer Width", "Espesor de capa PML")
+test_param_units = r"$\Delta\lambda_{max}$" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = trs.choose([lambda s : rf"Empty Width {vu.find_numbers(s)[test_param_position]:.0f} $r$"]*2,
-                          [lambda s : rf"Espesor Agua {vu.find_numbers(s)[test_param_position]:.0f} $r$"]*2)
+series_label = trs.choose([lambda s : f"PML {vu.find_numbers(s)[test_param_position]:.2f} "+r"$\Delta\lambda_{max}$"]*2,
+                          [lambda s : f"PML {vu.find_numbers(s)[test_param_position]:.2f} "+r"$\Delta\lambda_{max}$"]*2)
 series_must = [""] # leave "" per default
 series_mustnt = [""]*2 # leave "" per default
 series_column = [1]*2
@@ -59,7 +59,7 @@ series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_make_big = True
 plot_for_display = False
-plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/EmptyR"
+plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/PMLWLen"
 
 #%% LOAD DATA <<
 
@@ -445,7 +445,7 @@ if plot_for_display: use_backend("Qt5Agg")
 if len(series)==1:
     
     with_legend = False
-    needs_plot_fixing = True
+    needs_plot_fixing = False
     
     if plot_for_display: use_backend("Agg")
     
@@ -511,7 +511,10 @@ if len(series)==1:
                      + "MSD( $C^{MEEP} - C^{MIE}$ )")
     
     if needs_plot_fixing:
-        ax2.set_ylim(-.5, -.4)
+        if test_param_string=='max_wlen_range':
+            ax2.set_ylim(-.47, -.46)
+        elif False:
+            ax2.set_ylim(-.5, -.4)
             
     if plot_for_display: fig.set_size_inches([9.84, 4.01])
     else: fig.set_size_inches([8.49, 4.55])
