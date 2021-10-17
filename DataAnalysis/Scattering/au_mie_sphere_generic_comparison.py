@@ -149,16 +149,18 @@ except: print("Sysname needs manual assignment"); needs_fixing = True
 
 if needs_fixing:
     
-    # index = [[1]*len(series[0]), [1.33]*len(series[1])]
-    # sysname = [["SC"]*len(series[0]), ["SC"]*len(series[1])]
-    empty_width = []
-    for i in range(len(series)):
-        empty_width.append([])
-        for j in range(len(series[i])):
-            try:
-                empty_width[i].append(params[i][j]["empty_width"])
-            except:
-                empty_width[i].append(params[i][j]["air_width"])
+    if test_param_string=="r":
+        index = [[1]*len(series[0]), [1.33]*len(series[1])]
+        sysname = [["SC"]*len(series[0]), ["SC"]*len(series[1])]
+    else:
+        empty_width = []
+        for i in range(len(series)):
+            empty_width.append([])
+            for j in range(len(series[i])):
+                try:
+                    empty_width[i].append(params[i][j]["empty_width"])
+                except:
+                    empty_width[i].append(params[i][j]["air_width"])
 
 #%% EXTRACT SOME MORE PARAMETERS <<
 
@@ -245,12 +247,10 @@ msq_diff_right = [[np.mean(np.square(data[i][j][:np.argmax(theory[i][j]), series
 
 #%% DIFFERENCE IN MAXIMUM WAVELENGTH PLOT <<
 
-alternate_axis = False
-
-# if plot_for_display: use_backend("Agg")
+if plot_for_display: use_backend("Agg")
 
 fig = plt.figure()
-# if plot_for_display: fig.dpi = 200
+if plot_for_display: fig.dpi = 200
 if not plot_for_display:
     plt.suptitle(trs.choose("Difference in scattering for ", 
                             "Diferencia en dispersión en ") + plot_title_ending)
@@ -263,33 +263,27 @@ for i in range(len(series)):
              alpha=0.4, markeredgewidth=0, zorder=10)
 if max(fig.axes[0].get_ylim()) >= 0 >= min(fig.axes[0].get_ylim()):
     plt.axhline(color="k", linewidth=.5, zorder=0)
-if plot_for_display and alternate_axis:
-    fig.axes[0].yaxis.tick_right()
-    fig.axes[0].yaxis.set_label_position("right")
-plt.legend(fig.axes[0].lines[1:], series_legend)
+plt.legend(fig.axes[0].lines, series_legend)
 plt.xlabel(test_param_label)
 if max([len(tp) for tp in test_param])<=4: 
     plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
-if plot_for_display:
-    plt.ylabel(trs.choose("Difference\nin wavelength\n", 
-                          "Diferencia\nen longitud de onda\n") + 
-               "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
-else:
-    plt.ylabel(trs.choose("Difference in wavelength ", 
-                          "Diferencia en longitud de onda ") + 
-               "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
-if plot_for_display: fig.set_size_inches([9.63, 2.37])
-else: fig.set_size_inches([6 , 4.32]); fig.tight_layout()
+plt.ylabel(trs.choose("Difference in wavelength ", 
+                      "Diferencia en longitud de onda ") + 
+           "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
+fig.set_size_inches([6 , 4.32])
+fig.tight_layout()
 vs.saveplot(plot_file("MaxWLenDiff.png"), overwrite=True)
 
-# if plot_for_display: use_backend("Qt5Agg")
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% DIFFERENCE IN SCATTERING MAXIMUM PLOT <<
 
-# if plot_for_display: use_backend("Agg")
+alternate_axis = True
+
+if plot_for_display: use_backend("Agg")
 
 fig = plt.figure()
-# if plot_for_display: fig.dpi = 200
+if plot_for_display: fig.dpi = 200
 if not plot_for_display:
     plt.suptitle(trs.choose("Difference in scattering for ", 
                             "Diferencia en dispersión en ") + plot_title_ending)
@@ -304,27 +298,21 @@ if max(fig.axes[0].get_ylim()) >= 0 >= min(fig.axes[0].get_ylim()):
 if plot_for_display and alternate_axis:
     fig.axes[0].yaxis.tick_right()
     fig.axes[0].yaxis.set_label_position("right")
-plt.legend(fig.axes[0].lines[1:], series_legend)
+plt.legend(fig.axes[0].lines, series_legend)
 plt.xlabel(test_param_label)
 if max([len(tp) for tp in test_param])<=4: 
     plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose("Difference in scattering efficiency ", 
                       "Diferencia en eficiencia de dispersión ") + 
            "$C_{max}^{MEEP}-C_{max}^{MIE}$")
-if plot_for_display:
-    plt.ylabel(trs.choose("Difference in\nscattering efficiency\n", 
-                          "Diferencia en\neficiencia de dispersión\n") + 
-               "$C_{max}^{MEEP}-C_{max}^{MIE}$")
-else:
-    plt.ylabel(trs.choose("Difference in scattering efficiency ", 
-                      "Diferencia en eficiencia de dispersión ") + 
-           "$C_{max}^{MEEP}-C_{max}^{MIE}$")
-if plot_for_display: fig.set_size_inches([8.81, 2.37])
-else: fig.set_size_inches([6 , 4.32])
+plt.ylabel(trs.choose("Difference in scattering efficiency ", 
+                  "Diferencia en eficiencia de dispersión ") + 
+       "$C_{max}^{MEEP}-C_{max}^{MIE}$")
+fig.set_size_inches([6 , 4.32])
 fig.tight_layout()
 vs.saveplot(plot_file("MaxScattDiff.png"), overwrite=True)
 
-# if plot_for_display: use_backend("Qt5Agg")
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% DIFFERENCE IN SCATTERING MAXIMUM AND WAVELENGTH PLOT
 
@@ -379,8 +367,6 @@ if len(series)==1:
 
 #%% MEAN RESIDUAL LEFT AND RIGHT PLOT <<
 
-with_legend = False
-
 if plot_for_display: use_backend("Agg")
 
 fig = plt.figure()
@@ -421,20 +407,14 @@ for i in range(len(test_param)):
 if max(fig.axes[0].get_ylim()) >= 0 >= min(fig.axes[0].get_ylim()):
     plt.axhline(color="k", linewidth=.5, zorder=0)
 # plt.legend(lines, lines_legend)
-if with_legend: first_legend = plt.legend(lines, lines_legend, ncol=len(series), framealpha=1, frameon=True)
+first_legend = plt.legend(lines, lines_legend, ncol=len(series))
 # second_legend = plt.legend(medium_lines, medium_lines_legend, loc="center left")
 # plt.gca().add_artist(first_legend)
 plt.xlabel(test_param_label)
-if plot_for_display:
-    plt.ylabel(trs.choose("Mean squared\ndifference\n",
-                          "Diferencia\ncuadrática media\n")
-               + "MSD( $C^{MEEP} - C^{MIE}$ )")
-else:
-    plt.ylabel(trs.choose("Mean squared difference ",
-                          "Diferencia cuadrática media ") 
-               + "MSD( $C^{MEEP} - C^{MIE}$ )")
-if plot_for_display: fig.set_size_inches([8.59, 2.37])
-else: fig.set_size_inches([6 , 4.32])
+plt.ylabel(trs.choose("Mean squared difference ",
+                      "Diferencia cuadrática media ") 
+           + "MSD( $C^{MEEP} - C^{MIE}$ )")
+fig.set_size_inches([6 , 4.32])
 fig.tight_layout()
 vs.saveplot(plot_file("QuaDiff.png"), overwrite=True)
 
@@ -529,8 +509,9 @@ if plot_for_display: use_backend("Agg")
 
 fig = plt.figure()
 if plot_for_display: fig.dpi = 200
-plt.suptitle(trs.choose("Difference in scattering for ", 
-                        "Diferencia en dispersión en ") + plot_title_ending)
+if not plot_for_display:
+    plt.suptitle(trs.choose("Difference in scattering for ", 
+                            "Diferencia en dispersión en ") + plot_title_ending)
 for i in range(len(series)):
     plt.plot(test_param[i], 
              mindiv_diameter_factor[i], 

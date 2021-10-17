@@ -512,7 +512,10 @@ if len(series)==1:
                      + "MSD( $C^{MEEP} - C^{MIE}$ )")
     
     if needs_plot_fixing:
-        ax2.set_ylim(-.5, -.4)
+        if test_param_string=='max_wlen_range':
+            ax2.set_ylim(-.47, -.46)
+        elif False:
+            ax2.set_ylim(-.5, -.4)
             
     if plot_for_display: fig.set_size_inches([9.84, 4.01])
     else: fig.set_size_inches([8.49, 4.55])
