@@ -26,31 +26,30 @@ vp.set_style()
 #%% PARAMETERS <<
 
 # Saving directories
-folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/PMLWlen"]
+folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/500to650"]
 home = vs.get_home()
 
 # Parameter for the test
-test_param_string = "pml_wlen_factor"
-test_param_calculation = False
+test_param_string = "courant"
+test_param_calculation = True
 test_param_in_params = True
 test_param_in_series = True
-test_param_ij_expression = ""
 test_param_position = 0
-test_param_name = trs.choose("PML Layer Width", "Espesor de capa PML")
-test_param_units = r"$\Delta\lambda_{max}$" # Leave "" by default
+test_param_ij_expression = "courant[i][j] * from_um_factor[i][j] * 1e6 / ( resolution[i][j] * 299.792458 )" # Leave "" by default
+test_param_name = trs.choose("Minimum time division", "Mínima división temporal")
+test_param_units = "as" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = trs.choose([lambda s : f"PML {vu.find_numbers(s)[test_param_position]:.2f} "+r"$\Delta\lambda_{max}$"]*2,
-                          [lambda s : f"PML {vu.find_numbers(s)[test_param_position]:.2f} "+r"$\Delta\lambda_{max}$"]*2)
+series_label = [lambda s : rf"Courant {vu.find_numbers(s)[test_param_position]:.2f}"]*2
 series_must = [""] # leave "" per default
-series_mustnt = [""]*2 # leave "" per default
+series_mustnt = ["Failed"]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
 plot_title_ending = trs.choose("Au 103 nm NP in water", "NP de Au de 103 nm en agua")
 series_legend = trs.choose(["Data"], ["Datos"])
-series_colormaps = [plab.cm.winter]
+series_colormaps = [plab.cm.summer.reversed()]
 series_ind_colors = [["C0", "C2", "C3"]]*2
 series_colors = ["k"]
 series_markers = ["o","o"]
@@ -59,7 +58,7 @@ series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_make_big = True
 plot_for_display = False
-plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/PMLWLen"
+plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/Courant"
 
 #%% LOAD DATA <<
 
@@ -147,6 +146,12 @@ except: print("Sysname needs manual assignment"); needs_fixing = True
 
 #%% FIX PARAMETERS IF NEEDED BY TOUCHING THIS BLOCK <<
 
+if test_param_string=="flux_r_factor":
+    for i in range(len(series)):
+        for j in range(len(series[i])):
+            if "0.05" not in series[i][j]:
+                data[i][j][:,1] = data[i][j][:,1] / (1 + vu.find_numbers(series[i][j])[test_param_position])**2
+
 if needs_fixing:
     
     if test_param_string=="r":
@@ -173,7 +178,9 @@ empty_r_factor = [[empty_width[i][j] / r[i][j] for j in range(len(series[i]))] f
 minor_division = [[from_um_factor[i][j] * 1e3 / resolution[i][j] for j in range(len(series[i]))] for i in range(len(series))]
 mindiv_diameter_factor = [[minor_division[i][j] / (2 * 1e3 * from_um_factor[i][j] * r[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 width_points = [[int(cell_width[i][j] * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
+inner_width_points = [[int( (cell_width[i][j] - 2*pml_width[i][j]) * resolution[i][j]) for j in range(len(series[i]))] for i in range(len(series))]
 grid_points = [[width_points[i][j]**3 for j in range(len(series[i]))] for i in range(len(series))]
+inner_grid_points = [[inner_width_points[i][j]**3 for j in range(len(series[i]))] for i in range(len(series))]
 memory_B = [[2 * 12 * grid_points[i][j] * 32 for j in range(len(series[i]))] for i in range(len(series))]
 
 # Calculate test parameter if needed
@@ -1448,7 +1455,7 @@ first_legend = fig.axes[0].legend(series_lines,
 second_legend = fig.axes[0].legend(
     inside_series_lines, 
     [l.get_label() for l in inside_series_lines],
-    bbox_to_anchor=(1.15, .6), columnspacing=-.5,
+    bbox_to_anchor=(1.15, .65), columnspacing=-.5,
     loc="center", ncol=len(series), frameon=False)
 fig.axes[0].add_artist(first_legend)
 # leg = plt.legend(bbox_to_anchor=(1.40, .5), loc="center right", bbox_transform=fig.axes[0].transAxes)
