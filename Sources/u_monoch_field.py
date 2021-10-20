@@ -104,6 +104,8 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     if any('SPYDER' in name for name in os.environ):
     
+        rm.reset()
+        
         # Sim configuration
         units = True
         resolution_wlen = 10
