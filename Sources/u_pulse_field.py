@@ -108,7 +108,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
         # Sim configuration
         units = False
-        resolution_wlen = 10
+        resolution_wlen = 20
         resolution = 2
         from_um_factor = 10e-3
         courant = 0.5
@@ -119,20 +119,20 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
         
         # Source configuration
         if units: wlen_range = (450, 600)
-        else: wlen_range = (.9, 1.1)#(.9,1.1) #(.95,1.05)
+        else: wlen_range = (.85, 1.15)#(.9,1.1) #(.95,1.05)
         nfreq = 100
         
         # Box spatial dimensions
         wlen_in_vacuum = True
-        pml_wlen_factor = 0.18
-        empty_wlen_factor = 5#0.77 #0.67
+        pml_wlen_factor = 0.38
+        empty_wlen_factor = 2#0.77 #0.67
         
         # Sim temporal dimension
         time_factor_cell = 1.35
         
         # Files configuration
-        series = "JustATest"
-        folder = "Test"
+        series = "TestWatPML0.38EF2"
+        folder = "Test/TestPulse/085115"
         
         # Run configuration
         parallel = False
