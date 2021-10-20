@@ -774,7 +774,7 @@ def check_midflux(params):
         index = [i for i, boolean in enumerate(boolean_array) if boolean]
 
         if len(index) == 0:
-            print("No coincidences where found at the midflux database!")
+            print("No coincidences were found at the midflux database!")
         elif len(index) == 1:
             print(
                 f"You could use midflux data from '{database['path'][index[-1]]}'")
@@ -934,7 +934,7 @@ def check_chunks(params):
                     index_in_common.append(i)
 
         if len(index_in_common) == 0:
-            print("No coincidences where found at the chunks database!")
+            print("No coincidences were found at the chunks database!")
         elif len(index_in_common) == 1:
             print(
                 f"You could use chunks data from '{database['path'][index[0]]}'")
@@ -1055,7 +1055,7 @@ def check_normfield(params):
         index = [i for i, boolean in enumerate(boolean_array) if boolean]
 
         if len(index) == 0:
-            print("No coincidences where found at the normfield database!")
+            print("No coincidences were found at the normfield database!")
         elif len(index) == 1:
             print(
                 f"You could use normfield data from '{database['path'][index[-1]]}'")
