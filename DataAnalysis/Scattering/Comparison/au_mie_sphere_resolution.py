@@ -26,40 +26,43 @@ vp.set_style()
 #%% PARAMETERS <<
 
 # Saving directories
-folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR"]
+folder = ["Scattering/AuSphere/AlgorithmTest/RAM/TestRAMRes/AllVac",
+          "Scattering/AuSphere/AlgorithmTest/RAM/TestRAMRes/AllWat"]
 home = vs.get_home()
 
 # Parameter for the test
-test_param_string = "air_r_factor"
+test_param_string = "resolution"
 test_param_calculation = False
 test_param_in_params = False
 test_param_in_series = True
 test_param_position = 0
-test_param_ij_expression = ""
-test_param_name = trs.choose("Empty Layer Width", "Espesor de capa de agua")
-test_param_units = r"$r$" # Leave "" by default
+test_param_ij_expression = "from_um_factor[i][j] * 1e3 / resolution[i][j]" # Leave "" by default
+test_param_name = trs.choose("Resolution", "Resolución")
+test_param_units = "" # trs.choose("points/MPu","puntos/uMP") # Leave "" by default
+# test_param_name = trs.choose("Minimum space division", "Mínima división espacial")
+# test_param_units = "nm" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = trs.choose([lambda s : rf"Empty Width {vu.find_numbers(s)[test_param_position]:.1f} $r$"]*2,
-                          [lambda s : rf"Espesor Agua {vu.find_numbers(s)[test_param_position]:.1f} $r$"]*2)
-series_must = [""] # leave "" per default
-series_mustnt = [["Old", "0.0"]]*2 # leave "" per default
+series_label = trs.choose([lambda s : rf"Resolution {vu.find_numbers(s)[test_param_position]:.0f} points/MPu"]*2,
+                          [lambda s : rf"Resolución {vu.find_numbers(s)[test_param_position]:.0f} puntos/uMP"]*2)
+series_must = [""]*2 # leave "" per default
+series_mustnt = [""]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
-plot_title_ending = trs.choose("Au 103 nm NP in water", "NP de Au de 103 nm en agua")
-series_legend = trs.choose(["Data"], ["Datos"])
-series_colormaps = [plab.cm.winter]
+plot_title_ending = trs.choose("Au 103 nm NP", "NP de Au de 103 nm")
+series_legend = trs.choose(["Vacuum", "Water"], ["Vacío", "Agua"])
+series_colormaps = [plab.cm.Reds, plab.cm.Blues] # plab.cm.summer.reversed()
 series_ind_colors = [["C0", "C2", "C3"]]*2
-series_colors = ["k"]
+series_colors = ["red", "blue"] # "k"
 series_markers = ["o","o"]
 series_markersizes = [8,8]
 series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_make_big = True
-plot_for_display = True
-plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/EmptyR"
+plot_for_display = False
+plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/Resolution"
 
 #%% LOAD DATA <<
 
@@ -442,7 +445,7 @@ if plot_for_display: use_backend("Qt5Agg")
 if len(series)==1:
     
     with_legend = False
-    needs_plot_fixing = True
+    needs_plot_fixing = False
     
     if plot_for_display: use_backend("Agg")
     
@@ -510,7 +513,7 @@ if len(series)==1:
     if needs_plot_fixing:
         if test_param_string=='max_wlen_range':
             ax2.set_ylim(-.47, -.46)
-        elif test_param_string=='air_r_factor':
+        elif False:
             ax2.set_ylim(-.5, -.4)
             
     if plot_for_display: fig.set_size_inches([9.84, 4.01])

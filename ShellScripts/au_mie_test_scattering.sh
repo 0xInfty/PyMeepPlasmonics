@@ -41,11 +41,34 @@
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -np 4 --material "Ag" --wlen-range 350 500 -r 30 -res 2 -s "SilverDiam60Res2" -f "Test/TestSilver"
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -np 4 --material "Ag" --paper "JC" --wlen-range 350 500 -res 5 -s "SilverJCRes5" -f "Test/TestSilver"
 #############
-mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over00" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over00" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over20" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 20
-mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over10" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 10
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over10" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 10
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over25" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 25
-mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over15" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 15
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over15" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 15
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 -res 4 -s "Over05" -f "Test/TestGlass/OverlapRes4" --wlen-range 500 700 --index 1.33 --surface-index 1.54 --overlap 5
 ############ DO I ADD OVERLAP IN THIS RESOLUTION RUN?
 #mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc 4 --from-um-factor 20e-3 -res 8 -s "GlassRes8" -f "Test/TestGlass/TestGlassRes" --wlen-range "[500, 700]" --index 1.33 --surface-index 1.54
+##########
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/10)TimeFactors/TimeFactorCell" -s "TFC0.7" -res 2 --wlen-range 500 650 --index 1.33 --time-factor-cell 0.7
+##########
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/PMLWlen" -s "PMLWlen0.33Res2" -res 2 --wlen-range 500 650 --index 1.33 --pml-wlen-factor 0.33
+#########
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR" -s "AirR03.0Res2" -res 2 --wlen-range 500 650 --index 1.33 --empty-r-factor 3
+#########
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/FluxR" -s "FluxR0.05Res2" -res 2 --wlen-range 500 650 --index 1.33 --flux-r-factor 0.05
+#########
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/10)TimeFactors/SecondTimeFactor" -s "STF03Res2" -res 2 --wlen-range 500 650 --index 1.33 --second-time-factor 3
+#########
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/Vac450600" -s "Courant0.60Res2" -res 2 --wlen-range 450 600 --courant .6 --load-flux False
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/500650" -s "Courant0.60Res2" -res 2 --wlen-range 500 650 --courant .6 --load-flux False --index 1.33
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/Vac450600" -s "Courant0.65Res2" -res 2 --wlen-range 500 650 --courant .65 --load-flux False
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/Vac450600" -s "Courant0.55Res2" -res 2 --wlen-range 450 600 --courant .55 --load-flux False
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/500650" -s "Courant0.55Res2" -res 2 --wlen-range 500 650 --courant .55 --load-flux False --index 1.33
+#mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/500650" -s "Courant0.65Res2" -res 2 --wlen-range 450 600 --courant .65 --load-flux False --index 1.33
+#######
+mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR" -s "AirR00.0Res2" -res 2 --wlen-range 500 650 --index 1.33 --empty-r-factor 0
+mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR" -s "AirR01.0Res2" -res 2 --wlen-range 500 650 --index 1.33 --empty-r-factor 1
+mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR" -s "AirR01.5Res2" -res 2 --wlen-range 500 650 --index 1.33 --empty-r-factor 1.5
+mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR" -s "AirR02.5Res2" -res 2 --wlen-range 500 650 --index 1.33 --empty-r-factor 2.5
+mpirun -np 4 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -f "Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR" -s "AirR03.5Res2" -res 2 --wlen-range 500 650 --index 1.33 --empty-r-factor 3.5

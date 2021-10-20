@@ -26,40 +26,43 @@ vp.set_style()
 #%% PARAMETERS <<
 
 # Saving directories
-folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/AirR"]
+folder = ["Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/Vac450600",
+          "Scattering/AuSphere/AllWatTest/9)BoxDimensions/Courant/500to650"]
 home = vs.get_home()
 
 # Parameter for the test
-test_param_string = "air_r_factor"
+test_param_string = "courant"
 test_param_calculation = False
-test_param_in_params = False
+test_param_in_params = True
 test_param_in_series = True
 test_param_position = 0
-test_param_ij_expression = ""
-test_param_name = trs.choose("Empty Layer Width", "Espesor de capa de agua")
-test_param_units = r"$r$" # Leave "" by default
+test_param_ij_expression = "" # Leave "" by default
+test_param_name = trs.choose("Courant Factor", "Factor de Courant")
+test_param_units = ""
+# test_param_ij_expression = "courant[i][j] * from_um_factor[i][j] * 1e12 / ( resolution[i][j] * 299792458 )" # Leave "" by default
+# test_param_name = trs.choose("Minimum time division", "Mínima división temporal")
+# test_param_units = "as" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = trs.choose([lambda s : rf"Empty Width {vu.find_numbers(s)[test_param_position]:.1f} $r$"]*2,
-                          [lambda s : rf"Espesor Agua {vu.find_numbers(s)[test_param_position]:.1f} $r$"]*2)
-series_must = [""] # leave "" per default
-series_mustnt = [["Old", "0.0"]]*2 # leave "" per default
+series_label = [lambda s : rf"Courant {vu.find_numbers(s)[test_param_position]:.2f}"]*2
+series_must = [""]*2 # leave "" per default
+series_mustnt = [["Failed", "New", "0.55", "0.60", "0.65"]]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
 plot_title_ending = trs.choose("Au 103 nm NP in water", "NP de Au de 103 nm en agua")
-series_legend = trs.choose(["Data"], ["Datos"])
-series_colormaps = [plab.cm.winter]
+series_legend = trs.choose(["Vacuum", "Water"], ["Vacío", "Agua"])
+series_colormaps = [plab.cm.Reds, plab.cm.Blues] # plab.cm.summer.reversed()
 series_ind_colors = [["C0", "C2", "C3"]]*2
-series_colors = ["k"]
+series_colors = ["red", "blue"] # "k"
 series_markers = ["o","o"]
 series_markersizes = [8,8]
 series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_make_big = True
-plot_for_display = True
-plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/EmptyR"
+plot_for_display = False
+plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/Courant"
 
 #%% LOAD DATA <<
 
@@ -280,7 +283,7 @@ for i in range(len(series)):
              alpha=0.4, markeredgewidth=0, zorder=10)
 if max(fig.axes[0].get_ylim()) >= 0 >= min(fig.axes[0].get_ylim()):
     plt.axhline(color="k", linewidth=.5, zorder=0)
-plt.legend(fig.axes[0].lines, series_legend)
+plt.legend(fig.axes[0].lines, series_legend, loc="center left")
 plt.xlabel(test_param_label)
 if max([len(tp) for tp in test_param])<=4: 
     plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
@@ -315,7 +318,7 @@ if max(fig.axes[0].get_ylim()) >= 0 >= min(fig.axes[0].get_ylim()):
 if plot_for_display and alternate_axis:
     fig.axes[0].yaxis.tick_right()
     fig.axes[0].yaxis.set_label_position("right")
-plt.legend(fig.axes[0].lines, series_legend)
+plt.legend(fig.axes[0].lines, series_legend, loc="center left")
 plt.xlabel(test_param_label)
 if max([len(tp) for tp in test_param])<=4: 
     plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
@@ -424,7 +427,7 @@ for i in range(len(test_param)):
 if max(fig.axes[0].get_ylim()) >= 0 >= min(fig.axes[0].get_ylim()):
     plt.axhline(color="k", linewidth=.5, zorder=0)
 # plt.legend(lines, lines_legend)
-first_legend = plt.legend(lines, lines_legend, ncol=len(series))
+first_legend = plt.legend(lines, lines_legend, ncol=len(series), loc="center left")
 # second_legend = plt.legend(medium_lines, medium_lines_legend, loc="center left")
 # plt.gca().add_artist(first_legend)
 plt.xlabel(test_param_label)
@@ -442,7 +445,7 @@ if plot_for_display: use_backend("Qt5Agg")
 if len(series)==1:
     
     with_legend = False
-    needs_plot_fixing = True
+    needs_plot_fixing = False
     
     if plot_for_display: use_backend("Agg")
     
@@ -510,7 +513,7 @@ if len(series)==1:
     if needs_plot_fixing:
         if test_param_string=='max_wlen_range':
             ax2.set_ylim(-.47, -.46)
-        elif test_param_string=='air_r_factor':
+        elif False:
             ax2.set_ylim(-.5, -.4)
             
     if plot_for_display: fig.set_size_inches([9.84, 4.01])

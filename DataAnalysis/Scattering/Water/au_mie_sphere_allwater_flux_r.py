@@ -44,7 +44,7 @@ sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
 series_label = trs.choose([lambda s : rf"Flux Factor {vu.find_numbers(s)[test_param_position]:.2f} $r$"]*2,
                           [lambda s : rf"Factor de flujo {vu.find_numbers(s)[test_param_position]:.2f} $r$"]*2)
 series_must = [""]*2 # leave "" per default
-series_mustnt = [["MoreAir", "0.50", "1.00", "2.00"], ""] # leave "" per default
+series_mustnt = [["MoreAir", "Old", "0.50", "1.00", "2.00"], ""] # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
@@ -150,7 +150,7 @@ except: print("Sysname needs manual assignment"); needs_fixing = True
 if test_param_string=="flux_r_factor":
     for i in range(len(series)):
         for j in range(len(series[i])):
-            if "0.05" not in series[i][j]:
+            if "0.05" not in series[i][j] and "FluxR/Old" in folder[i]:
                 data[i][j][:,1] = data[i][j][:,1] / (1 + vu.find_numbers(series[i][j])[test_param_position])**2
 
 if needs_fixing:
@@ -1456,7 +1456,7 @@ first_legend = fig.axes[0].legend(series_lines,
 second_legend = fig.axes[0].legend(
     inside_series_lines, 
     [l.get_label() for l in inside_series_lines],
-    bbox_to_anchor=(1.15, .6), columnspacing=-.5,
+    bbox_to_anchor=(1.15, .65), columnspacing=-.5,
     loc="center", ncol=len(series), frameon=False)
 fig.axes[0].add_artist(first_legend)
 # leg = plt.legend(bbox_to_anchor=(1.40, .5), loc="center right", bbox_transform=fig.axes[0].transAxes)
