@@ -37,7 +37,7 @@ def linear_fit(X, Y, dY=None, showplot=True,
         Dependent Y data to fit.
     dY : np-array, list
         Dependent Y data's associated error.
-    shoplot : bool
+    showplot : bool
         Says whether to plot or not.
     plot_some_errors : tuple (bool, int)
         Says wehther to plot only some error bars (bool) and specifies 
@@ -173,7 +173,7 @@ def linear_fit(X, Y, dY=None, showplot=True,
 
 def nonlinear_fit(X, Y, fitfunction, initial_guess=None, dY=None, 
                   showplot=True, plot_some_errors=(False, 20), 
-                  **kwargs):
+                  parameters_bounds=(-np.inf, np.inf), **kwargs):
 
     """Applies nonlinear fit and returns parameters and Rsq. Plots it.
     
@@ -192,6 +192,8 @@ def nonlinear_fit(X, Y, fitfunction, initial_guess=None, dY=None,
         float. Must return only 'Y' as np.array.
     initial_guess=None : list, optional
         A list containing a initial guess for each parameter.
+    parameters_bounds=None : list, optional
+        A list containing a tuple of bounds for each parameter.
     dY : np-array, list, optional
         Dependent Y data's associated error.
     shoplot : bool
@@ -250,7 +252,8 @@ def nonlinear_fit(X, Y, fitfunction, initial_guess=None, dY=None,
         W = 1/dY**2
     
     parameters, covariance = curve_fit(fitfunction, X, Y,
-                                       p0=initial_guess, sigma=W)
+                                       p0=initial_guess, sigma=W,
+                                       bounds=parameters_bounds)
     n = len(parameters)
     rsq = sum( (Y - fitfunction(X, *parameters))**2 )
     rsq = rsq/sum( (Y - np.mean(Y))**2 )
