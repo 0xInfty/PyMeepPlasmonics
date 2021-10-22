@@ -270,11 +270,13 @@ def get_peaks_from_source(source_field,
         field array of shape (K) where K stands for different time instants.
     peaks_sep_sensitivity=0.1 : float between zero and one, optional
         A factor representing the allowed variation percentage in consecutive 
-        peaks separation. Any deviated value will be dropped.
+        peaks separation. Any deviated value will be dropped. If None is 
+        provided, no value will be discarded.
     last_stable_periods=5 : int, optional
         Number of periods to take as reference of the stable signal, extracted 
         from the end as the signal is assumed to have both a transcient and a 
-        stationary regimen.
+        stationary regimen. If None is provided, all of the signal is taken as 
+        reference.
 
     Returns
     -------
@@ -282,43 +284,66 @@ def get_peaks_from_source(source_field,
         List of int index for the maximum peaks found inside the input array.
     """
     
+    if not isinstance(source_field, np.ndarray):
+        source_field = np.array(source_field)
+    
     # peaks = find_peaks(source_field, height=0)[0]
-    peaks = find_peaks(np.abs(source_field), 
-                       height=np.max(np.abs(source_field))/2)[0]
+    if np.sign(np.min(source_field)) == np.sign(np.max(source_field)):
+        max_peaks = find_peaks(source_field)[0]
+        min_peaks = find_peaks(-source_field)[0]
+        peaks = [*min_peaks, *max_peaks]
+        peaks.sort()
+    else:
+        peaks = find_peaks(np.abs(source_field), 
+                            height=np.max(np.abs(source_field))/2)[0]
     # All peaks, no only maximums, but minimums too
     
-    # Take the last periods as reference and define periodicity criteria
-    mean_diff = np.mean(np.diff(peaks[-2*last_stable_periods:]))
-    def selection_criteria(k):
-        eval_point = np.abs( mean_diff - (peaks[k+1] - peaks[k]) )
-        return eval_point <= peaks_sep_sensitivity * mean_diff
-    
-    # Filter peaks to make sure they are periodic; i.e. they have equispaced index
-    selected_peaks = []
-    for k in range(len(peaks)):
-        if k == 0 and selection_criteria(k):
-            selected_peaks.append(peaks[k])
-        elif k == len(peaks)-1 and selection_criteria(k-1):
-            selected_peaks.append(peaks[k])
-        elif selection_criteria(k):
-            selected_peaks.append(peaks[k])
+    if peaks_sep_sensitivity is not None:
+        
+        # Take the last periods as reference and define periodicity criteria
+        if last_stable_periods is not None:
+            mean_diff = np.mean(np.diff(peaks[-2*last_stable_periods:]))
+        else: mean_diff = np.mean(np.diff(peaks))
+        def selection_criteria(k):
+            eval_point = np.abs( mean_diff - (peaks[k+1] - peaks[k]) )
+            return eval_point <= peaks_sep_sensitivity * mean_diff
+        
+        # Filter peaks to make sure they are periodic; i.e. they have equispaced index
+        selected_peaks = []
+        for k in range(len(peaks)):
+            if k == 0 and selection_criteria(k):
+                selected_peaks.append(peaks[k])
+            elif k == len(peaks)-1 and selection_criteria(k-1):
+                selected_peaks.append(peaks[k])
+            elif selection_criteria(k):
+                selected_peaks.append(peaks[k])
+                
+    else: selected_peaks = peaks
 
-    # Check if there's always a single maximum and a single minimum per period
-    # If not, try to fix it or raise Warning.
-    selected_sign = np.sign(source_field[selected_peaks])
-    if np.min(np.abs(np.diff( selected_sign ))) != 2:
-        error_index = np.argmin(np.abs(np.diff( selected_sign )))
-        missing_index_lower_bound = selected_peaks[ error_index ]
-        missing_index_upper_bound = selected_peaks[ error_index + 1 ]
-        if missing_index_upper_bound - missing_index_lower_bound == 2:
-            selected_peaks = [*selected_peaks[: error_index + 1],
-                              missing_index_lower_bound + 1,
-                              *selected_peaks[error_index + 1 :]]
-            selected_sign = np.sign(source_field[selected_peaks])
-            if np.min(np.abs(np.diff( selected_sign ))) != 2:
-                print("Warning! Sign algorithm failed and it couldn't be fixed!")
-        else:
-            print("Warning! Sign algorithm must have failed!")
+    if np.sign(np.min(source_field)) != np.sign(np.max(source_field)):
+        # Check if there's always a single maximum and a single minimum per period
+        # If not, try to fix it or raise Warning.
+        selected_sign = np.sign(source_field[selected_peaks])
+        if np.min(np.abs(np.diff( selected_sign ))) != 2:
+            error_index = np.argmin(np.abs(np.diff( selected_sign )))
+            missing_index_lower_bound = selected_peaks[ error_index ]
+            missing_index_upper_bound = selected_peaks[ error_index + 1 ]
+            if missing_index_upper_bound - missing_index_lower_bound == 2:
+                selected_peaks = [*selected_peaks[: error_index + 1],
+                                  missing_index_lower_bound + 1,
+                                  *selected_peaks[error_index + 1 :]]
+                selected_sign = np.sign(source_field[selected_peaks])
+                if np.min(np.abs(np.diff( selected_sign ))) != 2:
+                    print("Warning! Sign algorithm failed and it couldn't be fixed!")
+            else:
+                print("Warning! Sign algorithm must have failed!")
+    else:
+        k = 0
+        selected_min, selected_max = [], []
+        for p in selected_peaks:
+            if p in min_peaks: selected_min.append(p); k+=1
+            else: selected_max.append(p); k-=1
+            if abs(k)>=2: print("Warning! Sign algorithm must have failed!"); break
 
     return selected_peaks
 
@@ -340,7 +365,8 @@ def get_period_from_source(source_field, t_line=None,
         number array is created.
     peaks_sep_sensitivity=0.1 : float between zero and one, optional
         A factor representing the allowed variation percentage in consecutive 
-        peaks separation. Any deviated value will be dropped.
+        peaks separation. Any deviated value will be dropped. If None is 
+        provided, no value will be discarded.
     periods_sensitivity=0.05 : float between zero and one, optional
         A factor representing the allowed variation percentage in the period 
         of selected peaks. All values prior to a certain point will be dropped, 
@@ -348,7 +374,8 @@ def get_period_from_source(source_field, t_line=None,
     last_stable_periods=5 : int, optional
         Number of periods to take as reference of the stable signal, extracted 
         from the end as the signal is assumed to have both a transcient and a 
-        stationary regimen.
+        stationary regimen. If None is provided, all of the signal is taken as 
+        reference.
 
     Returns
     -------
@@ -359,6 +386,8 @@ def get_period_from_source(source_field, t_line=None,
         identified to be stable.
     """
     
+    if not isinstance(source_field, np.ndarray):
+        source_field = np.array(source_field)
     if t_line is None:
         t_line = np.arange(len(source_field))
     
@@ -367,21 +396,30 @@ def get_period_from_source(source_field, t_line=None,
                                   last_stable_periods=last_stable_periods)
     semiperiods = np.array(t_line[peaks[1:]] - t_line[peaks[:-1]])
     
-    # Take the last periods as reference and define stability criteria
-    mean_semiperiods = np.mean(semiperiods[-2*last_stable_periods:])
-    def selection_criteria(k):
-        eval_point = np.abs(semiperiods[k] - mean_semiperiods)
-        return eval_point <= periods_sensitivity * mean_semiperiods
-    
-    # Choose only the latter stable periods to compute period
-    keep_periods_from = 0
-    for k in range(len(semiperiods)):
-        if not selection_criteria(k):
-            keep_periods_from = max(keep_periods_from, k+1)
-    stable_semiperiods = semiperiods[keep_periods_from:]
-    
-    period = 2*np.mean(stable_semiperiods)
-    considered_peaks = peaks[keep_periods_from:]
+    if periods_sensitivity is not None:
+        
+        # Take the last periods as reference and define stability criteria
+        if last_stable_periods is not None:
+            mean_semiperiods = np.mean(semiperiods[-2*last_stable_periods:])
+        else: mean_semiperiods = np.mean(semiperiods)
+        def selection_criteria(k):
+            eval_point = np.abs(semiperiods[k] - mean_semiperiods)
+            return eval_point <= periods_sensitivity * mean_semiperiods
+        
+        # Choose only the latter stable periods to compute period
+        keep_periods_from = 0
+        for k in range(len(semiperiods)):
+            if not selection_criteria(k):
+                keep_periods_from = max(keep_periods_from, k+1)
+        stable_semiperiods = semiperiods[keep_periods_from:]
+        
+        period = 2*np.mean(stable_semiperiods)
+        considered_peaks = peaks[keep_periods_from:]
+        
+    else: 
+        
+        period = 2*np.mean(semiperiods)
+        considered_peaks = peaks
     
     return considered_peaks, period
 
@@ -402,11 +440,13 @@ def get_amplitude_from_source(source_field,
     amplitude_sensitivity=0.05 : float between zero and one, optional
         A factor representing the allowed variation percentage in the amplitude
         of selected peaks. All values prior to a certain point will be dropped, 
-        keeping only the last values identified to be stable.
+        keeping only the last values identified to be stable. If None is 
+        provided, no value will be discarded.
     last_stable_periods=5 : int, optional
         Number of periods to take as reference of the stable signal, extracted 
         from the end as the signal is assumed to have both a transcient and a 
-        stationary regimen.
+        stationary regimen. If None is provided, all of the signal is taken as 
+        reference.
 
     Returns
     -------
@@ -417,26 +457,45 @@ def get_amplitude_from_source(source_field,
         identified to be stable.
     """
     
+    if not isinstance(source_field, np.ndarray):
+        source_field = np.array(source_field)
+    
     peaks = get_peaks_from_source(source_field, 
                                   peaks_sep_sensitivity=peaks_sep_sensitivity,
                                   last_stable_periods=last_stable_periods)
-    heights = np.abs(source_field[peaks])
     
-    # Take the last periods as reference and define stability criteria
-    mean_height = np.mean(heights[-2*last_stable_periods:])
-    def selection_criteria(k):
-        eval_point = np.abs(heights[k] - mean_height)
-        return eval_point <= amplitude_sensitivity * mean_height
-    
-    # Choose only the latter stable periods to compute amplitude
-    amp_keep_periods_from = 0
-    for k in range(len(heights)):
-        if not selection_criteria(k):
-            amp_keep_periods_from = max(amp_keep_periods_from, k+1)
-    stable_heights = np.abs(source_field[peaks[amp_keep_periods_from:]])
-    
-    considered_peaks = peaks[amp_keep_periods_from:]
-    amplitude = np.mean(stable_heights)
+    if np.sign(np.min(source_field[peaks])) != np.sign(np.max(source_field[peaks])):
+        heights = np.abs(source_field[peaks])
+    else:
+        heights = np.abs( np.diff(source_field[peaks]) ) / 2
+        
+    if amplitude_sensitivity is not None:
+        
+        # Take the last periods as reference and define stability criteria
+        if last_stable_periods is not None:
+            mean_height = np.mean(heights[-2*last_stable_periods:])
+        else: mean_height = np.mean(heights)
+        def selection_criteria(k):
+            eval_point = np.abs(heights[k] - mean_height)
+            return eval_point <= amplitude_sensitivity * mean_height
+        
+        # Choose only the latter stable periods to compute amplitude
+        amp_keep_periods_from = 0
+        for k in range(len(heights)):
+            if not selection_criteria(k):
+                amp_keep_periods_from = max(amp_keep_periods_from, k+1)
+        if np.sign(np.min(source_field[peaks])) != np.sign(np.max(source_field[peaks])):
+            stable_heights = np.abs(source_field[peaks[amp_keep_periods_from:]])
+        else:
+            stable_heights = np.abs( np.diff(source_field[peaks[amp_keep_periods_from:]]) ) / 2
+                
+        considered_peaks = peaks[amp_keep_periods_from:]
+        amplitude = np.mean(stable_heights)
+        
+    else: 
+        
+        considered_peaks = peaks
+        amplitude = np.mean(heights)
     
     return considered_peaks, amplitude
 
