@@ -25,15 +25,15 @@ sys.path.append(syshome+"/PlotRoutines")
 import click as cli
 import meep as mp
 import numpy as np
-import matplotlib.pyplot as plt
 import os
-import PyMieScatt as ps
 import v_materials as vmt
 import v_meep as vm
 import v_save as vs
 import v_utilities as vu
 
 from np_planewave_cell_plot import plot_np_planewave_cell
+from np_pulse_scattering_plot import mid_plots_np_scattering
+from np_pulse_scattering_plot import plots_np_scattering
 
 rm = vm.ResourcesMonitor()
 rm.measure_ram()
@@ -505,12 +505,9 @@ def main(from_um_factor, resolution, courant,
                              box_y1_flux0, box_y2_flux0, box_z1_flux0, box_z2_flux0]).T
         
         header_mid = [r"Longitud de onda $\lambda$ [nm]", 
-                      "Flujo X10 [u.a.]",
-                      "Flujo X20 [u.a]",
-                      "Flujo Y10 [u.a]",
-                      "Flujo Y20 [u.a]",
-                      "Flujo Z10 [u.a]",
-                      "Flujo Z20 [u.a]"]
+                      "Flujo X10 [u.a.]", "Flujo X20 [u.a]",
+                      "Flujo Y10 [u.a]", "Flujo Y20 [u.a]",
+                      "Flujo Z10 [u.a]", "Flujo Z20 [u.a]"]
         
         if pm.assign(0):
             vs.savetxt(sa.file("MidFlux.txt"), data_mid, 
@@ -525,27 +522,8 @@ def main(from_um_factor, resolution, courant,
 
         #% PLOT FLUX FOURIER MID DATA
         
-        if pm.assign(1) and make_plots:
-            ylims = (np.min(data_mid[:,1:]), np.max(data_mid[:,1:]))
-            ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
-                      ylims[1]+.1*(ylims[1]-ylims[0]))
-            
-            fig, ax = plt.subplots(3, 2, sharex=True)
-            fig.subplots_adjust(hspace=0, wspace=.05)
-            for a in ax[:,1]:
-                a.yaxis.tick_right()
-                a.yaxis.set_label_position("right")
-            for a, h in zip(np.reshape(ax, 6), header_mid[1:]):
-                a.set_ylabel(h)
-            
-            for d, a in zip(data_mid[:,1:].T, np.reshape(ax, 6)):
-                a.plot(data_mid[:,0], d)
-                a.set_ylim(*ylims)
-            ax[-1,0].set_xlabel(r"Wavelength $\lambda$ [nm]")
-            ax[-1,1].set_xlabel(r"Wavelength $\lambda$ [nm]")
-            
-            plt.savefig(sa.file("MidFlux.png"))
-            del fig, ax, ylims, a, h
+        if make_plots: mid_plots_np_scattering(series, folder, 
+                                               english=trs.english)
             
         sim.reset_meep()
         del data_mid, box_x2_flux0, box_y1_flux0, box_y2_flux0
@@ -698,9 +676,9 @@ def main(from_um_factor, resolution, courant,
     
     #%% SCATTERING ANALYSIS
     
-    scatt_flux = box_x1_flux - box_x2_flux
-    scatt_flux = scatt_flux + box_y1_flux - box_y2_flux
-    scatt_flux = scatt_flux + box_z1_flux - box_z2_flux
+    scatt_flux = box_x2_flux - box_x1_flux
+    scatt_flux = scatt_flux + box_y2_flux - box_y1_flux
+    scatt_flux = scatt_flux + box_z2_flux - box_z1_flux
     
     intensity = box_x1_flux0/(flux_box_size)**2
     # Flux of one of the six monitor planes / Área
@@ -712,19 +690,18 @@ def main(from_um_factor, resolution, courant,
     # Scattering cross section σ = 
     # = scattered power in all directions / incident intensity.
     
-    scatt_eff_meep = -1 * scatt_cross_section / (np.pi*r**2)
+    scatt_eff_meep = scatt_cross_section / (np.pi*r**2)
     # Scattering efficiency =
     # = scattering cross section / cross sectional area of the sphere
     
     freqs = np.array(freqs)
-    scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
-                                1e3*from_um_factor/f,
-                                2*r*1e3*from_um_factor,
-                                nMedium=submerged_index,
-                                asDict=True)['Qsca'] 
-                        for f in freqs]
-    # The simulation results are validated by comparing with 
-    # analytic theory of PyMieScatt module
+    wlens = 1e3 * from_um_factor / freqs 
+    scatt_eff_theory = vmt.sigma_scatt_meep(r * from_um_factor * 1e3, # Radius [nm]
+                                            material, paper, 
+                                            wlens, # Wavelength [nm]
+                                            surrounding_index=submerged_index,
+                                            asEffiency=True)
+    # Results are validated by comparing with analytic Mie theory
     
     #%% ANGULAR PATTERN ANALYSIS
     
@@ -830,7 +807,7 @@ def main(from_um_factor, resolution, courant,
                          poynting_r.reshape(poynting_r.size)]
         
         if pm.assign(1):
-            vs.savetxt(sa.file("Near2FarResults.txt"), data_near2far, 
+            vs.savetxt(sa.file("Near2FarResults.txt"), np.array(data_near2far).T, 
                        header=header_near2far, footer=params)
         del header_near2far, data_near2far
         
@@ -840,200 +817,11 @@ def main(from_um_factor, resolution, courant,
     if sysname != "TC":
         rm.save(sa.file("Resources.h5"), params)
     
-    #%% PLOT ALL TOGETHER
+    #%% MAKE PLOTS, IF NEEDED
     
-    if pm.assign(0) and surface_index==submerged_index and make_plots:
-        plt.figure()
-        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
-                             'Scattering de esfera de {} con diámetro {:.1f} nm'
-                             ).format(material, 2*r*from_um_factor*1e3 ))
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',
-                 label=trs.choose('Theory', 'Teoría'))
-        plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
-        plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
-                              'Eficiencia de scattering [σ/πr$^{2}$]'))
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(sa.file("Comparison.png"))
-    
-    #%% PLOT SEPARATE
-    
-    if pm.assign(1) and make_plots:
-        plt.figure()
-        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
-                             'Scattering de esfera de {} con diámetro {:.1f} nm'
-                             ).format(material, 2*r*from_um_factor*1e3 ))
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
-        plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
-                              'Eficiencia de scattering [σ/πr$^{2}$]'))
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(sa.file("Meep.png"))
-        
-    if pm.assign(0) and surface_index==submerged_index and make_plots:
-        plt.figure()
-        plt.title(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
-                             'Scattering de esfera de {} con diámetro {:.1f} nm'
-                             ).format(material, 2*r*from_um_factor*1e3 ))
-        plt.plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',
-                 label=trs.choose('Theory', 'Teoría'))
-        plt.xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
-        plt.ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
-                              'Eficiencia de scattering [σ/πr$^{2}$]'))
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(sa.file("Theory.png"))
-    
-    #%% PLOT ONE ABOVE THE OTHER
-    
-    if pm.assign(1) and surface_index==submerged_index and make_plots:
-        fig, axes = plt.subplots(nrows=2, sharex=True)
-        fig.subplots_adjust(hspace=0)
-        plt.suptitle(trs.choose('Scattering of {} Sphere With {:.1f} nm Diameter',
-                                'Scattering de esfera de {} con diámetro {:.1f} nm'
-                                ).format(material, 2*r*from_um_factor*1e3 ))
-        axes[0].plot(1e3*from_um_factor/freqs, scatt_eff_meep,'bo-',label='Meep')
-        axes[0].yaxis.tick_right()
-        axes[0].set_ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
-                                      'Eficiencia de scattering [σ/πr$^{2}$]'))
-        axes[0].legend()
-        
-        axes[1].plot(1e3*from_um_factor/freqs, scatt_eff_theory,'ro-',label='Theory')
-        axes[1].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
-        axes[1].set_ylabel('Scattering efficiency [σ/πr$^{2}$]')
-        axes[0].set_ylabel(trs.choose('Scattering efficiency [σ/πr$^{2}$]', 
-                                      'Eficiencia de scattering [σ/πr$^{2}$]'))
-        axes[1].legend()
-        
-        plt.savefig(sa.file("SeparatedComparison.png"))
-            
-    #%% PLOT FLUX FOURIER FINAL DATA
-    
-    if pm.assign(0) and make_plots:
-        
-        ylims = (np.min(data_base[:,2:8]), np.max(data_base[:,2:8]))
-        ylims = (ylims[0]-.1*(ylims[1]-ylims[0]),
-                  ylims[1]+.1*(ylims[1]-ylims[0]))
-        
-        fig, ax = plt.subplots(3, 2, sharex=True)
-        fig.subplots_adjust(hspace=0, wspace=.05)
-        plt.suptitle(trs.choose('Final flux of {} Sphere With {:.1f} nm Diameter',
-                                'Flujo final de esfera de {} con diámetro {:.1f} nm'
-                                ).format(material, 2*r*from_um_factor*1e3 ))
-        for a in ax[:,1]:
-            a.yaxis.tick_right()
-            a.yaxis.set_label_position("right")
-        for a, h in zip(np.reshape(ax, 6), header_base[1:7]):
-            a.set_ylabel(h)
-        
-        for d, a in zip(data_base[:,3:9].T, np.reshape(ax, 6)):
-            a.plot(1e3*from_um_factor/freqs, d)
-            a.set_ylim(*ylims)
-        ax[-1,0].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
-        ax[-1,1].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
-        
-        plt.savefig(sa.file("FinalFlux.png"))
-    
-    #%% PLOT ANGULAR PATTERN IN 3D
-    
-    if near2far and pm.assign(1) and separate_simulations_needed and make_plots:
-    
-        freq_index = np.argmin(np.abs(freqs - freq_center))
-    
-        fig = plt.figure()
-        plt.suptitle(trs.choose(
-            'Angular Pattern of {} Sphere With {:.1f} nm Diameter at {:.1f} nm',
-            'Patrón angular de esfera de {} con diámetro {:.1f} nm a {:.1f} nm'
-            ).format(material,
-                     2*r*from_um_factor*1e3, 
-                     from_um_factor*1e3/freqs[freq_index] ))
-        ax = fig.add_subplot(1,1,1, projection='3d')
-        ax.plot_surface(
-            poynting_x[:,:,freq_index], 
-            poynting_y[:,:,freq_index], 
-            poynting_z[:,:,freq_index], cmap=plt.get_cmap('jet'), 
-            linewidth=1, antialiased=False, alpha=0.5)
-        ax.set_xlabel(r"$P_x$")
-        ax.set_ylabel(r"$P_y$")
-        ax.set_zlabel(r"$P_z$")
-        
-        plt.savefig(sa.file("AngularPattern.png"))
-        
-    #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
-        
-    if near2far and pm.assign(0) and separate_simulations_needed and make_plots:
-        
-        freq_index = np.argmin(np.abs(freqs - freq_center))
-        index = [list(polar_angle).index(alpha) for alpha in [0, .25, .5, .75, 1]]
-        
-        plt.figure()
-        plt.suptitle(trs.choose(
-            'Angular Pattern of {} Sphere With {:.1f} nm Diameter at {:.1f} nm',
-            'Patrón angular de esfera de {} con diámetro {:.1f} nm a {:.1f} nm'
-            ).format(material,
-                     2*r*from_um_factor*1e3, 
-                     from_um_factor*1e3/freqs[freq_index] ))
-        ax_plain = plt.axes()
-        for i in index:
-            ax_plain.plot(poynting_x[:,i,freq_index], 
-                          poynting_y[:,i,freq_index], 
-                          ".-", label=rf"$\theta$ = {polar_angle[i]:.2f} $\pi$")
-        plt.legend()
-        ax_plain.set_xlabel(r"$P_x$")
-        ax_plain.set_ylabel(r"$P_y$")
-        ax_plain.set_aspect("equal")
-        
-        plt.savefig(sa.file("AngularPolar.png"))
-        
-    #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
-        
-    if near2far and pm.assign(1) and separate_simulations_needed and make_plots:
-        
-        freq_index = np.argmin(np.abs(freqs - freq_center))
-        index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
-        
-        plt.figure()
-        plt.suptitle(trs.choose(
-            'Angular Pattern of {} Sphere With {:.1f} nm Diameter at {:.1f} nm',
-            'Patrón angular de esfera de {} con diámetro {:.1f} nm a {:.1f} nm'
-            ).format(material,
-                     2*r*from_um_factor*1e3, 
-                     from_um_factor*1e3/freqs[freq_index] ))
-                     
-        ax_plain = plt.axes()
-        for i in index:
-            ax_plain.plot(poynting_x[i,:,freq_index], 
-                          poynting_z[i,:,freq_index], 
-                          ".-", label=rf"$\phi$ = {azimuthal_angle[i]:.2f} $\pi$")
-        plt.legend()
-        ax_plain.set_xlabel(r"$P_x$")
-        ax_plain.set_ylabel(r"$P_z$")
-        
-        plt.savefig(sa.file("AngularAzimuthal.png"))
-        
-    if near2far and pm.assign(0) and separate_simulations_needed and make_plots:
-        
-        freq_index = np.argmin(np.abs(freqs - freq_center))
-        index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
-        
-        plt.figure()
-        plt.suptitle(trs.choose(
-            'Angular Pattern of {} Sphere With {:.1f} nm Diameter at {:.1f} nm',
-            'Patrón angular de esfera de {} con diámetro {:.1f} nm a {:.1f} nm'
-            ).format(material,
-                     2*r*from_um_factor*1e3, 
-                     from_um_factor*1e3/freqs[freq_index] ))
-        ax_plain = plt.axes()
-        for i in index:
-            ax_plain.plot(np.sqrt(np.square(poynting_x[i,:,freq_index]) + np.square(poynting_y[i,:,freq_index])), 
-                                  poynting_z[i,:,freq_index], ".-", label=rf"$\phi$ = {azimuthal_angle[i]:.2f} $\pi$")
-        plt.legend()
-        ax_plain.set_xlabel(r"$P_\rho$")
-        ax_plain.set_ylabel(r"$P_z$")
-        
-        plt.savefig(sa.file("AngularAzimuthalAbs.png"))
+    if make_plots: plots_np_scattering(series, folder, near2far, 
+                                       separate_simulations_needed, 
+                                       english=trs.english)
         
 #%%
 
