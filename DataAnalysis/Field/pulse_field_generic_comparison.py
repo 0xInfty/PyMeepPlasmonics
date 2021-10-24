@@ -52,11 +52,11 @@ test_param_in_series = True
 test_param_position = 0
 test_param_ij_expression = "pml_width[i][j]" # Leave "" by default
 test_param_name = trs.choose("PML Width", "Espesor PML")
-test_param_units = r"$\Delta\lambda_{max}$" # Leave "" by default
+test_param_units = r"$\lambda_{0}$" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = [lambda s : f"PML {vu.find_numbers(s)[test_param_position]:.2f} "+r"$\Delta\lambda_{max}$"]*2
+series_label = [lambda s : f"PML {vu.find_numbers(s)[test_param_position]:.2f} "+r"$\lambda_{0}$"]*2
 series_must = ["Vac", "Wat"] # leave "" per default
 series_mustnt = ["Res"]*2 # leave "" per default
 
@@ -326,11 +326,15 @@ plt.ylabel(trs.choose("Maximum Wavelength Percentual Variation",
 plt.tight_layout()
 plt.savefig(plot_file("LambdaVariation.png"))
 
-#%% MEAN SQUARED DIFFERENCE PLOT
+#%% MEAN SQUARED DIFFERENCE PLOT ==
 
-plt.figure()
-plt.title(trs.choose("Spectrum source contrast for ", 
-                     "Contraste de espectro de la fuente para ") + plot_title_ending)
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+if plot_for_display: fig.dpi = 200
+if not plot_for_display:
+    plt.title(trs.choose("Spectrum source contrast for ", 
+                         "Contraste de espectro de la fuente para ") + plot_title_ending)
 for i in range(len(series)):
     plt.plot(test_param[i], 
              fourier_msqdiff[i], 
@@ -340,9 +344,21 @@ plt.legend(series_legend)
 plt.xlabel(test_param_label)
 plt.ylabel(trs.choose("Electric Field Fourier\nMean Squared Difference\n",
                       "Diferencia cuadrática media \nen transformada del campo eléctrico\n") + 
-           r"$MSD[\;\mathcal{F}^{MEEP}(\lambda) - \mathcal{F}^{MEEP}(\lambda)\;]$")
-plt.tight_layout()
+           r"$MSD[\;\mathcal{F}^{MEEP}(\lambda) - \mathcal{F}^{GAUSS}(\lambda)\;]$")
+fig.axes[0].set_yscale("log")
+
+for ax in fig.axes:
+    box = ax.get_position()
+    width = box.x1 - box.x0
+    box.x1 = box.x1 + .08 * width
+    box.x0 = box.x0 + .08 * width
+    box.y1 = box.y1 + .05*(box.y1 - box.y0)
+    ax.set_position(box)
+    
+fig.set_size_inches([6 , 4.32])
 plt.savefig(plot_file("FourierMSD.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
 
 #%% ANALYSE FLUX WALLS <<
 
@@ -394,7 +410,7 @@ plt.title(trs.choose("Flux spectrum contrast for ",
                      "Contraste en espectro de flujo para ") + plot_title_ending)
 for i in range(len(series)):
     for j in range(len(series[i])):
-        plt.plot(np.array(flux_wall_positions[i][j]) * index[i][j] / np.mean(wlen_range)[i][j], 
+        plt.plot(np.array(flux_wall_positions[i][j]) * index[i][j] / np.mean(wlen_range[i][j]), 
                  flux_msqdiff[i][j], "o-", color=colors[i][j], 
                  alpha=0.6, label=series_label[i](series[i][j]))
         plt.axvline(-empty_width[i][j] * index[i][j], color=colors[i][j],
@@ -430,7 +446,9 @@ flux_max_amplitude = [[vma.get_amplitude_from_source(flux_max_intensity[i][j],
 flux_max_relative_amplitude = [[flux_max_amplitude[i][j] / np.mean(flux_max_intensity[i][j])
                                 for j in range(len(series[i]))] for i in range(len(series))]
 
-#%% PLOT INTERFERENCE AMPLITUDE
+#%% PLOT INTERFERENCE AMPLITUDE ==
+
+alternate_axis = True
 
 if plot_for_display: use_backend("Agg")
 
@@ -456,13 +474,21 @@ plt.ylabel(trs.choose("Oscillations Amplitude in Flux ",
                       "Amplitud de las oscilaciones del flujo ") + 
            "$\Delta P_{max}$ [%]")
 fig.axes[0].set_yscale("log")
+if alternate_axis:
+    fig.axes[0].yaxis.tick_right()
+    fig.axes[0].yaxis.set_label_position("right")
 fig.set_size_inches([6 , 4.32])
-fig.tight_layout()
+
+for ax in fig.axes:
+    box = ax.get_position()
+    box.x1 = box.x1 - .05 * (box.x1 - box.x0)
+    ax.set_position(box)
+
 vs.saveplot(plot_file("FluxMaximumVariation.png"), overwrite=True)
 
 if plot_for_display: use_backend("Qt5Agg")
 
-#%% COMPARE TEST PARAMETERS
+#%% COMPARE TEST PARAMETER VALUES: SOURCE AND FIELD ==
 
 test_param_to_compare = [0.10, 0.25, 0.50]
 which_series = 1
@@ -480,16 +506,16 @@ for k in range(N):
     i = which_series
     j = which_inside_series[k]
 
-    axes[k,0].set_title(series_legend[i]+": "+series_label[i](series[i][j]))
+    axes[k,0].set_title(series_legend[i]+":\n"+series_label[i](series[i][j]))
 
     T, X = np.meshgrid(t_line[i][j], 
                        x_line_cropped[i][j] * index[i][j] / np.mean(wlen_range[i][j]))
-    axes[k,0].contourf(T, X, results_cropped_line[i][j], 100, cmap='RdBu')
+    pic = axes[k,0].contourf(T, X, results_cropped_line[i][j], 100, cmap='RdBu')
     axes[k,0].axhline(color="k", linewidth=.5)
 
-    axes[k,1].plot(t_line[i][j], source_results[i][j] / np.max(source_results[i][j]),
+    axes[k,1].plot(t_line[i][j], source_results[i][j] / np.max(np.abs(source_results[i][j])),
                    label=series_label[i](series[i][j]))
-    axes[k,1].axhline(color="k", linewidth=.5)    
+    axes[k,1].axhline(color="k", linewidth=.5)
 
 axes[0,0].set_ylabel(trs.choose(r"Position $X$ [$\lambda_0/n$]", 
                                 r"Posición  $X$ [$\lambda_0/n$]"))
@@ -508,15 +534,38 @@ for k in range(N):
         axes[k,0].yaxis.set_ticklabels( [] )
         axes[k,1].yaxis.set_ticklabels( [] )
         
-plt.savefig(plot_file("ComparisonSourceXVsT.png"))
-    
+cax = axes[-1,1].inset_axes([1.04, 0, 0.07, 2.5],
+                            transform=axes[-1,1].transAxes)
+cbar = fig.colorbar(pic, ax=axes[-1,0], cax=cax)
+cbar.set_label(trs.choose("Electric Field\n"+r"$E_z(x,\,y=z=0)$",
+                          "Campo eléctrico\n"+r"$E_z(x,\,y=z=0)$"))
+
+for ax in axes.flatten():
+    box = ax.get_position()
+    width = box.x1 - box.x0
+    box.x1 = box.x1 - .1 * width
+    box.x0 = box.x0 - .1 * width
+    ax.set_position(box)
+           
 fig.set_size_inches([10.02, 5.94])
 
-#%%
+plt.savefig(plot_file("ComparisonSourceField.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% COMPARE TEST PARAMETER VALUES: FLUX WALLS ==
+
+test_param_to_compare = [0.10, 0.25, 0.50]
+which_series = 1
+N = len(test_param_to_compare)
+which_inside_series = [test_param[which_series].index(test_param_to_compare[k]) for k in range(N)]
 
 if np.std(n_flux_walls)<10e-6:
     
-    these_colors = plab.cm.Greens(np.linspace(0,1,n_flux_walls[0][0]+2)[2:])
+    with_legend = False
+    these_colors = plab.cm.Greens(np.linspace(0,1,n_flux_walls[0][0]))
+    
+    if plot_for_display: use_backend("Agg")
     
     fig, axes = plt.subplots(ncols=N, nrows=2, 
                              gridspec_kw={"hspace":0, "wspace":0, "height_ratios":(1,1)})
@@ -542,10 +591,6 @@ if np.std(n_flux_walls)<10e-6:
     
         axes[k,1].plot(np.array(flux_wall_positions[i][j]) * index[i][j] / np.mean(wlen_range[i][j]), 
                        flux_max_intensity[i][j] / np.mean(flux_max_intensity[i][j]), "o-")
-        # axes[k,1].axvline(-empty_width[i][j] * index[i][j], color="k",
-        #                   linestyle=(0, (5,10)), linewidth=.8)
-        # axes[k,1].axvline(empty_width[i][j] * index[i][j], color="k",
-        #                   linestyle=(0, (5,10)), linewidth=.8)
         axes[k,1].axvline(linewidth=1, color="k")
         
     
@@ -573,14 +618,22 @@ if np.std(n_flux_walls)<10e-6:
             axes[k,0].yaxis.set_ticklabels( [] )
             axes[k,1].yaxis.set_ticklabels( [] )
         
-    plt.legend(inside_lines, [l.get_label() for l in inside_lines], ncol=4,
-                     frameon=True, framealpha=1, bbox_to_anchor=(2, 0),
-                     bbox_transform=axes[0,0].transAxes)
+    if with_legend:
+        plt.legend(inside_lines, [l.get_label() for l in inside_lines], ncol=4,
+                         frameon=True, framealpha=1, bbox_to_anchor=(2, 0),
+                         bbox_transform=axes[0,0].transAxes)
     
     fig.set_size_inches([10.02, 7])
     
-    plt.savefig(plot_file("ComparisonSourceXVsT.png"))
-    
-    if plot_for_display: use_backend("Qt5Agg")
+    plt.savefig(plot_file("ComparisonFluxWalls.png"))
     
     # Me falta ver si a este gráfico le puedo poner una colorbar en vez de leyenda.
+    
+    fig = plt.figure()
+    plt.imshow(np.array([np.array(flux_wall_positions[i][0]) * np.array(index[i][0]) / np.mean(wlen_range[i][0]) for i in range(len(series))]),
+               cmap=plab.cm.Greens)
+    plt.colorbar(label=trs.choose(r"Position $X$ [$\lambda_0/n$]", r"Posición  $X$ [$\lambda_0/n$]"))
+    fig.set_size_inches([10.02, 7])
+    plt.savefig(plot_file("ComparisonFluxWallsColorbar.png"))
+    
+    if plot_for_display: use_backend("Qt5Agg")
