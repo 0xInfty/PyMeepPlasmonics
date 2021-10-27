@@ -39,43 +39,40 @@ vp.set_style()
 #%% PARAMETERS <<
 
 # Saving directories
-folder = ["Scattering/AuSphere/AlgorithmTest/RAM/TestRAMRes/AllVac",
-          "Scattering/AuSphere/AlgorithmTest/RAM/TestRAMRes/AllWat"]
+folder = ["Scattering/AuSphere/AllVacTest/7)Diameters/WLen4560", 
+          "Scattering/AuSphere/AllWatDiam"]
 home = vs.get_home()
 
 # Parameter for the test
-test_param_string = "resolution"
+test_param_string = "r"
 test_param_calculation = False
 test_param_in_params = False
 test_param_in_series = True
 test_param_position = 0
-test_param_ij_expression = "from_um_factor[i][j] * 1e3 / resolution[i][j]" # Leave "" by default
-test_param_name = trs.choose("Resolution", "Resolución")
-test_param_units = trs.choose("points/MPu","puntos/uMP") # Leave "" by default
-# test_param_name = trs.choose("Minimum space division", "Mínima división espacial")
-# test_param_units = "nm" # Leave "" by default
+test_param_ij_expression = ""
+test_param_name = trs.choose("Diameter $d$", "Diámetro $d$")
+test_param_units = "nm" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = trs.choose([lambda s : rf"Resolution {vu.find_numbers(s)[test_param_position]:.0f}"]*2,
-                          [lambda s : rf"Resolución {vu.find_numbers(s)[test_param_position]:.0f}"]*2)
-series_must = [""]*2 # leave "" per default
-series_mustnt = [""]*2 # leave "" per default
+series_label = [lambda s : rf" $d$ = {vu.find_numbers(s)[test_param_position]:.0f} nm"]*2
+series_must = ["SC", "AllWater"] # leave "" per default
+series_mustnt = ["", ""]*2 # leave "" per default
 series_column = [1]*2
 
 # Scattering plot options
-plot_title_ending = trs.choose("Au 103 nm NP", "NP de Au de 103 nm")
+plot_title_ending = trs.choose("Au nanospheres", "nanoesferas de Au")
 series_legend = trs.choose(["Vacuum", "Water"], ["Vacío", "Agua"])
-series_colormaps = [plab.cm.Reds, plab.cm.Blues] # plab.cm.summer.reversed()
+series_colormaps = [plab.cm.Reds, plab.cm.Blues]
 series_ind_colors = [["C0", "C2", "C3"]]*2
-series_colors = ["red", "blue"] # "k"
+series_colors = ["red", "blue"]
 series_markers = ["o","o"]
 series_markersizes = [8,8]
 series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_make_big = True
 plot_for_display = False
-plot_folder = "DataAnalysis/Scattering/AuSphere/VacWatComparison/Resolution"
+plot_folder = "DataAnalysis/Scattering/AuSphere/VacWatDiameters"
 
 #%% LOAD DATA <<
 
@@ -298,8 +295,8 @@ if max(fig.axes[0].get_ylim()) >= 0 >= min(fig.axes[0].get_ylim()):
     plt.axhline(color="k", linewidth=.5, zorder=0)
 plt.legend(fig.axes[0].lines, series_legend)
 plt.xlabel(test_param_label)
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
+# if max([len(tp) for tp in test_param])<=4: 
+#     plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose("Difference in wavelength ", 
                       "Diferencia en longitud de onda ") + 
            "$\lambda_{max}^{MEEP}-\lambda_{max}^{MIE}$ [nm]")
@@ -332,8 +329,6 @@ if 1<len(series)<=3:
             axes[i].axhline(color="k", linewidth=.5, zorder=0)
         axes[i].legend([axes[i].lines[0]], [series_legend[i]])
     plt.xlabel(test_param_label)
-    if max([len(tp) for tp in test_param])<=4: 
-        plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
     
     for i in range(len(series)):
         axes[i].set_ylabel(trs.choose("Difference in\nwavelength\n", 
@@ -369,8 +364,6 @@ if plot_for_display and alternate_axis:
     fig.axes[0].yaxis.set_label_position("right")
 plt.legend(fig.axes[0].lines, series_legend)
 plt.xlabel(test_param_label)
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose("Difference in scattering efficiency ", 
                       "Diferencia en eficiencia de dispersión ") + 
            "$C_{max}^{MEEP}-C_{max}^{MIE}$")
@@ -410,9 +403,6 @@ if 1<len(series)<=3:
             axes[i].yaxis.set_label_position("right")
         axes[i].legend([axes[i].lines[0]], [series_legend[i]], loc="lower right")
     plt.xlabel(test_param_label)
-    if max([len(tp) for tp in test_param])<=4: 
-        plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
-
     
     for i in range(len(series)):
         axes[i].set_ylabel(trs.choose("Difference in\nscattering efficiency\n", 
@@ -452,8 +442,7 @@ if len(series)==1:
     if with_legend or not plot_for_display:
         plt.legend([l, l2], [r"$\lambda_{max}$", r"$C_{max}^{MEEP}$"], loc="center right", framealpha=1, frameon=True)
     plt.xlabel(test_param_label)
-    if max([len(tp) for tp in test_param])<=4: 
-        plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
+
     if plot_for_display:
         ax.set_ylabel(trs.choose("Difference\nin wavelength\n", 
                                  "Diferencia\nen longitud de onda\n") + 
@@ -588,8 +577,6 @@ if len(series)==2:
             axes[i].yaxis.set_label_position("right")
         axes[i].legend(lines[i], lines_legend[i])
         axes[i].set_xlabel(test_param_label)
-    if max([len(tp) for tp in test_param])<=4: 
-        plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 
     axes[-1].yaxis.tick_right()
     axes[-1].yaxis.set_label_position("right")
@@ -764,8 +751,6 @@ if len(series)==1:
         axmsq.legend(lines, lines_legend, ncol=len(series), framealpha=1, frameon=True)
     
     axmsq.set_xlabel(test_param_label)
-    if max([len(tp) for tp in test_param])<=4: 
-        axmsq.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
         
     ax.set_ylabel(trs.choose("Difference in\nwavelength\n", 
                              "Diferencia en\nlongitud de onda\n") + 
@@ -817,8 +802,7 @@ fig.axes[0].set_xlabel(trs.choose("Resolution [points/MPu]\n1 MPu = 20 nm",
 if condition_second_scale and not show_only_one_scale and not alternate_axis: 
     ax2 = plt.twinx(fig.axes[0])
 ax2x = plt.twiny(fig.axes[0])
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
+
 if plot_for_display and alternate_axis:
     fig.axes[0].yaxis.tick_right()
     fig.axes[0].yaxis.set_label_position("right")
@@ -862,8 +846,6 @@ if plot_for_display and alternate_axis:
     fig.axes[0].yaxis.set_label_position("right")
 plt.legend(series_legend)
 plt.xlabel(trs.choose("Courant Factor", "Factor de Courant"))
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose(r"Minimum time division $\Delta t$ [as]",
                       r"Mínima división temporal $\Delta t$ [as]"))
 fig.set_size_inches([6 , 4.32])
@@ -892,8 +874,6 @@ if plot_for_display:
     fig.axes[0].yaxis.set_label_position("right")
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose(r"Minimum spatial division $\Delta r$ [$d$]",
                       r"Mínima división espacial $\Delta r$ [$d$]"))
 fig.set_size_inches([6 , 4.32])
@@ -1037,8 +1017,6 @@ for i in range(len(series)):
     plt.plot(test_param[i], total_elapsed_time[i],
              color=these_colors[i], marker="o", label=series_legend[i] + " Total")
 plt.xlabel(test_param_label)
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose("Elapsed time [s]", "Tiempo transcurrido [s]"))
 
 box = fig.axes[0].get_position()
@@ -1059,8 +1037,6 @@ for i in range(len(series)):
     plt.plot(second_test_param[i], second_sim_time[i], 
              's-', color=these_colors[i], label=series_legend[i] + " Sim II")
 plt.xlabel(test_param_label)
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose("Elapsed time in simulations [s]", 
                       "Tiempo transcurrido en simulaciones [s]"))
 box = fig.axes[0].get_position()
@@ -1081,8 +1057,6 @@ for i in range(len(series)):
     plt.plot(second_test_param[i], second_build_time[i], 
              's-', color=these_colors[i], label=series_legend[i] + " Sim II")
 plt.xlabel(test_param_label)
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose("Elapsed time in building [s]", 
                       "Tiempo transcurrido en construcción [s]"))
 box = fig.axes[0].get_position()
@@ -1101,8 +1075,6 @@ for i in range(len(series)):
     plt.plot(second_test_param[i], second_flux_time[i], 
              's-', color=these_colors[i], label=series_legend[i] + " Sim II")
 plt.xlabel(test_param_label)
-if max([len(tp) for tp in test_param])<=4: 
-    plt.xticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
 plt.ylabel(trs.choose("Elapsed time in loading flux [s]", 
                       "Tiempo transcurrido en carga de flujo [s]"))
 box = fig.axes[0].get_position()
@@ -1167,8 +1139,6 @@ if len(series)==2:
             axes[i].axhline(color="k", linewidth=.5, zorder=0)
         axes[i].legend(lines[i], lines_legend[i])
         axes[i].set_xlabel(test_param_label)
-        if max([len(tp) for tp in test_param])<=4: 
-            axes[i].xaxis.set_ticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
         axes_hs[i].set_ylim(np.array(axes[i].get_ylim())/60/60)
 
     axes[0].set_ylabel(trs.choose("Elapsed time [s]", "Tiempo transcurrido [s]"))
@@ -1239,8 +1209,6 @@ if len(series)==2:
         axes[i].legend(lines[i], lines_legend[i])
         axes[i].set_xlabel(trs.choose("Minor space division [nm]",
                                       "Mínima divisón espacial [nm]"))
-        if max([len(tp) for tp in test_param])<=4: 
-            axes[i].xaxis.set_ticks( test_param[ np.argmax([len(data) for data in test_param]) ] )
         axes_hs[i].set_ylim(np.array(axes[i].get_ylim())/60/60)
 
     axes[0].set_ylabel(trs.choose("Elapsed time [s]", "Tiempo transcurrido [s]"))

@@ -6,6 +6,19 @@ Created on Wed Nov 11 12:24:04 2020
 @author: vall
 """
 
+# NP scattering as response to a planewave pulse
+
+from socket import gethostname
+if "Nano" in gethostname():
+    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+elif "vall" in gethostname():
+    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+else:
+    raise ValueError("Your PC must be registered at the top of this code")
+
+import sys
+sys.path.append(syshome)
+
 import h5py as h5
 import numpy as np
 import matplotlib.pyplot as plt
@@ -62,7 +75,7 @@ series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_make_big = True
 plot_for_display = False
-plot_folder = "DataAnalysis/Scattering/AuSphere/AllWaterTest/Resolution"
+plot_folder = "DataAnalysis/Scattering/AuSphere/VacWatComparison/Resolution"
 
 #%% LOAD DATA <<
 
