@@ -40,8 +40,8 @@ vp.set_style()
 #%% PARAMETERS <<
 
 # Saving directories
-folder = ["Field/Sources/PulsePlanewave/6)TestPulse/095105/Res10",
-          "Field/Sources/PulsePlanewave/6)TestPulse/095105/Res10"]
+folder = ["Field/Sources/PulsePlanewave/6)TestPulse/085115/Res10",
+          "Field/Sources/PulsePlanewave/6)TestPulse/085115/Res10"]
 home = vs.get_home()
 
 # Parameter for the test
@@ -52,11 +52,11 @@ test_param_in_series = True
 test_param_position = 0
 test_param_ij_expression = "pml_width[i][j]" # Leave "" by default
 test_param_name = trs.choose("PML Width", "Espesor PML")
-test_param_units = r"$\Delta\lambda_{max}$" # Leave "" by default
+test_param_units = r"$\lambda_{0}$" # Leave "" by default
 
 # Sorting and labelling data series
 sorting_function = [lambda l : vu.sort_by_number(l, test_param_position)]*2
-series_label = [lambda s : f"PML {vu.find_numbers(s)[test_param_position]:.2f} "+r"$\Delta\lambda_{max}$"]*2
+series_label = [lambda s : f"PML {vu.find_numbers(s)[test_param_position]:.2f} "+r"$\lambda_{0}$"]*2
 series_must = ["Vac", "Wat"] # leave "" per default
 series_mustnt = ["Res"]*2 # leave "" per default
 
@@ -70,7 +70,7 @@ series_markersizes = [8]*2
 series_linestyles = ["solid"]*2
 theory_linestyles = ["dashed"]*2
 plot_for_display = False
-plot_folder = "DataAnalysis/Field/Sources/PulsePlanewave/PMLWidth/095105"
+plot_folder = "DataAnalysis/Field/Sources/PulsePlanewave/PMLWidth/085115"
 
 #%% LOAD DATA <<
 
@@ -316,8 +316,8 @@ plt.title(trs.choose("Wavelength difference for ",
 for i in range(len(series)):
     plt.plot(test_param[i], 
              100 * ( np.array(fourier_max_wlen[i]) - np.array(fourier_max_best[i]) ) / np.array(fourier_max_best[i]), 
-             color=series_colors[i], marker=series_markers[i], alpha=0.4,
-             markersize=8, linestyle="", markeredgewidth=0)
+             color=series_colors[i], marker=series_markers[i], alpha=.6,
+             markersize=series_markersizes[i], markeredgewidth=0, linestyle="solid")
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
 plt.ylabel(trs.choose("Maximum Wavelength Percentual Variation", 
@@ -326,25 +326,41 @@ plt.ylabel(trs.choose("Maximum Wavelength Percentual Variation",
 plt.tight_layout()
 plt.savefig(plot_file("LambdaVariation.png"))
 
-#%% MEAN SQUARED DIFFERENCE PLOT
+#%% MEAN SQUARED DIFFERENCE PLOT ==
 
-plt.figure()
-plt.title(trs.choose("Spectrum source contrast for ", 
-                     "Contraste de espectro de la fuente para ") + plot_title_ending)
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+if plot_for_display: fig.dpi = 200
+if not plot_for_display:
+    plt.title(trs.choose("Spectrum source contrast for ", 
+                         "Contraste de espectro de la fuente para ") + plot_title_ending)
 for i in range(len(series)):
     plt.plot(test_param[i], 
              fourier_msqdiff[i], 
-             color=series_colors[i], marker=series_markers[i], alpha=0.4,
-             markersize=10, linestyle="", markeredgewidth=0)
+             color=series_colors[i], marker=series_markers[i], alpha=.6,
+             markersize=series_markersizes[i], linestyle="solid", markeredgewidth=0)
 plt.legend(series_legend)
 plt.xlabel(test_param_label)
 plt.ylabel(trs.choose("Electric Field Fourier\nMean Squared Difference\n",
                       "Diferencia cuadrática media \nen transformada del campo eléctrico\n") + 
-           r"$MSD[\;\mathcal{F}^{MEEP}(\lambda) - \mathcal{F}^{MEEP}(\lambda)\;]$")
-plt.tight_layout()
+           r"$MSD[\;\mathcal{F}^{MEEP}(\lambda) - \mathcal{F}^{GAUSS}(\lambda)\;]$")
+fig.axes[0].set_yscale("log")
+
+for ax in fig.axes:
+    box = ax.get_position()
+    width = box.x1 - box.x0
+    box.x1 = box.x1 + .08 * width
+    box.x0 = box.x0 + .08 * width
+    box.y1 = box.y1 + .05*(box.y1 - box.y0)
+    ax.set_position(box)
+    
+fig.set_size_inches([6 , 4.32])
 plt.savefig(plot_file("FourierMSD.png"))
 
-#%% ANALYSE FLUX WALLS
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% ANALYSE FLUX WALLS <<
 
 flux_max_intensity = [[ [np.max(flux_intensity[i][j][:,k]) for k in range(n_flux_walls[i][j])] for j in range(len(series[i]))] for i in range(len(series))]
 
@@ -364,16 +380,17 @@ plt.title(trs.choose("Flux maximum intensity for ",
                      "Intensidad máxima del flujo para ") + plot_title_ending)
 for i in range(len(series)):
     for j in range(len(series[i])):
-        plt.plot(np.array(flux_wall_positions[i][j]) * index[i][j] / np.mean(wlen_range), 
-                 flux_max_intensity[i][j], "o-",
-                 color=colors[i][j], alpha=0.6, label=series_label[i](series[i][j]))
+        plt.plot(np.array(flux_wall_positions[i][j]) * index[i][j] / np.mean(wlen_range[i][j]), 
+                 flux_max_intensity[i][j] / np.mean(flux_max_intensity[i][j]), 
+                 "o-", color=colors[i][j], alpha=0.6, 
+                 label=series_label[i](series[i][j]))
         plt.axvline(-empty_width[i][j] * index[i][j], color=colors[i][j],
                     linestyle=(0, (5,10)), linewidth=.8)
         plt.axvline(empty_width[i][j] * index[i][j], color=colors[i][j],
                     linestyle=(0, (5,10)), linewidth=.8)
 plt.axvline(linewidth=1, color="k")
 
-plt.xlabel(trs.choose(r"Position $X$ [$\lambda/n$]", r"Posición  $X$ [$\lambda/n$]"))
+plt.xlabel(trs.choose(r"Position $X$ [$\lambda_0/n$]", r"Posición  $X$ [$\lambda_0/n$]"))
 plt.ylabel(trs.choose(r"Electromagnetic Flux Maximum $P_{max}(\lambda)$ [au]",
                       r"Máximo flujo electromagnético $P_{max}(\lambda)$ [ua]"))
 
@@ -393,7 +410,7 @@ plt.title(trs.choose("Flux spectrum contrast for ",
                      "Contraste en espectro de flujo para ") + plot_title_ending)
 for i in range(len(series)):
     for j in range(len(series[i])):
-        plt.plot(np.array(flux_wall_positions[i][j]) * index[i][j] / np.mean(wlen_range), 
+        plt.plot(np.array(flux_wall_positions[i][j]) * index[i][j] / np.mean(wlen_range[i][j]), 
                  flux_msqdiff[i][j], "o-", color=colors[i][j], 
                  alpha=0.6, label=series_label[i](series[i][j]))
         plt.axvline(-empty_width[i][j] * index[i][j], color=colors[i][j],
@@ -426,10 +443,12 @@ flux_max_amplitude = [[vma.get_amplitude_from_source(flux_max_intensity[i][j],
                                                      last_stable_periods=None)[-1]
                        for j in range(len(series[i]))] for i in range(len(series))]
 
-flux_max_relative_amplitude = [[flux_max_amplitude[i][j] / np.max(flux_max_intensity[i][j])
+flux_max_relative_amplitude = [[flux_max_amplitude[i][j] / np.mean(flux_max_intensity[i][j])
                                 for j in range(len(series[i]))] for i in range(len(series))]
 
-#%% PLOT INTERFERENCE AMPLITUDE
+#%% PLOT INTERFERENCE AMPLITUDE ==
+
+alternate_axis = True
 
 if plot_for_display: use_backend("Agg")
 
@@ -442,9 +461,9 @@ if not plot_for_display:
 for i in range(len(series)):
     plt.plot(test_param[i], 
              100 * np.array(flux_max_relative_amplitude[i]), 
-             color=series_colors[i], linestyle="none",
-             marker=series_markers[i], markersize=10, 
-             alpha=0.4, markeredgewidth=0, zorder=10)
+             color=series_colors[i], linestyle="solid",
+             marker=series_markers[i], markersize=series_markersizes[i], 
+             alpha=0.6, markeredgewidth=0, zorder=10)
 if max(fig.axes[0].get_ylim()) >= 0 >= min(fig.axes[0].get_ylim()):
     plt.axhline(color="k", linewidth=.5, zorder=0)
 plt.legend(fig.axes[0].lines, series_legend)
@@ -454,8 +473,167 @@ if max([len(tp) for tp in test_param])<=4:
 plt.ylabel(trs.choose("Oscillations Amplitude in Flux ", 
                       "Amplitud de las oscilaciones del flujo ") + 
            "$\Delta P_{max}$ [%]")
+fig.axes[0].set_yscale("log")
+if alternate_axis:
+    fig.axes[0].yaxis.tick_right()
+    fig.axes[0].yaxis.set_label_position("right")
 fig.set_size_inches([6 , 4.32])
-fig.tight_layout()
+
+for ax in fig.axes:
+    box = ax.get_position()
+    box.x1 = box.x1 - .05 * (box.x1 - box.x0)
+    ax.set_position(box)
+
 vs.saveplot(plot_file("FluxMaximumVariation.png"), overwrite=True)
 
 if plot_for_display: use_backend("Qt5Agg")
+
+#%% COMPARE TEST PARAMETER VALUES: SOURCE AND FIELD ==
+
+test_param_to_compare = [0.10, 0.25, 0.50]
+which_series = 1
+N = len(test_param_to_compare)
+which_inside_series = [test_param[which_series].index(test_param_to_compare[k]) for k in range(N)]
+
+if plot_for_display: use_backend("Agg")
+
+fig, axes = plt.subplots(ncols=N, nrows=2, sharex=True,
+                         gridspec_kw={"hspace":0, "wspace":0, "height_ratios":(3,2)})
+axes = np.array(axes).T
+if plot_for_display: fig.dpi = 200
+
+for k in range(N):
+    i = which_series
+    j = which_inside_series[k]
+
+    axes[k,0].set_title(series_legend[i]+":\n"+series_label[i](series[i][j]))
+
+    T, X = np.meshgrid(t_line[i][j], 
+                       x_line_cropped[i][j] * index[i][j] / np.mean(wlen_range[i][j]))
+    pic = axes[k,0].contourf(T, X, results_cropped_line[i][j], 100, cmap='RdBu')
+    axes[k,0].axhline(color="k", linewidth=.5)
+
+    axes[k,1].plot(t_line[i][j], source_results[i][j] / np.max(np.abs(source_results[i][j])),
+                   label=series_label[i](series[i][j]))
+    axes[k,1].axhline(color="k", linewidth=.5)
+
+axes[0,0].set_ylabel(trs.choose(r"Position $X$ [$\lambda_0/n$]", 
+                                r"Posición  $X$ [$\lambda_0/n$]"))
+axes[0,1].set_ylabel(trs.choose("Electric Field\n"+r"$E_z(x=x_0,\,y=z=0)$",
+                                "Campo eléctrico\n"+r"$E_z(x=x_0,\,y=z=0)$"))
+
+for k in range(N):
+    axes[k,-1].set_xlabel(trs.choose("Time $T$ [MPu]", "Tiempo $T$ [uMP]"))
+    axes[k,0].grid(False)
+    axes[k,0].set_ylim(np.max([np.min(x_line_cropped[i][j] * index[i][j] / np.mean(wlen_range[i][j])) 
+                               for j in which_inside_series]),
+                       np.min([np.max(x_line_cropped[i][j] * index[i][j] / np.mean(wlen_range[i][j]))
+                               for j in which_inside_series]))
+    axes[k,1].set_ylim(axes[0,1].get_ylim())
+    if k!=0:
+        axes[k,0].yaxis.set_ticklabels( [] )
+        axes[k,1].yaxis.set_ticklabels( [] )
+        
+cax = axes[-1,1].inset_axes([1.04, 0, 0.07, 2.5],
+                            transform=axes[-1,1].transAxes)
+cbar = fig.colorbar(pic, ax=axes[-1,0], cax=cax)
+cbar.set_label(trs.choose("Electric Field\n"+r"$E_z(x,\,y=z=0)$",
+                          "Campo eléctrico\n"+r"$E_z(x,\,y=z=0)$"))
+
+for ax in axes.flatten():
+    box = ax.get_position()
+    width = box.x1 - box.x0
+    box.x1 = box.x1 - .1 * width
+    box.x0 = box.x0 - .1 * width
+    ax.set_position(box)
+           
+fig.set_size_inches([10.02, 5.94])
+
+plt.savefig(plot_file("ComparisonSourceField.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% COMPARE TEST PARAMETER VALUES: FLUX WALLS ==
+
+test_param_to_compare = [0.10, 0.25, 0.50]
+which_series = 1
+N = len(test_param_to_compare)
+which_inside_series = [test_param[which_series].index(test_param_to_compare[k]) for k in range(N)]
+
+if np.std(n_flux_walls)<10e-6:
+    
+    with_legend = False
+    these_colors = plab.cm.Greens(np.linspace(0,1,n_flux_walls[0][0]))
+    
+    if plot_for_display: use_backend("Agg")
+    
+    fig, axes = plt.subplots(ncols=N, nrows=2, 
+                             gridspec_kw={"hspace":0, "wspace":0, "height_ratios":(1,1)})
+    axes = np.array(axes).T
+    if plot_for_display: fig.dpi = 200
+    
+    inside_lines = []
+    for k in range(N):
+        i = which_series
+        j = which_inside_series[k]
+    
+        axes[k,0].set_title(series_legend[i]+": "+series_label[i](series[i][j]))
+    
+        for fw in range(n_flux_walls[i][j]):
+            l, = axes[k,0].plot(flux_wlens[i][j], 
+                                flux_intensity[i][j][:,fw] / np.max(flux_intensity[i][j]), 
+                                color=these_colors[fw], 
+                                alpha=0.7, linewidth=2,
+                                label=f"x = {flux_wall_positions[i][j][fw] * index[i][j] / np.mean(wlen_range[i][j]):.1f} $\lambda_0/n$")
+            if j==which_inside_series[0]:
+                inside_lines.append(l)
+        axes[k,0].axhline(color="k", linewidth=.5)
+    
+        axes[k,1].plot(np.array(flux_wall_positions[i][j]) * index[i][j] / np.mean(wlen_range[i][j]), 
+                       flux_max_intensity[i][j] / np.mean(flux_max_intensity[i][j]), "o-")
+        axes[k,1].axvline(linewidth=1, color="k")
+        
+    
+    axes[0,0].set_ylabel(trs.choose("Normalized\nElectromagnetic Flux "+r"$P(\lambda)$",
+                                    "Flujo electromagnético\nnormalizado "+r"$P(\lambda)$"))
+    axes[0,1].set_ylabel(trs.choose("Normalized\nElectromagnetic Flux Maximum "+r"$P_{max}(\lambda)$",
+                                    "Máximo flujo electromagnético\nnormalizado "+r"$P_{max}(\lambda)$"))
+    
+    ylims = (np.min([axes[k,0].get_ylim() for k in range(N)]),
+             np.max([axes[k,0].get_ylim() for k in range(N)]))
+    for k in range(N):
+        if use_units:
+            axes[k,0].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", 
+                                            r"Longitud de onda $\lambda$ [nm]"))
+        else:
+            axes[k,0].set_xlabel(trs.choose(r"Wavelength $\lambda/n$ [$\lambda_0/n$]", 
+                                            r"Longitud de onda $\lambda/n$ [$\lambda_0/n$]"))
+        axes[k,0].xaxis.tick_top()
+        axes[k,0].xaxis.set_label_position("top")
+        axes[k,0].set_ylim(ylims)
+        axes[k,1].set_xlabel(trs.choose(r"Position $X$ [$\lambda_0/n$]", 
+                                        r"Posición  $X$ [$\lambda_0/n$]"))
+        axes[k,1].set_ylim(axes[0,1].get_ylim())
+        if k!=0:
+            axes[k,0].yaxis.set_ticklabels( [] )
+            axes[k,1].yaxis.set_ticklabels( [] )
+        
+    if with_legend:
+        plt.legend(inside_lines, [l.get_label() for l in inside_lines], ncol=4,
+                         frameon=True, framealpha=1, bbox_to_anchor=(2, 0),
+                         bbox_transform=axes[0,0].transAxes)
+    
+    fig.set_size_inches([10.02, 7])
+    
+    plt.savefig(plot_file("ComparisonFluxWalls.png"))
+    
+    # Me falta ver si a este gráfico le puedo poner una colorbar en vez de leyenda.
+    
+    fig = plt.figure()
+    plt.imshow(np.array([np.array(flux_wall_positions[i][0]) * np.array(index[i][0]) / np.mean(wlen_range[i][0]) for i in range(len(series))]),
+               cmap=plab.cm.Greens)
+    plt.colorbar(label=trs.choose(r"Position $X$ [$\lambda_0/n$]", r"Posición  $X$ [$\lambda_0/n$]"))
+    fig.set_size_inches([10.02, 7])
+    plt.savefig(plot_file("ComparisonFluxWallsColorbar.png"))
+    
+    if plot_for_display: use_backend("Qt5Agg")

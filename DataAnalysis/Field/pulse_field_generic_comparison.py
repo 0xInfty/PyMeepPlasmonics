@@ -606,8 +606,8 @@ if np.std(n_flux_walls)<10e-6:
             axes[k,0].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", 
                                             r"Longitud de onda $\lambda$ [nm]"))
         else:
-            axes[k,0].set_xlabel(trs.choose(r"Wavelength $\lambda/n$ [$\lambda_0$]", 
-                                            r"Longitud de onda $\lambda/n$ [$\lambda_0$]"))
+            axes[k,0].set_xlabel(trs.choose(r"Wavelength $\lambda/n$ [$\lambda_0/n$]", 
+                                            r"Longitud de onda $\lambda/n$ [$\lambda_0/n$]"))
         axes[k,0].xaxis.tick_top()
         axes[k,0].xaxis.set_label_position("top")
         axes[k,0].set_ylim(ylims)
