@@ -312,7 +312,7 @@ def sigma_abs_dipolar(r, wlen, alpha, surrounding_N=1, asEfficiency=False):
     
     return sigma_ext - sigma_scatt
 
-# def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
+# def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEfficiency=False):
 def sigma_scatt_Mie(r, wlen, inner_N=1.458, surrounding_N=1, asEfficiency=False):
     """
     Calculates scattering cross section using Mie theory for a spherical NP.
@@ -382,7 +382,7 @@ def sigma_scatt_Mie(r, wlen, inner_N=1.458, surrounding_N=1, asEfficiency=False)
         return sigma_scatt[0]
 
 def sigma_abs_Mie(r, wlen, inner_N=1.458, surrounding_N=1, asEfficiency=False):    
-# def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
+# def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEfficiency=False):
     """
     Calculates absorption cross section using Mie theory for a spherical NP.
 

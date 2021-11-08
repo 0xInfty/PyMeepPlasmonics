@@ -106,7 +106,7 @@ theory = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3,
                                 material[i][j], paper[i][j], 
                                 data[i][j][:,0], # wavelength in nm
                                 surrounding_index=index[i][j],
-                                asEffiency=True) 
+                                asEfficiency=True) 
            for j in range(len(series[i]))] for i in range(len(series))]
 
 max_wlen_theory = [[ data[i][j][ np.argmax(theory[i][j]) , 0 ] for j in range(len(series[i]))] for i in range(len(series))]

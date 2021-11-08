@@ -700,7 +700,7 @@ def main(from_um_factor, resolution, courant,
                                             material, paper, 
                                             wlens, # Wavelength [nm]
                                             surrounding_index=submerged_index,
-                                            asEffiency=True)
+                                            asEfficiency=True)
     # Results are validated by comparing with analytic Mie theory
     
     #%% ANGULAR PATTERN ANALYSIS

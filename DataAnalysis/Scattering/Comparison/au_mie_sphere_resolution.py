@@ -242,7 +242,7 @@ theory = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, # Radius [
                                 paper[i][j], 
                                 data[i][j][:,0], # Wavelength [nm]
                                 surrounding_index=index[i][j],
-                                asEffiency=True)
+                                asEfficiency=True)
                           for j in range(len(series[i]))] for i in range(len(series))]
         
 
@@ -252,7 +252,7 @@ theory_plot = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3,
                                      paper[i][j], 
                                      wlen_plot,
                                      surrounding_index=index[i][j],
-                                     asEffiency=True)
+                                     asEfficiency=True)
                           for j in range(len(series[i]))] for i in range(len(series))]
 
 #%% QUANTIFY CONTRAST WITH MIE THEORY <<

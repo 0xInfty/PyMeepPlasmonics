@@ -54,7 +54,7 @@ mode = "RefT" # Either 'RefT' or 'RefP'
 inner_epsilon_function = vmt.epsilon_function(material, paper, reference)
 inner_N = np.sqrt(inner_epsilon_function(wlen))
 
-sigma_abs = vt.sigma_abs(r, wlen, inner_N, surrounding_N)
+sigma_abs = vt.sigma_abs_Mie(r, wlen, inner_N, surrounding_N)
 
 estimated_delta_T = vt.delta_T(P, sigma_abs, w0, r, surrounding_kappa)
 
@@ -66,7 +66,7 @@ ref_laser = lasers[[l["wlen"] for l in lasers].index(wlen)]
 
 for l in lasers:
     inner_N = np.sqrt(inner_epsilon_function(wlen))
-    l["sigma_abs"] = vt.sigma_abs(r, l["wlen"], inner_N, surrounding_N)
+    l["sigma_abs"] = vt.sigma_abs_Mie(r, l["wlen"], inner_N, surrounding_N)
 
 ref_laser["P"] = P
 for l in lasers:
