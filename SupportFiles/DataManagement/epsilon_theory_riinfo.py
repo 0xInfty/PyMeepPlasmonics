@@ -20,7 +20,7 @@ reference = "https://refractiveindex.info/?shelf=main&book=Ag&page=Rakic-LD"
 
 #%%
 
-file = lambda name : os.path.join(syshome, "MaterialsData", name)
+file = lambda name : os.path.join(syshome, "SupportFiles", "MaterialsData", name)
 
 data = np.loadtxt(file(name + ".csv"),
                   skiprows=1,
