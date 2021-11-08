@@ -9,6 +9,8 @@ Created on Thu Mar 25 22:51:24 2021
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import use as use_backend
+# from matplotlib.ticker import FormatStrFormatter
+import matplotlib.pylab as plab
 import os
 import v_theory as vt
 import v_plot as vp
@@ -24,7 +26,7 @@ syshome = vs.get_sys_home()
 
 #%% PARAMETERS
 
-r = 30 # nm
+r = 60 # nm
 material = "Au"
 wlen_range = np.array([300, 800])
 wlen_chosen = [405, 532, 642]
@@ -34,6 +36,7 @@ submerged_index = 1.33 # Water
 E0 = np.array([0,0,1])
 
 npoints = 500
+nminpoints = 75
 
 folder = "DataAnalysis/MaterialsPaper"
 
@@ -57,7 +60,9 @@ home = vs.get_home()
 if not os.path.isdir(os.path.join(home, folder)): 
     vs.new_dir(os.path.join(home, folder))
 plot_file = lambda n : os.path.join(
-    home, folder, f"AllWaterField{2*r:1.0f}" + n)
+    home, folder, f"All{vmt.recognize_material(submerged_index)}Field{2*r:1.0f}" + n)
+short_plot_file = lambda n : os.path.join(
+        home, folder, f"All{vmt.recognize_material(submerged_index)}" + n)
 
 plot_title = trs.choose(f"{material} NP of {2*r:1.0f} nm diameter in {vmt.recognize_material(submerged_index).lower()}",
                         f"NP de {material} de {2*r:1.0f} nm de diámetro en {vmt.recognize_material(submerged_index, english).lower()}")
@@ -277,8 +282,8 @@ for i in range(len(axes)):
         axes[i,j].set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", 
                                         r"Longitud de onda $\lambda$ [nm]"))
     
-ylims = ( -np.max([np.abs(axes[0,j].get_ylim()) for j in range(len(axes[0,:]))]),
-          np.max([np.abs(axes[0,j].get_ylim()) for j in range(len(axes[0,:]))]) )
+ylims = ( np.min([axes[0,j].get_ylim() for j in range(len(axes[0,:]))]),
+          np.max([axes[0,j].get_ylim() for j in range(len(axes[0,:]))])*1.2 )
 for j in range(len(axes[0,:])): axes[0,j].set_ylim(ylims)
 ylims = ( 0, np.max([np.abs(axes[1,j].get_ylim()) for j in range(len(axes[1,:]))]) )
 for j in range(len(axes[1,:])): axes[1,j].set_ylim(ylims)
@@ -317,7 +322,8 @@ alpha_k = np.array([alpha_k_exp_jc, alpha_k_meep_r])
 
 #%% PLOT POLARIZABILITY
 
-plot_for_display = False
+plot_for_display = True
+with_legend = False
 
 functions = [np.abs, np.real, np.imag]
 titles = trs.choose([r"Absolute value |$\alpha$|", r"Real part $\Re$e$(\alpha$)", r"Imaginary part $\Im$m$(\alpha$)$"],
@@ -348,8 +354,9 @@ for ax, f, t in zip(axes, functions, titles):
     for wl, al, l, col, lsy, trp in zip(wlen_alpha, alpha, labels,
                                         colors, linestyles, transparencies):
         ax.set_title(t)
-        print(l, eps[:2])
         ax.axhline(linewidth=0.5, color="k")
+        # if submerged_index==1.33:
+        #     ax.plot(wl, f(al), label=l, color="cornflowerblue", linestyle="solid", alpha=0.3, linewidth=4)
         ax.plot(wl, f(al), label=l, color=col, linestyle=lsy, alpha=trp, linewidth=2)
         ax.set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
         ax.set_ylabel(trs.choose("Polarizability", "Polarizabilidad") + r" $\alpha$ [nm$^3$]")
@@ -358,7 +365,7 @@ for ax, f, t in zip(axes, functions, titles):
             ax.yaxis.set_label_position("right")
         ax.set_xlim(*wlen_range)
 
-axes[0].legend()
+if with_legend: axes[0].legend()
 
 # ylims = ( -np.max([np.abs(axes[-1].get_ylim()), np.abs(axes[-2].get_ylim())]), 
 #            np.max([np.abs(axes[-1].get_ylim()), np.abs(axes[-2].get_ylim())]) )
@@ -465,7 +472,7 @@ if plot_for_display: use_backend("Qt5Agg")
 #%% COMPLEX FIELD FOR SINGLE WAVELENGTH
 
 plot_for_display = True
-with_legend = True
+with_legend = False
 
 wlen_single = 532
 wlen_index = wlen_chosen.index(wlen_single)
@@ -475,7 +482,7 @@ sample_r_factor = 3
 E_single = [E_cm_exp_jc_chosen[wlen_index], E_cm_meep_r_chosen[wlen_index], 
             E_k_exp_jc_chosen[wlen_index], E_k_meep_r_chosen[wlen_index]]
 
-colors = ["C0", "C3"]*2
+colors = ["C2", "C1"]*2
 linestyles = [*["solid"]*2, *["dotted"]*2]
 transparencies = [*[.5]*2, *[1]*2]
 
@@ -506,15 +513,13 @@ for ax, f, t in zip(axes, functions, titles):
         ax.set_title(t)
         ax.axvline(-r, color="grey", linestyle="dotted", alpha=0.5)
         ax.axvline(r, color="grey", linestyle="dotted", alpha=0.5)
-        ax.axvline(-sample_r_factor*r, color="grey", linestyle="dotted", alpha=0.5)
-        ax.axvline(sample_r_factor*r, color="grey", linestyle="dotted", alpha=0.5)
         if ax != axes[0]: ax.axhline(color="k", linewidth=.5)
         line, = ax.plot(rvec[:,2], f(field[:,2]), label=l, color=col, 
                         linestyle=lsy, alpha=trp, linewidth=2)
-        if ax == axes[0]: lines.append(line)
-        # ax.plot(rvec[:,2], np.abs(E_chosen[j][i][:,2]),
-        #         color=colors[j], linestyle=linestyles[j],
-        #         alpha=transparencies[j], linewidth=2, label=E_labels[j])
+        if ax == axes[0]: 
+            lines.append(line)
+            ax.axhline(np.max(f(field[:,2])), color=col, linestyle=lsy, 
+                       alpha=trp-.15, linewidth=2)
         ax.set_xlabel(trs.choose(r"Position $Z$ [nm]", r"Posición $Z$ [nm]"))
         ax.yaxis.set_label_text(trs.choose(r"Electric field $E_z(x=y=0)$", "Campo eléctrico $E_z(x=y=0)$"))
         if ax == axes[-1]:
@@ -537,21 +542,238 @@ else: plt.savefig(plot_file("FieldComplex.png"))
 
 if plot_for_display: use_backend("Qt5Agg")
 
-#%%
+#%% DIPOLAR APROXIMATION: ELECTRIC FIELD EZ IN YZ PLANE
 
-# n = len(wlen_chosen)
-# fig = plt.figure(figsize=(n*6.4, 6.4))
-# axes = fig.subplots(ncols=n)
-# lims = [abs(np.min(np.real(E_cm_chosen))), abs(np.max(np.real(E_cm_chosen)))]
-# lims = [-max(lims), max(lims)]
+# x = np.zeros(npoints)
+y = np.linspace(-2.5*r, 2.5*r, nminpoints)
+z = np.linspace(-2.5*r, 2.5*r, nminpoints)
+# x, y, z = np.meshgrid(x, y, z)
+Y, Z = np.meshgrid(y, z)
 
-# for j in range(n):
-#     axes[j].imshow(np.real(E_cm_chosen[j]), 
-#                     interpolation='spline36', cmap='RdBu', 
-#                     vmin=lims[0], vmax=lims[1])
-#     axes[j].set_xlabel("Distancia en x (u.a.)", fontsize=18)
-#     axes[j].set_ylabel("Distancia en y (u.a.)", fontsize=18)
-#     axes[j].set_title("$\lambda$={} nm".format(wlen_chosen[j]*10), fontsize=22)
-#     plt.setp(axes[j].get_xticklabels(), fontsize=16)
-#     plt.setp(axes[j].get_yticklabels(), fontsize=16)
-# plt.savefig(file("MaxFieldPlane.png"))
+rvec = np.zeros((len(y) * len(z), 3))
+rvec[:,1] = Y.reshape( len(y) * len(z) )
+rvec[:,2] = Z.reshape( len(y) * len(z) )
+
+E_cm_meep_r_chosen = []
+E_k_meep_r_chosen = []
+E_cm_exp_jc_chosen = []
+E_k_exp_jc_chosen = []
+for wl in wlen_chosen:
+    e_meep_r_chosen = epsilon_func_meep_r(wl)
+    a_cm_meep_r_chosen = vt.alpha_Clausius_Mosotti(e_meep_r_chosen, r, 
+                                                   epsilon_ext=epsilon_ext)
+    a_k_meep_r_chosen = vt.alpha_Kuwata(e_meep_r_chosen, wl, r,
+                                        epsilon_ext=epsilon_ext)
+    e_exp_jc_chosen = epsilon_func_exp_jc(wl)
+    a_cm_exp_jc_chosen = vt.alpha_Clausius_Mosotti(e_exp_jc_chosen, r,
+                                                   epsilon_ext=epsilon_ext)
+    a_k_exp_jc_chosen = vt.alpha_Kuwata(e_exp_jc_chosen, wl, r,
+                                        epsilon_ext=epsilon_ext)
+    E_cm_meep_r_chosen.append(
+        np.array([vt.E(e_meep_r_chosen, a_cm_meep_r_chosen, 
+                       E0, rv, r, epsilon_ext=epsilon_ext)[-1] 
+                  for rv in rvec]).reshape(len(y), len(z)))
+    E_k_meep_r_chosen.append(
+        np.array([vt.E(e_meep_r_chosen, a_k_meep_r_chosen, 
+                       E0, rv, r, epsilon_ext=epsilon_ext)[-1]
+                  for rv in rvec]).reshape(len(y), len(z)))
+    E_cm_exp_jc_chosen.append(
+        np.array([vt.E(e_exp_jc_chosen, a_cm_exp_jc_chosen, 
+                       E0, rv, r, epsilon_ext=epsilon_ext)[-1]
+                  for rv in rvec]).reshape(len(y), len(z)))
+    E_k_exp_jc_chosen.append(
+        np.array([vt.E(e_exp_jc_chosen, a_k_exp_jc_chosen, 
+                       E0, rv, r, epsilon_ext=epsilon_ext)[-1]
+                  for rv in rvec]).reshape(len(y), len(z)))
+# First index: wavelength
+# Second index: position
+# Third index: direction
+
+
+# E_chosen = [E_cm_exp_jc_chosen, E_cm_meep_r_chosen,
+#             E_k_exp_jc_chosen, E_k_meep_r_chosen]
+# E_labels = ["J&C Claussius-Mosotti", "R Claussius-Mosotti", "J&C Kuwata", "R Kuwata"]
+
+E_chosen = [E_cm_exp_jc_chosen, E_cm_meep_r_chosen,
+            E_k_exp_jc_chosen, E_k_meep_r_chosen]
+E_labels = ["J&C Claussius-Mosotti", "R Claussius-Mosotti", "J&C Kuwata", "R Kuwata"]
+
+# E_plane_cm_meep = np.array([E(epsilon_meep, alpha_cm_meep, E0, rv) for rv in rvec])
+# First index: position
+# Second index: wavelength
+# Third index: direction
+
+#%% FIELD VS WAVELENGTH
+
+plot_for_display = True
+
+n = len(wlen_chosen)
+if n <= 3:
+    subfig_size = 6
+if n <= 6:
+    subfig_size = 4.15
+else:
+    subfig_size = 3.2
+    
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure(figsize=(n*subfig_size, subfig_size))
+axes = fig.subplots(ncols=n, nrows=1)
+if plot_for_display: fig.dpi = 200
+
+# lims = [0, np.max([np.max([ np.max( np.power( np.abs(E_chosen[j][i]) , 2)/2 ) for j in range(len(E_chosen))]) for i in range(len(wlen_chosen))])]
+# [0, 15.310595163068891]
+lims = [0, np.max([ np.max( np.power( np.abs(E_k_meep_r_chosen[i]) , 2)/2 ) for i in range(len(wlen_chosen))])]
+# lims = [0, 11.203576619970478]
+
+plt.suptitle(plot_title)
+for i in range(len(wlen_chosen)):
+    axes[i].set_title(f'$\lambda$={wlen_chosen[i]:1.0f} nm')
+    ims = axes[i].imshow(np.power(np.abs(E_cm_meep_r_chosen[i]), 2).T / 2,
+                         cmap=plab.cm.jet, interpolation='spline36', 
+                         vmin=lims[0], vmax=lims[1],
+                         extent=[np.min(rvec), np.max(rvec),
+                                 np.min(rvec), np.max(rvec)])
+    # for j in range(len(E_chosen)):
+    #     ims = axes[i].imshow(np.power(np.abs(E_cm_meep_r_chosen[j][i]), 2).T / 2,
+    #                          cmap=plab.cm.jet, #interpolation='spline36', 
+    #                          vmin=lims[0], vmax=lims[1],
+    #                          extent=[np.min(rvec), np.max(rvec),
+    #                                  np.min(rvec), np.max(rvec)])
+    axes[i].grid(False)
+    axes[i].set_xlabel(trs.choose("Position $Z$ [nm]", "Posición $Z$ [nm]"))
+    if i==0:
+        axes[i].set_ylabel(trs.choose("Position $Y$ [nm]", "Posición $Y$ [nm]"))
+    if i==len(wlen_chosen)-1:
+        cax = axes[i].inset_axes([1.04, 0, 0.07, 1], #[1.04, 0.2, 0.05, 0.6], 
+                                 transform=axes[i].transAxes)
+        cbar = fig.colorbar(ims, ax=axes[i], cax=cax)
+        cbar.set_label(trs.choose(r"Electric field intensity $\langle\,|E_z|^2\,\rangle(y=z=0)$",
+                                  r"Intensidad del campo eléctrico $\langle\,|E_z|^2\,\rangle(y=z=0)$"))
+        
+plt.savefig(plot_file("FieldIntensity.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% SCATTERING CROSS SECTION
+
+scatt_meep_jc = vmt.sigma_scatt_meep(r, material, "JC", 
+                                      wlen, surrounding_index=submerged_index)
+scatt_meep_r = vmt.sigma_scatt_meep(r, material, "R", 
+                                    wlen, surrounding_index=submerged_index)
+scatt_exp_jc = vt.sigma_scatt_Mie(r, wlen, inner_N=n_exp_jc,
+                                  surrounding_N=submerged_index)
+
+scatt_k_exp_jc = vt.sigma_scatt_dipolar(r, wlen, alpha_k_exp_jc, surrounding_N=submerged_index)
+scatt_cm_exp_jc = vt.sigma_scatt_dipolar(r, wlen, alpha_cm_exp_jc, surrounding_N=submerged_index)
+scatt_k_meep_r = vt.sigma_scatt_dipolar(r, wlen, alpha_k_meep_r, surrounding_N=submerged_index)
+scatt_cm_meep_r = vt.sigma_scatt_dipolar(r, wlen, alpha_cm_meep_r, surrounding_N=submerged_index)
+
+#%% PLOT SCATTERING THEORY: FULL COMPARISON
+
+scatt = [scatt_exp_jc, scatt_cm_exp_jc, scatt_k_exp_jc,
+         scatt_meep_r, scatt_cm_meep_r, scatt_k_meep_r]
+wlen_long = [wlen]*6
+scatt_labels = ["JC Mie", "JC CM Dipolar", "JC K Dipolar",
+                "R Mie", "R CM Dipolar", "R K Dipolar"]
+
+plot_for_display = True
+split_plot = False
+
+colors = [*["C2"]*3, *["C1"]*3]
+linestyles = ["solid", "dashed", "dotted"]*2
+transparencies = [.5, .75, 1]*2
+
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+if split_plot:
+    axes = fig.subplots(nrows=2, sharex=True, gridspec_kw={"wspace":0, "hspace":0})
+    second_axes = [plt.twinx(ax) for ax in axes]
+else:
+    first_ax = fig.add_subplot()
+    second_ax = plt.twinx(first_ax)
+    axes = [first_ax]*2
+    second_axes = [second_ax]*2
+def get_ax(k):
+    if k<len(wlen_long)/2: return axes[0]
+    else: return axes[1]
+if plot_for_display: fig.dpi = 200
+
+plt.suptitle(plot_title)
+for k in range(len(wlen_long)):
+    ax = get_ax(k)
+    ax.plot(wlen_long[k], scatt[k], linewidth=2, linestyle=linestyles[k],
+            color=colors[k], alpha=transparencies[k], label=scatt_labels[k])
+ylims = (0, np.max([axes[0].get_ylim()[1], axes[0].get_ylim()[1]]))
+for ax, second_ax in zip(axes, second_axes):
+    ax.set_ylim(ylims)
+    second_ax.set_ylim(np.array(ax.get_ylim()) / (np.pi * r**2))
+    ax.legend()
+    ax.set_ylabel(trs.choose("Scattering Cross Section\n"+r"$\sigma_{disp}$ [nm$^2$]",
+                             "Sección eficaz\nde dispersión\n"+r"$\sigma_{disp}$ [nm$^2$]"))
+    second_ax.set_ylabel(trs.choose("Scattering Efficiency\n"+r"$C_{disp}$",
+                                    "Eficiencia\nde dispersión\n"+r"$C_{disp}$"))
+ax.set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+
+# fig.set_size_inches([9.06, 4.8])
+if split_plot: 
+    fig.set_size_inches([10.01,  5.68])
+    plt.savefig(plot_file("SplitScattering.png"))
+else: 
+    fig.set_size_inches([10.01,  4.99])
+    plt.savefig(plot_file("Scattering.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
+
+#%% PLOT SCATTERING THEORY: MINIMUM COMPARISON
+
+# scatt = [scatt_exp_jc, scatt_meep_jc, scatt_meep_r]
+# wlen_long = [wlen]*3
+# scatt_labels = [trs.choose("JC Data", "JC Datos"), 
+#                 "JC Drude-Lorentz", "R Drude-Lorentz"]
+
+scatt = [scatt_exp_jc, scatt_meep_r]
+wlen_long = [wlen]*2
+scatt_labels = [trs.choose("JC Data", "JC Datos"), 
+                "R Drude-Lorentz"]
+
+# colors = ["C2", "C2", "C1"]
+# linestyles = ["dashdot", "solid", "solid"]
+# transparencies = [1, .5, .5]
+
+colors = ["C2", "C1"]
+linestyles = ["solid", "solid"]
+transparencies = [.5, .5]
+
+plot_for_display = True
+
+if plot_for_display: use_backend("Agg")
+
+fig = plt.figure()
+ax = fig.add_subplot()
+second_ax = plt.twinx(ax)
+if plot_for_display: fig.dpi = 200
+
+plt.suptitle(plot_title)
+for k in range(len(wlen_long)):
+    ax.plot(wlen_long[k], scatt[k], linewidth=2, linestyle=linestyles[k],
+            color=colors[k], alpha=transparencies[k], label=scatt_labels[k])
+ax.set_ylim( (0, ax.get_ylim()[1]) )
+second_ax.set_ylim(np.array(ax.get_ylim()) / (np.pi * r**2))
+
+ax.set_ylabel(trs.choose("Scattering Cross Section\n"+r"$\sigma_{disp}$ [nm$^2$]",
+                         "Sección eficaz\nde dispersión\n"+r"$\sigma_{disp}$ [nm$^2$]"))
+second_ax.set_ylabel(trs.choose("Scattering Efficiency\n"+r"$C_{disp}$",
+                                "Eficiencia\nde dispersión\n"+r"$C_{disp}$"))
+ax.set_xlabel(trs.choose(r"Wavelength $\lambda$ [nm]", r"Longitud de onda $\lambda$ [nm]"))
+
+ax.legend()
+
+# fig.set_size_inches([9.06, 4.8])
+
+fig.set_size_inches([10.01,  3.83])
+plt.tight_layout()
+plt.savefig(plot_file("ScatteringSimple.png"))
+
+if plot_for_display: use_backend("Qt5Agg")
