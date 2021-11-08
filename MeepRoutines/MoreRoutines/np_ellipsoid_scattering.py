@@ -22,7 +22,6 @@ import click as cli
 import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
-# from mpi4py import MPI
 import os
 from time import time
 from vmp_materials import import_medium
@@ -101,12 +100,6 @@ def main(series, folder, resolution, from_um_factor, d, h,
     pml_width = pml_width - pml_width%(1/resolution)
     pml_layers = [mp.PML(thickness=pml_width)]
     
-    # symmetries = [mp.Mirror(mp.Y), 
-    #               mp.Mirror(mp.Z, phase=-1)]
-    # Two mirror planes reduce cell size to 1/4
-    # Issue related that lead me to comment this lines:
-    # https://github.com/NanoComp/meep/issues/1484
-    
     cell_width_z = 2 * (pml_width + air_width + h/2) # Parallel to polarization.
     cell_width_z = cell_width_z - cell_width_z%(1/resolution)
     
@@ -114,9 +107,8 @@ def main(series, folder, resolution, from_um_factor, d, h,
     cell_width_r = cell_width_r - cell_width_r%(1/resolution)
     
     cell_size = mp.Vector3(cell_width_r, cell_width_r, cell_width_z)
-    
     source_center = -0.5*cell_width_r + pml_width
-    # print("Resto Source Center: {}".format(source_center%(1/resolution)))
+
     sources = [mp.Source(mp.GaussianSource(freq_center,
                                            fwidth=freq_width,
                                            is_integrated=True,
@@ -189,36 +181,6 @@ def main(series, folder, resolution, from_um_factor, d, h,
     sim.init_sim()
     elapsed.append( time() - temp )
     
-    """
-    112x112x112 with resolution 4
-    (48 cells inside diameter)
-    ==> 30 s to build
-    
-    112x112x112 with resolution 2
-    (24 cells inside diameter)
-    ==> 4.26 s to build
-    
-    116x116x116 with resolution 2
-    (24 cells inside diameter)
-    ==> 5.63 s
-    
-    98 x 98 x 98 with resolution 3
-    (36 cells inside diameter)
-    ==> 9.57 s
-    
-    172x172x172 with resolution 2
-    (24 cells inside diameter)
-    ==> 17.47 s
-    
-    67 x 67 x 67 with resolution 4
-    (48 cells inside diameter)
-    ==> 7.06 s
-    
-    67,375 x 67,375 x 67,375 with resolution 8
-    (100 cells inside diameter)
-    ==> 56.14 s
-    """
-    
     #%% FIRST RUN: SIMULATION NEEDED TO NORMALIZE
     
     temp = time()
@@ -229,20 +191,6 @@ def main(series, folder, resolution, from_um_factor, d, h,
         # mp.Vector3(0.5*cell_width - pml_width, 0, 0), # Where to check
         # 1e-3)) # Factor to decay
     elapsed.append( time() - temp )
-    
-    """
-    112x112x112 with resolution 2
-    (24 cells inside diameter)
-    ==> 135.95 s to complete 1st run
-    
-    116x116x116 with resolution 2
-    (24 cells inside diameter)
-    ==> 208 s to complete 1st run
-    
-    67 x 67 x 67 with resolution 4
-    (48 cells inside diameter)
-    ==> 2000 s = 33 min to complete 1st run
-    """
     
     freqs = np.asarray(mp.get_flux_freqs(box_x1))
     box_x1_data = sim.get_flux_data(box_x1)
@@ -367,7 +315,6 @@ def main(series, folder, resolution, from_um_factor, d, h,
                         boundary_layers=pml_layers,
                         sources=sources,
                         k_point=mp.Vector3(),
-                        # symmetries=symmetries,
                         geometry=geometry)
     
     box_x1 = sim.add_flux(freq_center, freq_width, nfreq, 
@@ -394,21 +341,7 @@ def main(series, folder, resolution, from_um_factor, d, h,
     temp = time()
     sim.init_sim()
     elapsed.append( time() - temp )
-    
-    """
-    112x112x112 with resolution 2
-    (24 cells in diameter)
-    ==> 5.16 s to build with sphere
-    
-    116x116x116 with resolution 2
-    (24 cells inside diameter)
-    ==> 9.71 s to build with sphere
-    
-    67 x 67 x 67 with resolution 4
-    (48 cells inside diameter)
-    ==> 14.47 s to build with sphere
-    """
-    
+        
     temp = time()
     sim.load_minus_flux_data(box_x1, box_x1_data)
     sim.load_minus_flux_data(box_x2, box_x2_data)
@@ -419,20 +352,6 @@ def main(series, folder, resolution, from_um_factor, d, h,
     elapsed.append( time() - temp )
     del box_x1_data, box_x2_data, box_y1_data, box_y2_data
     del box_z1_data, box_z2_data
-    
-    """
-    112x112x112 with resolution 2
-    (24 cells in diameter)
-    ==> 0.016 s to add flux
-    
-    116x116x116 with resolution 2
-    (24 cells inside diameter)
-    ==> 0.021 s to add flux
-    
-    67 x 67 x 67 with resolution 4
-    (48 cells inside diameter)
-    ==> 0.043 s to add flux
-    """
     
     #%% SECOND RUN: SIMULATION :D
     

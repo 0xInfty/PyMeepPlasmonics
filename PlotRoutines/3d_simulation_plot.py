@@ -1,10 +1,20 @@
 # -*- coding: utf-8 -*-
+"""
+Visualization of a 3D structure defined inside a sim.Simulation instance
 
-# From Meep Tutorial: Visualizing 3D structures
+See also
+--------
+Meep Tutorial: Visualizing 3D structures
+"""
 
 import meep as mp
 import numpy as np
+import matplotlib.pyplot as plt
+#from mayavi import mlab
 import math
+
+#%% DEFAULT SIMULATION
+# Do not run this if you have your own simulation defined
 
 cell_size = mp.Vector3(2,2,2)
 
@@ -23,7 +33,7 @@ sim = mp.Simulation(resolution=50,
                     cell_size=cell_size,
                     geometry=geometry)
 
-#%%
+#%% STEPS TO GET DATA FROM SIMULATION
 
 sim.init_sim()
 
@@ -33,16 +43,12 @@ del more
 
 eps_data = sim.get_epsilon()
 
-#%%
+#%% 3D VISUALIZATION VIA MAYABI SUGGESTED BY MEEP
 
-from mayavi import mlab
-s = mlab.contour3d(eps_data, colormap="YlGnBu")
-mlab.show()
+#s = mlab.contour3d(eps_data, colormap="YlGnBu")
+#mlab.show()
 
-#%%
-
-import matplotlib.pyplot as plt
-# import matplotlib.pylab as plab
+#%% 3D SLICED VISUALIZATION VIA MATPLOTLIB
 
 n_slices = 3
 
@@ -83,5 +89,5 @@ for ax, xp, yp, eps, tl, xl, yl in zip(axes, x_plot, y_plot, eps_slices,
     ax.imshow(eps.T, interpolation='spline36', cmap='RdBu', 
               vmin=cmlims[0], vmax=cmlims[1])
     ax.axis("off")
-    # ax.xaxis.set_label_text(xl)
-    # ax.yaxis.set_label_text(yl)
+    ax.xaxis.set_label_text(xl)
+    ax.yaxis.set_label_text(yl)
