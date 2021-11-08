@@ -6,7 +6,7 @@ Created on Wed Jun 23 14:34:26 2021
 @author: vall
 """
 
-import v_meep as vm
+import vmp_utilities as vmu
 import v_save as vs
 import numpy as np
 import os
@@ -39,7 +39,7 @@ vs.savetxt(norm_file, np.array([]), footer=norm_dir, overwrite=True)
 
 blank_norm_file = {}
 blank_norm_file["norm_path"] = []
-for k in vm.normfield_key_params: blank_norm_file[k] = []
+for k in vmu.normfield_key_params: blank_norm_file[k] = []
 blank_norm_file["path"] = []
 
 vs.savetxt(os.path.join(home, "FieldData/FieldDataDirBlank.txt"),

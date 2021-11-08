@@ -9,7 +9,7 @@ Routines/np_monoch_field
 
 import matplotlib.pyplot as plt
 import numpy as np
-import v_meep as vm
+import vmp_utilities as vmu
 import v_plot as vp
 import v_utilities as vu
 
@@ -40,7 +40,7 @@ def plot_np_planewave_cell(params, series, folder,
     #%% SETUP
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     
     trs = vu.BilingualManager(english=english)
     

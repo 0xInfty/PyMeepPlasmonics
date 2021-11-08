@@ -29,7 +29,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.colors import colorConverter
 import os
 import v_analysis as va
-import v_meep_analysis as vma
+import vmp_analysis as vma
 import v_plot as vp
 import v_save as vs
 import v_utilities as vu

@@ -29,9 +29,9 @@ from matplotlib.ticker import AutoMinorLocator
 from matplotlib.colors import colorConverter
 import os
 import v_analysis as va
-import v_materials as vmt
-import v_meep as vm
-import v_meep_analysis as vma
+import vmp_materials as vmt
+import vmp_utilities as vmu
+import vmp_analysis as vma
 import v_plot as vp
 import v_theory as vt
 import v_save as vs

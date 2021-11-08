@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
 import os
-import v_meep as vm
-import v_meep_analysis as vma
+import vmp_utilities as vmu
+import vmp_analysis as vma
 import v_plot as vp
 import v_utilities as vu
 
@@ -37,12 +37,12 @@ maxnframes = 300
 #%% SETUP
 
 # Computation
-pm = vm.ParallelManager()
+pm = vmu.ParallelManager()
 n_processes, n_cores, n_nodes = pm.specs
 parallel = pm.parallel
 
 # Saving directories
-sa = vm.SavingAssistant(series, folder)
+sa = vmu.SavingAssistant(series, folder)
 
 trs = vu.BilingualManager(english=english)
 

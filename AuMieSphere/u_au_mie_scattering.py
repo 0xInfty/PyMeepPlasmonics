@@ -26,8 +26,8 @@ import click as cli
 import meep as mp
 import numpy as np
 import os
-import v_materials as vmt
-import v_meep as vm
+import vmp_materials as vmt
+import vmp_utilities as vmu
 import v_save as vs
 import v_utilities as vu
 
@@ -35,7 +35,7 @@ from np_planewave_cell_plot import plot_np_planewave_cell
 from np_pulse_scattering_plot import mid_plots_np_scattering
 from np_pulse_scattering_plot import plots_np_scattering
 
-rm = vm.ResourcesMonitor()
+rm = vmu.ResourcesMonitor()
 rm.measure_ram()
 
 #%% COMMAND LINE FORMATTER
@@ -190,7 +190,7 @@ def main(from_um_factor, resolution, courant,
     ### TREATED INPUT PARAMETERS
     
     # Computation
-    pm = vm.ParallelManager(n_cores, n_nodes)
+    pm = vmu.ParallelManager(n_cores, n_nodes)
     n_processes, n_cores, n_nodes = pm.specs
     parallel = pm.parallel
     
@@ -243,7 +243,7 @@ def main(from_um_factor, resolution, courant,
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     home = sa.home
     sysname = sa.sysname
     path = sa.path
@@ -324,7 +324,7 @@ def main(from_um_factor, resolution, courant,
     
     rm.measure_ram()
     
-    stable, max_courant = vm.check_stability(params)
+    stable, max_courant = vmu.check_stability(params)
     if stable:
         pm.log("As a whole, the simulation should be stable")
     else:
@@ -334,7 +334,7 @@ def main(from_um_factor, resolution, courant,
         
     if load_flux:
         try:
-            flux_path = vm.check_midflux(params)[-1]
+            flux_path = vmu.check_midflux(params)[-1]
             if load_resources and sysname != "TC":
                 if os.path.isfile( os.path.join(flux_path, "Resources.h5") ):
                     flux_needed = False
@@ -351,7 +351,7 @@ def main(from_um_factor, resolution, courant,
         
     if load_chunks and not split_chunks_evenly:
         try:
-            chunks_path = vm.check_chunks(params)[-1]
+            chunks_path = vmu.check_chunks(params)[-1]
             chunk_layout = os.path.join(chunks_path, "Layout.h5")
             chunks_needed = False
         except:
@@ -381,7 +381,7 @@ def main(from_um_factor, resolution, courant,
     
         sim.init_sim()
         
-        chunks_path = vm.save_chunks(sim, params, path)         
+        chunks_path = vmu.save_chunks(sim, params, path)         
         chunk_layout = os.path.join(chunks_path, "Layout.h5")
         
         del sim
@@ -489,7 +489,7 @@ def main(from_um_factor, resolution, courant,
 
         for p in params_list: params[p] = eval(p)
 
-        flux_path =  vm.save_midflux(sim, box_x1, box_x2, box_y1, 
+        flux_path =  vmu.save_midflux(sim, box_x1, box_x2, box_y1, 
                                      box_y2, box_z1, box_z2, 
                                      near2far_box, params, path)
                 
@@ -514,7 +514,7 @@ def main(from_um_factor, resolution, courant,
                        header=header_mid, footer=params)
 
         if not split_chunks_evenly:
-            vm.save_chunks(sim, params, path)
+            vmu.save_chunks(sim, params, path)
             
         if sysname != "TC":
             rm.save(os.path.join(flux_path, "Resources.h5"), params)
@@ -616,7 +616,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% LOAD FLUX FROM FILE
     
-    vm.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
+    vmu.load_midflux(sim, box_x1, box_x2, box_y1, box_y2, box_z1, box_z2, 
                     near2far_box, flux_path)
         
     rm.measure_ram()
@@ -812,7 +812,7 @@ def main(from_um_factor, resolution, courant,
         del header_near2far, data_near2far
         
     if not split_chunks_evenly:
-        vm.save_chunks(sim, params, path)
+        vmu.save_chunks(sim, params, path)
         
     if sysname != "TC":
         rm.save(sa.file("Resources.h5"), params)

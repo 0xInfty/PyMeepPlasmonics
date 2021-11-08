@@ -12,7 +12,7 @@ import matplotlib.pylab as plab
 from matplotlib.ticker import AutoMinorLocator
 import os
 import PyMieScatt as ps
-from v_materials import import_medium
+from vmp_materials import import_medium
 import v_save as vs
 import v_utilities as vu
 

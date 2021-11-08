@@ -30,9 +30,9 @@ import matplotlib.pylab as plab
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.gridspec as gridspec
 import os
-import v_materials as vmt
-import v_meep as vm
-import v_meep_analysis as vma
+import vmp_materials as vmt
+import vmp_utilities as vmu
+import vmp_analysis as vma
 import v_plot as vp
 import v_theory as vt
 import v_save as vs
@@ -154,7 +154,7 @@ for i in range(len(series)):
                 files_line_norm[i].append( h5.File(os.path.join(norm_path[i][j], "Field-Lines-Norm.h5"), "r") )
             print(f"Loading available normfield for {i},{j}")
         except:
-            norm_path_ij = vm.check_normfield(params[i][j])
+            norm_path_ij = vmu.check_normfield(params[i][j])
             try:
                 files_line_norm[i].append( h5.File(os.path.join(norm_path_ij[0], "Field-Lines-Norm.h5"), "r") )
                 print(f"Loading compatible normfield for {i},{j}")

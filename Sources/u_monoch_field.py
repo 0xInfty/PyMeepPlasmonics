@@ -24,14 +24,14 @@ import matplotlib.pyplot as plt
 import meep as mp
 import numpy as np
 import os
-import v_meep as vm
-import v_meep_analysis as vma
+import vmp_utilities as vmu
+import vmp_analysis as vma
 import v_utilities as vu
 
 from np_planewave_cell_plot import plot_np_planewave_cell
 from monoch_field_plot import plots_monoch_field
 
-rm = vm.ResourcesMonitor()
+rm = vmu.ResourcesMonitor()
 rm.measure_ram()
 
 #%% COMMAND LINE FORMATTER
@@ -158,7 +158,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     #%% TREATED PARAMETERS
     
     # Computation
-    pm = vm.ParallelManager(n_cores, n_nodes)
+    pm = vmu.ParallelManager(n_cores, n_nodes)
     n_processes, n_cores, n_nodes = pm.specs
     parallel = pm.parallel
     
@@ -209,7 +209,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     period_plane = period / n_period_plane # If I use period instead of wlen, the discretization will be different
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     home = sa.home
     sysname = sa.sysname
     path = sa.path
@@ -278,7 +278,7 @@ def main(from_um_factor, resolution, resolution_wlen, courant,
     
     #%% INITIALIZE
     
-    # stable, max_courant = vm.check_stability(params)
+    # stable, max_courant = vmu.check_stability(params)
     # if stable:
     #     pm.log("As a whole, the simulation should be stable")
     # else:

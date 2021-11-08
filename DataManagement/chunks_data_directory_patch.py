@@ -6,7 +6,7 @@ Created on Wed Jun 23 14:34:26 2021
 @author: vall
 """
 
-import v_meep as vm
+import vmp_utilities as vmu
 import v_save as vs
 import h5py as h5
 import numpy as np
@@ -124,7 +124,7 @@ vs.savetxt(chunks_file, np.array([]), footer=chunks_dir, overwrite=True)
 
 blank_chunks_dir = {}
 blank_chunks_dir["chunks_path"] = []
-for k in vm.chunks_key_params: blank_chunks_dir[k] = []
+for k in vmu.chunks_key_params: blank_chunks_dir[k] = []
 blank_chunks_dir["path"] = []
 
 vs.savetxt(os.path.join(home, "ChunksData/ChunksDataDirBlank.txt"), 

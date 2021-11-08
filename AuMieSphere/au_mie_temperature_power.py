@@ -21,7 +21,7 @@ power on a spherical nanoparticle submerged in an isotropic medium.
 
 import numpy as np
 import v_theory as vt
-import v_materials as vmt
+import vmp_materials as vmt
 
 #%% PARAMETERS
 

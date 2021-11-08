@@ -11,7 +11,7 @@ Routines/u_np_scattering
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
-import v_meep as vm
+import vmp_utilities as vmu
 import v_plot as vp
 import v_save as vs
 import v_utilities as vu
@@ -38,10 +38,10 @@ def mid_plots_np_scattering(series, folder, english=False):
     #%% SETUP
     
     # Computation
-    pm = vm.ParallelManager()
+    pm = vmu.ParallelManager()
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     
     trs = vu.BilingualManager(english=english)
     
@@ -106,10 +106,10 @@ def plots_np_scattering(series, folder, near2far=False,
     #%% SETUP
     
     # Computation
-    pm = vm.ParallelManager()
+    pm = vmu.ParallelManager()
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     
     trs = vu.BilingualManager(english=english)
     

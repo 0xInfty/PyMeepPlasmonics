@@ -26,11 +26,11 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
 from scipy.signal import find_peaks
-import v_materials as vmt
+import vmp_materials as vmt
 import v_theory as vt
 import v_save as vs
 import v_utilities as vu
-import v_meep_analysis as vma
+import vmp_analysis as vma
 
 english = False
 trs = vu.BilingualManager(english=english)

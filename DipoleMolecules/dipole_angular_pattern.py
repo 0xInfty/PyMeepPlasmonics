@@ -29,11 +29,11 @@ import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import v_meep as vm
+import vmp_utilities as vmu
 import v_save as vs
 import v_utilities as vu
 
-rm = vm.ResourcesMonitor()
+rm = vmu.ResourcesMonitor()
 rm.measure_ram()
 
 #%% COMMAND LINE FORMATTER
@@ -165,7 +165,7 @@ def main(from_um_factor, resolution, courant,
     ### TREATED INPUT PARAMETERS
     
     # Computation
-    pm = vm.ParallelManager(n_cores, n_nodes)
+    pm = vmu.ParallelManager(n_cores, n_nodes)
     n_processes, n_cores, n_nodes = pm.specs
     parallel = pm.parallel
     
@@ -220,7 +220,7 @@ def main(from_um_factor, resolution, courant,
     # Originally: Aprox 3 periods of lowest frequency, using T=λ/c=λ in Meep units 
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     home = sa.home
     sysname = sa.sysname
     path = sa.path
@@ -581,7 +581,7 @@ def main(from_um_factor, resolution, courant,
     pm.log("Saved far fields")
         
     # if not split_chunks_evenly:
-    #     vm.save_chunks(sim, params, path)
+    #     vmu.save_chunks(sim, params, path)
     
     rm.save(sa.file("Resources.h5"), params)
     
@@ -855,7 +855,7 @@ def main(from_um_factor, resolution, courant,
         mp.all_wait()
         
         # if not split_chunks_evenly:
-        #     vm.save_chunks(sim, params, path)
+        #     vmu.save_chunks(sim, params, path)
         
         rm.save(sa.file("Resources.h5"), params)
         

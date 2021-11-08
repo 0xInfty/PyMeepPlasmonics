@@ -12,10 +12,10 @@ import matplotlib.pylab as plab
 import matplotlib.gridspec as gridspec
 import os
 import PyMieScatt as ps
-from v_materials import import_medium
+from vmp_materials import import_medium
 import v_save as vs
 import v_utilities as vu
-import v_materials as vmt
+import vmp_materials as vmt
 import h5py as h5
 
 english = False

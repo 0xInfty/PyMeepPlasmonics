@@ -14,8 +14,8 @@ import matplotlib.gridspec as gridspec
 from matplotlib import use as use_backend
 import numpy as np
 import os
-import v_meep as vm
-import v_meep_analysis as vma
+import vmp_utilities as vmu
+import vmp_analysis as vma
 import v_plot as vp
 import v_save as vs
 import v_utilities as vu
@@ -47,12 +47,12 @@ def plot_np_planewave_cell(params, series, folder,
     #%% SETUP
     
     # Computation
-    pm = vm.ParallelManager()
+    pm = vmu.ParallelManager()
     n_processes, n_cores, n_nodes = pm.specs
     parallel = pm.parallel
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     home = sa.home
     sysname = sa.sysname
     path = sa.path
@@ -264,10 +264,10 @@ def mid_plots_np_scattering(series, folder, english=False):
     #%% SETUP
     
     # Computation
-    pm = vm.ParallelManager()
+    pm = vmu.ParallelManager()
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     
     trs = vu.BilingualManager(english=english)
     
@@ -341,10 +341,10 @@ def plots_np_scattering(series, folder, near2far=False,
     #%% SETUP
     
     # Computation
-    pm = vm.ParallelManager()
+    pm = vmu.ParallelManager()
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     
     trs = vu.BilingualManager(english=english)
     

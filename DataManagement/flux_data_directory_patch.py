@@ -6,7 +6,7 @@ Created on Wed Jun 23 14:34:26 2021
 @author: vall
 """
 
-import v_meep as vm
+import vmp_utilities as vmu
 import v_save as vs
 import numpy as np
 import os
@@ -122,7 +122,7 @@ vs.savetxt(flux_file, np.array([]), footer=flux_dir, overwrite=True)
 
 blank_flux_file = {}
 blank_flux_file["flux_path"] = []
-for k in vm.midflux_key_params: blank_flux_file[k] = []
+for k in vmu.midflux_key_params: blank_flux_file[k] = []
 blank_flux_file["path"] = []
 
 vs.savetxt(os.path.join(home, "FluxData/FluxDataDirBlank.txt"),

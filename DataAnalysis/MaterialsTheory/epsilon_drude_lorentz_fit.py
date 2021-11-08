@@ -13,7 +13,7 @@ import matplotlib.pylab as plab
 import os
 import sys
 import v_save as vs
-import v_materials as vmt
+import vmp_materials as vmt
 
 syshome = vs.get_sys_home()
 home = vs.get_home()

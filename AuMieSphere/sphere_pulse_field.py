@@ -27,7 +27,7 @@ import os
 from scipy.stats import norm
 # from scipy.integrate import dblquad
 from time import time
-# from v_materials import import_medium
+# from vmp_materials import import_medium
 import v_save as vs
 
 #%% PARAMETERS

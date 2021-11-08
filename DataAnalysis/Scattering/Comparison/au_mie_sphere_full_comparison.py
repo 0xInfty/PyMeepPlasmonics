@@ -13,7 +13,7 @@ import matplotlib.pylab as plab
 from matplotlib import use as use_backend
 import os
 import PyMieScatt as ps
-import v_materials as vmt
+import vmp_materials as vmt
 import v_save as vs
 import v_utilities as vu
 import v_plot as vp

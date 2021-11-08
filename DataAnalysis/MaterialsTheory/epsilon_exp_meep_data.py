@@ -9,7 +9,7 @@ Created on Tue Jul 27 13:59:19 2021
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import v_materials as vmt
+import vmp_materials as vmt
 import v_save as vs
 
 home = vs.get_home()

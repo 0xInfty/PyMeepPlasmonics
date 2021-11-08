@@ -9,8 +9,8 @@ Created on Mon Aug  9 13:17:36 2021
 from copy import deepcopy
 import numpy as np
 import meep as mp
-import v_materials as vmt
-import v_meep as vm
+import vmp_materials as vmt
+import vmp_utilities as vmu
 import v_utilities as vu
 
 #%%
@@ -645,7 +645,7 @@ class Surroundings:
                   f"with n = {self.surface_index}")
             if self.side == 1: position = "positive"
             else: position = "negative"
-            print(f"Normal {vm.recognize_direction(self.normal)}, " +
+            print(f"Normal {vmu.recognize_direction(self.normal)}, " +
                   f"situated on {position} side of the axis")
             print(f"Overlap {self.overlap} nm <=> "+
                   f"Displacement {self.displacement} nm")
@@ -912,9 +912,9 @@ class PlanePulseSource:
         print(f"Wavelength range: {self.wlen_range[0]:.0f} - {self.wlen_range[1]:.0f} nm")
         if self.side == 1: position = "positive"
         else: position = "negative"
-        print(f"Normal direction: {vm.recognize_direction(self.normal)}, " +
+        print(f"Normal direction: {vmu.recognize_direction(self.normal)}, " +
               f"situated on {position} side of the axis")
-        print(f"Polarization: {vm.recognize_component(self.polarization)}")
+        print(f"Polarization: {vmu.recognize_component(self.polarization)}")
     
     def get_params(self):
                 

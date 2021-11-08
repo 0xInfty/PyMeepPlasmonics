@@ -23,14 +23,14 @@ import h5py as h5
 import meep as mp
 import numpy as np
 import os
-from v_materials import import_medium
-import v_meep as vm
+from vmp_materials import import_medium
+import vmp_utilities as vmu
 import v_utilities as vu
 
 from np_planewave_cell_plot import plot_np_planewave_cell
 from np_monoch_field_plot import plots_np_monoch_field
 
-rm = vm.ResourcesMonitor()
+rm = vmu.ResourcesMonitor()
 rm.measure_ram()
 
 #%% COMMAND LINE FORMATTER
@@ -174,7 +174,7 @@ def main(from_um_factor, resolution, courant,
     #%% TREATED PARAMETERS
     
     # Computation
-    pm = vm.ParallelManager(n_cores, n_nodes)
+    pm = vmu.ParallelManager(n_cores, n_nodes)
     n_processes, n_cores, n_nodes = pm.specs
     parallel = pm.parallel
     
@@ -213,7 +213,7 @@ def main(from_um_factor, resolution, courant,
     period_plane = wlen / n_period_plane
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     home = sa.home
     sysname = sa.sysname
     path = sa.path
@@ -288,7 +288,7 @@ def main(from_um_factor, resolution, courant,
     params = {}
     for p in params_list: params[p] = eval(p)
     
-    # stable, max_courant = vm.check_stability(params)
+    # stable, max_courant = vmu.check_stability(params)
     # if stable:
     #     pm.log("As a whole, the simulation should be stable")
     # else:
@@ -298,7 +298,7 @@ def main(from_um_factor, resolution, courant,
         
     if load_field:
         try:
-            norm_path = vm.check_normfield(params)[-1]
+            norm_path = vmu.check_normfield(params)[-1]
             if load_resources:
                 if os.path.isfile( os.path.join(norm_path, "Resources.h5") ):
                     norm_needed = False
@@ -315,7 +315,7 @@ def main(from_um_factor, resolution, courant,
         
     # if load_chunks and not split_chunks_evenly:
     #     try:
-    #         chunks_path = vm.check_chunks(params)[-1]
+    #         chunks_path = vmu.check_chunks(params)[-1]
     #         chunk_layout = os.path.join(chunks_path, "Layout.h5")
     #         norm_needed = False
     #     except:
@@ -345,7 +345,7 @@ def main(from_um_factor, resolution, courant,
     
     #     sim.init_sim()
         
-    #     chunks_path = vm.save_chunks(sim, params, path)         
+    #     chunks_path = vmu.save_chunks(sim, params, path)         
     #     chunk_layout = os.path.join(chunks_path, "Layout.h5")
         
     #     del sim
@@ -366,7 +366,7 @@ def main(from_um_factor, resolution, courant,
         
         #% % FIRST RUN: INITIALIZE
         
-        # stable, max_courant = vm.check_stability(params)
+        # stable, max_courant = vmu.check_stability(params)
         # if stable:
         #     pm.log("As a whole, the simulation should be stable")
         # else:
@@ -484,7 +484,7 @@ def main(from_um_factor, resolution, courant,
                 
                 del f, fh, keys, oldk, newk, k
         
-        norm_path = vm.save_normfield(params, path)
+        norm_path = vmu.save_normfield(params, path)
         
         rm.save(os.path.join(norm_path, "Resources.h5"), params)
         rm.save(sa.file("Resources.h5"), params)
@@ -506,7 +506,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% SECOND RUN: INITIALIZE
     
-    # stable, max_courant = vm.check_stability(params)
+    # stable, max_courant = vmu.check_stability(params)
     # if stable:
     #     pm.log("As a whole, the simulation should be stable")
     # else:
@@ -537,7 +537,7 @@ def main(from_um_factor, resolution, courant,
     
     #%% LOAD FIELD FROM FILE
     
-    norm_amplitude, norm_period = vm.load_normfield(norm_path)
+    norm_amplitude, norm_period = vmu.load_normfield(norm_path)
 
     rm.measure_ram()
     

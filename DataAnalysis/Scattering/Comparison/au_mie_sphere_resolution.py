@@ -27,7 +27,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib import use as use_backend
 import os
 import v_analysis as va
-import v_materials as vmt
+import vmp_materials as vmt
 import v_plot as vp
 import v_save as vs
 import v_utilities as vu

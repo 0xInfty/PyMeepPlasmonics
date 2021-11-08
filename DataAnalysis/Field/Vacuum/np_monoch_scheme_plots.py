@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
 import os
-import v_meep as vm
-import v_meep_analysis as vma
+import vmp_utilities as vmu
+import vmp_analysis as vma
 import v_plot as vp
 import v_utilities as vu
 
@@ -43,12 +43,12 @@ def plot_np_monoch_field_cell(params, series, folder,
     #%% SETUP
     
     # Computation
-    pm = vm.ParallelManager()
+    pm = vmu.ParallelManager()
     n_processes, n_cores, n_nodes = pm.specs
     parallel = pm.parallel
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     home = sa.home
     sysname = sa.sysname
     path = sa.path
@@ -187,12 +187,12 @@ def plots_np_monoch_field(series, folder, hfield=False,
     #%% SETUP
     
     # Computation
-    pm = vm.ParallelManager()
+    pm = vmu.ParallelManager()
     n_processes, n_cores, n_nodes = pm.specs
     parallel = pm.parallel
     
     # Saving directories
-    sa = vm.SavingAssistant(series, folder)
+    sa = vmu.SavingAssistant(series, folder)
     home = sa.home
     sysname = sa.sysname
     path = sa.path
@@ -255,7 +255,7 @@ def plots_np_monoch_field(series, folder, hfield=False,
         
     except:
         
-        norm_path = vm.check_normfield(params)
+        norm_path = vmu.check_normfield(params)
         
         try:
             h = pm.hdf_file(os.path.join(norm_path[0], "Field-Lines-Norm.h5"), "r")

@@ -26,9 +26,9 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 from matplotlib.ticker import AutoMinorLocator
 import os
-import v_materials as vmt
-import v_meep as vm
-import v_meep_analysis as vma
+import vmp_materials as vmt
+import vmp_utilities as vmu
+import vmp_analysis as vma
 import v_plot as vp
 import v_theory as vt
 import v_save as vs

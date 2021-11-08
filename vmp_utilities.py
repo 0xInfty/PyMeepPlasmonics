@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-The `v_meep` module contains tools used to complement Meep.
+The `vmp_utilities` module contains tools used to complement Meep.
 
 Some of its most useful tools are...
 
@@ -28,10 +28,10 @@ import os
 import resource as res
 from shutil import copy
 from time import sleep, time
-import v_materials as vmt
+import vmp_materials as vmt
 import v_save as vs
 import v_utilities as vu
-import v_meep_analysis as vma
+import vmp_analysis as vma
 
 sysname = vs.get_sys_name()
 syshome = vs.get_sys_home()

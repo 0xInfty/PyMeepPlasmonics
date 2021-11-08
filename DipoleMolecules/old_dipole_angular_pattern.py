@@ -34,10 +34,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from time import time#, sleep
-import v_meep as vm
+import vmp_utilities as vmu
 import v_save as vs
 
-used_ram, swapped_ram, measure_ram = vm.ram_manager()
+used_ram, swapped_ram, measure_ram = vmu.ram_manager()
 measure_ram()
 
 #%% COMMAND LINE FORMATTER
@@ -240,7 +240,7 @@ def main(from_um_factor, resolution_wlen, courant,
     home = vs.get_home()
     sysname = vs.get_sys_name()
     path = os.path.join(home, folder, series)
-    if not os.path.isdir(path) and vm.parallel_assign(0, n_processes, parallel):
+    if not os.path.isdir(path) and vmu.parallel_assign(0, n_processes, parallel):
         os.makedirs(path)
     file = lambda f : os.path.join(path, f)
         
@@ -373,7 +373,7 @@ def main(from_um_factor, resolution_wlen, courant,
     
     os.chdir(path)
     sim.save_near2far("BaseNear2Far", near2far_box)
-    if vm.parallel_assign(0, np_process, parallel):
+    if vmu.parallel_assign(0, np_process, parallel):
             f = h5.File("BaseNear2Far.h5", "r+")
             for key, par in params.items():
                 f[ list(f.keys())[0] ].attrs[key] = par
@@ -381,7 +381,7 @@ def main(from_um_factor, resolution_wlen, courant,
             del f
     os.chdir(syshome)
 
-    if vm.parallel_assign(1, np_process, parallel):
+    if vmu.parallel_assign(1, np_process, parallel):
             f = h5.File(file("BaseResults.h5"), "w")
             f["Px"] = poynting_x
             f["Py"] = poynting_y
@@ -394,7 +394,7 @@ def main(from_um_factor, resolution_wlen, courant,
             del f
         
     # if not split_chunks_evenly:
-    #     vm.save_chunks(sim, params, path)
+    #     vmu.save_chunks(sim, params, path)
     
     if parallel:
         f = h5.File(file("BaseRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
@@ -538,7 +538,7 @@ def main(from_um_factor, resolution_wlen, courant,
         
         os.chdir(path)
         sim.save_near2far("FurtherNear2Far", near2far_box)
-        if vm.parallel_assign(0, np_process, parallel):
+        if vmu.parallel_assign(0, np_process, parallel):
                 f = h5.File("FurtherNear2Far.h5", "r+")
                 for key, par in params.items():
                     f[ list(f.keys())[0] ].attrs[key] = par
@@ -546,7 +546,7 @@ def main(from_um_factor, resolution_wlen, courant,
                 del f
         os.chdir(syshome)
     
-        if vm.parallel_assign(1, np_process, parallel):
+        if vmu.parallel_assign(1, np_process, parallel):
                 f = h5.File(file("FurtherResults.h5"), "w")
                 f["Px"] = poynting_x2
                 f["Py"] = poynting_y2
@@ -559,7 +559,7 @@ def main(from_um_factor, resolution_wlen, courant,
                 del f
             
         # if not split_chunks_evenly:
-        #     vm.save_chunks(sim, params, path)
+        #     vmu.save_chunks(sim, params, path)
         
         if parallel:
             f = h5.File(file("FurtherRAM.h5"), "w", driver='mpio', comm=MPI.COMM_WORLD)
@@ -634,19 +634,19 @@ def main(from_um_factor, resolution_wlen, courant,
 
     #%% SAVE FINAL DATA
     
-    if surface_index!=1 and vm.parallel_assign(0, np_process, parallel):
+    if surface_index!=1 and vmu.parallel_assign(0, np_process, parallel):
         
         os.remove(file("BaseRAM.h5"))
         os.rename(file("FurtherRAM.h5"), file("RAM.h5"))
     
-    elif vm.parallel_assign(0, np_process, parallel):
+    elif vmu.parallel_assign(0, np_process, parallel):
         
         os.rename(file("BaseRAM.h5"), file("RAM.h5"))
     
     
     #%% PLOT ANGULAR PATTERN IN 3D
     
-    if vm.parallel_assign(1, np_process, parallel):
+    if vmu.parallel_assign(1, np_process, parallel):
     
         freq_index = np.argmin(np.abs(freqs - freq_center))
     
@@ -666,7 +666,7 @@ def main(from_um_factor, resolution_wlen, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT POLAR ANGLES
         
-    if vm.parallel_assign(0, np_process, parallel):
+    if vmu.parallel_assign(0, np_process, parallel):
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(polar_angle).index(alpha) for alpha in [0, .25, .5, .75, 1]]
@@ -687,7 +687,7 @@ def main(from_um_factor, resolution_wlen, courant,
         
     #%% PLOT ANGULAR PATTERN PROFILE FOR DIFFERENT AZIMUTHAL ANGLES
         
-    if vm.parallel_assign(1, np_process, parallel):
+    if vmu.parallel_assign(1, np_process, parallel):
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
@@ -705,7 +705,7 @@ def main(from_um_factor, resolution_wlen, courant,
         
         plt.savefig(file("AngularAzimuthal.png"))
         
-    if vm.parallel_assign(0, np_process, parallel):
+    if vmu.parallel_assign(0, np_process, parallel):
         
         freq_index = np.argmin(np.abs(freqs - freq_center))
         index = [list(azimuthal_angle).index(alpha) for alpha in [0, .25, .5, .75, 1, 1.25, 1.5, 1.75, 2]]
