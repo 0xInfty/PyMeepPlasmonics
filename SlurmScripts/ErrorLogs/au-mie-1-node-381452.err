@@ -1,5 +1,0 @@
-srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
-srun: got SIGCONT
-slurmstepd: error: *** JOB 381452 ON cnode55 CANCELLED AT 2021-08-20T15:15:21 ***
-srun: forcing job termination
-slurmstepd: error: *** STEP 381452.0 ON cnode55 CANCELLED AT 2021-08-20T15:15:21 ***

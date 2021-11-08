@@ -1,4 +1,0 @@
-srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
-slurmstepd: error: *** JOB 381434 ON cnode08 CANCELLED AT 2021-08-20T12:55:22 DUE TO TIME LIMIT ***
-slurmstepd: error: *** STEP 381434.0 ON cnode08 CANCELLED AT 2021-08-20T12:55:22 DUE TO TIME LIMIT ***
-srun: got SIGCONT

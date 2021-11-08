@@ -576,13 +576,13 @@ def epsilon_data_from_file(material="Au", paper="JC", reference="RIinfo"):
                                      "or", True)
         raise ValueError(error)
     
-    data_series = os.listdir(os.path.join(syshome, 'MaterialsData'))
+    data_series = os.listdir(os.path.join(syshome, 'SupportFiles', 'MaterialsData'))
     
     try:
         data_files = []
         for df in data_series:
             if (f"_{paper}_") in df and material in df and reference in df:
-                data_files.append( os.path.join(syshome, 'MaterialsData', df) )
+                data_files.append( os.path.join(syshome, 'SupportFiles', 'MaterialsData', df) )
     except:
         raise ValueError("Experimental data couldn't be found. Sorry!")
     
@@ -921,13 +921,13 @@ def n_data_from_file(material="Au", paper="JC", reference="RIinfo"):
                                      "or", True)
         raise ValueError(error)
     
-    data_series = os.listdir(os.path.join(syshome, 'MaterialsData'))
+    data_series = os.listdir(os.path.join(syshome, 'SupportFiles', 'MaterialsData'))
     
     try:
         data_files = []
         for df in data_series:
             if (f"_{paper}_") in df and material in df and reference in df:
-                data_files.append( os.path.join(syshome, 'MaterialsData', df) )
+                data_files.append( os.path.join(syshome, 'SupportFiles', 'MaterialsData', df) )
     except:
         raise ValueError("Experimental data couldn't be found. Sorry!")
     

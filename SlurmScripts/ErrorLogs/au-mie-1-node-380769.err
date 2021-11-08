@@ -1,4 +1,0 @@
-[warn] Epoll ADD(1) on fd 0 failed.  Old events were 0; read change was 1 (add); write change was 0 (none): Operation not permitted
-[warn] Epoll ADD(4) on fd 1 failed.  Old events were 0; read change was 0 (none); write change was 1 (add): Operation not permitted
-mpirun: Forwarding signal 18 to job
-slurmstepd: error: *** JOB 380769 ON cnode11 CANCELLED AT 2021-07-25T18:38:59 ***

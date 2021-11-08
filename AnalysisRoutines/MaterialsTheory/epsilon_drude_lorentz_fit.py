@@ -193,7 +193,7 @@ for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)),
 #%%
 
 filename = f"{material}_JC_ComplexN_RIinfo.txt"
-path = os.path.join(syshome, "MaterialsData", filename)
+path = os.path.join(syshome, "SupportFiles", "MaterialsData", filename)
 data_n_jc = np.loadtxt(path)
     
 wlens_jc = data_n_jc[:,0] / (1e3 * from_um_factor)
