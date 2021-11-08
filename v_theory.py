@@ -63,13 +63,13 @@ def alpha_Clausius_Mosotti(epsilon, r, epsilon_ext=1):
 #%% KUWATA: POLARIZABILITY
 
 def alpha_Kuwata(epsilon, wlen, r, epsilon_ext=1):
-    """Returns Kuwata polarizability alpha in units of volume"""
-    aux_x = np.pi * r / wlen # Withouth units, so no need for from_um_factor * 1e3
+    """Returns alternative Kuwata polarizability alpha in units of volume"""
+    aux_d = 2 * np.pi * r * epsilon_ext / wlen # Withouth units, so no need for from_um_factor * 1e3
     aux_vol = 4 * np.pi * (r**3) / 3
-    alpha = aux_vol * ( 1 - ( (epsilon + epsilon_ext) * ( aux_x**2 ) / 10 ) )
-    aux_den = ( 1/3 ) + ( epsilon_ext / ( epsilon - epsilon_ext ) )
-    aux_den = aux_den - ( epsilon + 10 * epsilon_ext ) * ( aux_x**2 ) / 30
-    aux_den = aux_den - 4j * (np.pi**2) * (epsilon_ext**(3/2) ) * aux_vol / (3 * (wlen**3))
+    alpha = 3 * aux_vol * ( 1 - ( (epsilon + epsilon_ext) * ( aux_d**2 ) / ( 40 * epsilon_ext ) ) )
+    aux_den = 1 + ( 3 * epsilon_ext / ( epsilon - epsilon_ext ) )
+    aux_den = aux_den - ( epsilon + 10 * epsilon_ext ) * ( aux_d**2 ) / ( 40 * epsilon_ext )
+    aux_den = aux_den - 2 * 1j * aux_d**3 / 3
     alpha = alpha / aux_den
     return alpha
 
@@ -135,7 +135,185 @@ def E(epsilon, alpha, E0, rvec, r, epsilon_ext=1):
 
 #%% SCATTERING AND ABSORPTION CROSS SECTION
 
-def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
+def sigma_scatt_dipolar(r, wlen, alpha, surrounding_N=1, asEfficiency=False):
+    """
+    Calculates scattering cross section using dipolar approximation for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    wlen : float, list, np.array
+        Incident light wavelength. Measured in nm.
+    inner_N=1.458 : float, list, np.array
+        Spherical NP inner medium's complex refractive index. The default is 
+        1.458 for fused-silica.
+    surrounding_N=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEfficiency : bool, optional
+        If false, scattering cross section sigma is returned, measured in nm^2. 
+        If true, scattering effienciency Q is returned, dimensionless and 
+        related to scattering cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    sigma_scatt : float, np.array
+        The scattering cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, scattering effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many inner refractive index values as..."
+        If the length of `wlen` and `inner_N` differ.
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    try:
+        wlen = np.array([*wlen])
+    except:
+        wlen = np.array([wlen])
+    
+    try:
+        if len(alpha)==len(wlen):
+            alpha = np.array([*alpha])
+        else:
+            raise ValueError("Must have as many inner polarizability values as wavelength values")
+    except:
+        alpha = [*[alpha]*len(wlen)]
+    
+    try:
+        if len(surrounding_N)==len(wlen):
+            surrounding_N = np.array([*surrounding_N])
+        else:
+            raise ValueError("Must have as many surrounding refractive index values as wavelength values")
+    except:
+        surrounding_N = [*[surrounding_N]*len(wlen)]
+    
+    # k = 2 * np.pi * surrounding_N / wlen
+    # return k**4 * np.abs(alpha)**2 / (6 * np.pi)
+
+    if not asEfficiency:
+        return 8 * np.pi**3 * np.abs(alpha)**2 * (surrounding_N / wlen)**4 / 3
+    else:
+        return 8 * (np.pi * np.abs(alpha))**2 * (surrounding_N / wlen)**4 / ( 3 * r**2 )
+
+def sigma_ext_dipolar(r, wlen, alpha, surrounding_N=1, asEfficiency=False):
+    """
+    Calculates extinction cross section using dipolar approximation for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    wlen : float, list, np.array
+        Incident light wavelength. Measured in nm.
+    inner_N=1.458 : float, list, np.array
+        Spherical NP inner medium's complex refractive index. The default is 
+        1.458 for fused-silica.
+    surrounding_N=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEfficiency : bool, optional
+        If false, extinction cross section sigma is returned, measured in nm^2. 
+        If true, extinction effienciency Q is returned, dimensionless and 
+        related to extinction cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    sigma_ext : float, np.array
+        The extinction cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, extinction effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many inner refractive index values as..."
+        If the length of `wlen` and `inner_N` differ.
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    try:
+        wlen = np.array([*wlen])
+    except:
+        wlen = np.array([wlen])
+    
+    try:
+        if len(alpha)==len(wlen):
+            alpha = np.array([*alpha])
+        else:
+            raise ValueError("Must have as many inner polarizability values as wavelength values")
+    except:
+        alpha = [*[alpha]*len(wlen)]
+    
+    try:
+        if len(surrounding_N)==len(wlen):
+            surrounding_N = np.array([*surrounding_N])
+        else:
+            raise ValueError("Must have as many surrounding refractive index values as wavelength values")
+    except:
+        surrounding_N = [*[surrounding_N]*len(wlen)]
+    
+    # k = 2 * np.pi * surrounding_N / wlen
+    # return k * np.imag(alpha)
+
+    if not asEfficiency:
+        return 2 * np.pi * surrounding_N * np.imag(alpha) / wlen
+    else:
+        return 2 * surrounding_N * np.imag(alpha) / ( wlen * r**2 )
+
+def sigma_abs_dipolar(r, wlen, alpha, surrounding_N=1, asEfficiency=False):
+    """
+    Calculates absorption cross section using dipolar approximation for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    wlen : float, list, np.array
+        Incident light wavelength. Measured in nm.
+    inner_N=1.458 : float, list, np.array
+        Spherical NP inner medium's complex refractive index. The default is 
+        1.458 for fused-silica.
+    surrounding_N=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEfficiency : bool, optional
+        If false, absorption cross section sigma is returned, measured in nm^2. 
+        If true, absorption effienciency Q is returned, dimensionless and 
+        related to absorption cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    sigma_ext : float, np.array
+        The absorption cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, absorption effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many inner refractive index values as..."
+        If the length of `wlen` and `inner_N` differ.
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    sigma_scatt = sigma_scatt_dipolar(r, wlen, alpha, surrounding_N, asEfficiency)
+    sigma_ext = sigma_ext_dipolar(r, wlen, alpha, surrounding_N, asEfficiency)
+    
+    return sigma_ext - sigma_scatt
+
+# def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
+def sigma_scatt_Mie(r, wlen, inner_N=1.458, surrounding_N=1, asEfficiency=False):
     """
     Calculates scattering cross section using Mie theory for a spherical NP.
 
@@ -151,7 +329,7 @@ def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
     surrounding_N=1 : float, list, np.array
         Surrounding medium's complex refractive index. The default is 
         1 for vacuum.
-    asEffiency : bool, optional
+    asEfficiency : bool, optional
         If false, scattering cross section sigma is returned, measured in nm^2. 
         If true, scattering effienciency Q is returned, dimensionless and 
         related to scattering cross section by sigma = pi r^2 Q 
@@ -187,7 +365,7 @@ def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
         inner_N = [*[inner_N]*len(wlen)]
     
     try:
-        if len(inner_N)==len(wlen):
+        if len(surrounding_N)==len(wlen):
             surrounding_N = np.array([*surrounding_N])
         else:
             raise ValueError("Must have as many surrounding refractive index values as wavelength values")
@@ -195,15 +373,16 @@ def sigma_scatt(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
         surrounding_N = [*[surrounding_N]*len(wlen)]
     
     sigma_scatt = np.array([ps.MieQ(
-        iN, wl, 2*r, nMedium=sN, asCrossSection=not(asEffiency))[1] 
+        iN, wl, 2*r, nMedium=sN, asCrossSection=not(asEfficiency))[1] 
             for wl, iN, sN in zip(wlen, inner_N, surrounding_N)])
     
     if len(sigma_scatt)>1:
         return sigma_scatt
     else:
         return sigma_scatt[0]
-    
-def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
+
+def sigma_abs_Mie(r, wlen, inner_N=1.458, surrounding_N=1, asEfficiency=False):    
+# def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
     """
     Calculates absorption cross section using Mie theory for a spherical NP.
 
@@ -219,7 +398,7 @@ def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
     surrounding_N=1 : float, list, np.array
         Surrounding medium's complex refractive index. The default is 
         1 for vacuum.
-    asEffiency : bool, optional
+    asEfficiency : bool, optional
         If false, scattering cross section sigma is returned, measured in nm^2. 
         If true, scattering effienciency Q is returned, dimensionless and 
         related to scattering cross section by sigma = pi r^2 Q 
@@ -254,7 +433,7 @@ def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
         inner_N = [*[inner_N]*len(wlen)]
     
     try:
-        if len(inner_N)==len(wlen):
+        if len(surrounding_N)==len(wlen):
             surrounding_N = np.array([*surrounding_N])
         else:
             raise ValueError("Must have as many surrounding refractive index values as wavelength values")
@@ -262,13 +441,81 @@ def sigma_abs(r, wlen, inner_N=1.458, surrounding_N=1, asEffiency=False):
         surrounding_N = [*[surrounding_N]*len(wlen)]
     
     sigma_abs = np.array([ps.MieQ(
-        iN, wl, 2*r, nMedium=sN, asCrossSection=not(asEffiency))[2]
+        iN, wl, 2*r, nMedium=sN, asCrossSection=not(asEfficiency))[2]
             for wl, iN, sN in zip(wlen, inner_N, surrounding_N)])
     
     if len(sigma_abs)>1:
         return sigma_abs
     else:
         return sigma_abs[0]
+    
+def sigma_ext_Mie(r, wlen, inner_N=1.458, surrounding_N=1, asEfficiency=False):
+    """
+    Calculates extinction cross section using Mie theory for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    wlen : float, list, np.array
+        Incident light wavelength. Measured in nm.
+    inner_N=1.458 : float, list, np.array
+        Spherical NP inner medium's complex refractive index. The default is 
+        1.458 for fused-silica.
+    surrounding_N=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEfficiency : bool, optional
+        If false, extinction cross section sigma is returned, measured in nm^2. 
+        If true, extinction effienciency Q is returned, dimensionless and 
+        related to extinction cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    sigma_scatt : float, np.array
+        The extinction cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, extinction effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many inner refractive index values as..."
+        If the length of `wlen` and `inner_N` differ.
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    try:
+        wlen = np.array([*wlen])
+    except:
+        wlen = np.array([wlen])
+    
+    try:
+        if len(inner_N)==len(wlen):
+            inner_N = np.array([*inner_N])
+        else:
+            raise ValueError("Must have as many inner refractive index values as wavelength values")
+    except:
+        inner_N = [*[inner_N]*len(wlen)]
+    
+    try:
+        if len(surrounding_N)==len(wlen):
+            surrounding_N = np.array([*surrounding_N])
+        else:
+            raise ValueError("Must have as many surrounding refractive index values as wavelength values")
+    except:
+        surrounding_N = [*[surrounding_N]*len(wlen)]
+    
+    sigma_ext = np.array([ps.MieQ(
+        iN, wl, 2*r, nMedium=sN, asCrossSection=not(asEfficiency))[0]
+            for wl, iN, sN in zip(wlen, inner_N, surrounding_N)])
+    
+    if len(sigma_ext)>1:
+        return sigma_ext
+    else:
+        return sigma_ext[0]
 
 #%% TEMPERATURE
 

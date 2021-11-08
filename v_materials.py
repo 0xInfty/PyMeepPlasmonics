@@ -1095,7 +1095,7 @@ def n_function(material="Au", paper="JC", reference="RIinfo",
 #%% SCATTERING CALCULATED USING MEEP
 
 def sigma_scatt_meep(r, material, paper, wlen, 
-                     surrounding_index=1, asEffiency=False):
+                     surrounding_index=1, asEfficiency=False):
     
     """
     Calculates scattering cross section using Mie theory for a spherical NP.
@@ -1116,7 +1116,7 @@ def sigma_scatt_meep(r, material, paper, wlen,
     surrounding_index=1 : float, list, np.array
         Surrounding medium's complex refractive index. The default is 
         1 for vacuum.
-    asEffiency : bool, optional
+    asEfficiency : bool, optional
         If false, scattering cross section sigma is returned, measured in nm^2. 
         If true, scattering effienciency Q is returned, dimensionless and 
         related to scattering cross section by sigma = pi r^2 Q 
@@ -1152,14 +1152,14 @@ def sigma_scatt_meep(r, material, paper, wlen,
     epsilon = np.array([ medium.epsilon(1 / wl)[0,0] for wl in wlen ])
     N = vt.N_from_epsilon( epsilon )
     
-    scattering = vt.sigma_scatt(r,  wlen,  inner_N=N, 
-                                surrounding_N=surrounding_index,
-                                asEffiency=asEffiency)
+    scattering = vt.sigma_scatt_Mie(r,  wlen,  inner_N=N, 
+                                    surrounding_N=surrounding_index,
+                                    asEfficiency=asEfficiency)
     
     return scattering
 
 def max_scatt_meep(r, material, paper, wlen_range, wlen_delta=0.5,
-                   surrounding_index=1, asEffiency=False):
+                   surrounding_index=1, asEfficiency=False):
             
     """
     Returns maximum scattering cross section using Mie theory for a nanosphere.
@@ -1179,7 +1179,7 @@ def max_scatt_meep(r, material, paper, wlen_range, wlen_delta=0.5,
     surrounding_index=1 : float, list, np.array
         Surrounding medium's complex refractive index. The default is 
         1 for vacuum.
-    asEffiency : bool, optional
+    asEfficiency : bool, optional
         If false, scattering cross section sigma is returned, measured in nm^2. 
         If true, scattering effienciency Q is returned, dimensionless and 
         related to scattering cross section by sigma = pi r^2 Q 
@@ -1205,7 +1205,7 @@ def max_scatt_meep(r, material, paper, wlen_range, wlen_delta=0.5,
     
     scattering = sigma_scatt_meep(r, material, paper, wavelength, 
                                   surrounding_index=surrounding_index, 
-                                  asEffiency=asEffiency)
+                                  asEfficiency=asEfficiency)
     
     max_index = np.argmax(scattering)
     max_wlen = wavelength[max_index]
@@ -1216,7 +1216,7 @@ def max_scatt_meep(r, material, paper, wlen_range, wlen_delta=0.5,
 #%% ABSORPTION CALCULATED USING MEEP
 
 def sigma_abs_meep(r, material, paper, wlen, 
-                   surrounding_index=1, asEffiency=False):
+                   surrounding_index=1, asEfficiency=False):
     
     """
     Calculates absorption cross section using Mie theory for a spherical NP.
@@ -1237,10 +1237,10 @@ def sigma_abs_meep(r, material, paper, wlen,
     surrounding_index=1 : float, list, np.array
         Surrounding medium's complex refractive index. The default is 
         1 for vacuum.
-    asEffiency : bool, optional
-        If false, scattering cross section sigma is returned, measured in nm^2. 
-        If true, scattering effienciency Q is returned, dimensionless and 
-        related to scattering cross section by sigma = pi r^2 Q 
+    asEfficiency : bool, optional
+        If false, absorption cross section sigma is returned, measured in nm^2. 
+        If true, absorption effienciency Q is returned, dimensionless and 
+        related to absorption cross section by sigma = pi r^2 Q 
         for a spherical NP. The default is False.
 
     Returns
@@ -1273,14 +1273,14 @@ def sigma_abs_meep(r, material, paper, wlen,
     epsilon = np.array([ medium.epsilon(1 / wl)[0,0] for wl in wlen ])
     N = vt.N_from_epsilon( epsilon )
     
-    absorption = vt.sigma_abs(r,  wlen,  inner_N=N, 
-                              surrounding_N=surrounding_index,
-                              asEffiency=asEffiency)
+    absorption = vt.sigma_abs_Mie(r,  wlen,  inner_N=N, 
+                                  surrounding_N=surrounding_index,
+                                  asEfficiency=asEfficiency)
     
     return absorption
 
 def max_abs_meep(r, material, paper, wlen_range, wlen_delta=0.5,
-                 surrounding_index=1, asEffiency=False):
+                 surrounding_index=1, asEfficiency=False):
             
     """
     Returns maximum absorption cross section using Mie theory for a nanosphere.
@@ -1300,10 +1300,10 @@ def max_abs_meep(r, material, paper, wlen_range, wlen_delta=0.5,
     surrounding_index=1 : float, list, np.array
         Surrounding medium's complex refractive index. The default is 
         1 for vacuum.
-    asEffiency : bool, optional
-        If false, scattering cross section sigma is returned, measured in nm^2. 
-        If true, scattering effienciency Q is returned, dimensionless and 
-        related to scattering cross section by sigma = pi r^2 Q 
+    asEfficiency : bool, optional
+        If false, absorption cross section sigma is returned, measured in nm^2. 
+        If true, absorption effienciency Q is returned, dimensionless and 
+        related to absorption cross section by sigma = pi r^2 Q 
         for a spherical NP. The default is False.
 
     Returns
@@ -1326,13 +1326,134 @@ def max_abs_meep(r, material, paper, wlen_range, wlen_delta=0.5,
     
     absorption = sigma_abs_meep(r, material, paper, wavelength, 
                                 surrounding_index=surrounding_index, 
-                                asEffiency=asEffiency)
+                                asEfficiency=asEfficiency)
     
     max_index = np.argmax(absorption)
     max_wlen = wavelength[max_index]
     max_abs = absorption[max_index]
     
     return max_wlen, max_abs
+
+#%% EXTINCTION CALCULATED USING MEEP
+
+def sigma_ext_meep(r, material, paper, wlen, 
+                   surrounding_index=1, asEfficiency=False):
+    
+    """
+    Calculates extinction cross section using Mie theory for a spherical NP.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    material: str
+        Name of the desired material.
+    paper="R": str
+        Name of desired source for experimental input data of medium.
+    wlen : float, list, np.array
+        Incident light wavelength. Measured in nm.
+    inner_N=1.458 : float, list, np.array
+        Spherical NP inner medium's complex refractive index. The default is 
+        1.458 for fused-silica.
+    surrounding_index=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEfficiency : bool, optional
+        If false, extinction cross section sigma is returned, measured in nm^2. 
+        If true, extinction effienciency Q is returned, dimensionless and 
+        related to extinction cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    extinction : float, np.array
+        The extinction cross section calculated using Mie theory and measured 
+        in nm^2. In case `asEfficiency=True`, extinction effiency is returned 
+        instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    try:
+        wlen = np.array([*wlen])
+    except:
+        wlen = np.array([wlen])
+    
+    try:
+        len(surrounding_index)
+    except TypeError:
+        surrounding_index = [*[surrounding_index]*len(wlen)]
+    
+    medium = import_medium(material, paper=paper, from_um_factor=1e-3)
+    # Meep unit chosen to be 1 nm
+    
+    epsilon = np.array([ medium.epsilon(1 / wl)[0,0] for wl in wlen ])
+    N = vt.N_from_epsilon( epsilon )
+    
+    extinction = vt.sigma_ext_Mie(r,  wlen,  inner_N=N, 
+                                 surrounding_N=surrounding_index,
+                                 asEfficiency=asEfficiency)
+    
+    return extinction
+
+def max_ext_meep(r, material, paper, wlen_range, wlen_delta=0.5,
+                 surrounding_index=1, asEfficiency=False):
+            
+    """
+    Returns maximum extinction cross section using Mie theory for a nanosphere.
+
+    Parameters
+    ----------
+    r : float
+        Spherical NP radius. Measured in nm.
+    material: str
+        Name of the desired material.
+    paper="R": str
+        Name of desired source for experimental input data of medium.
+    wlen_range : tuple
+        Wavelength range to check. Measured in nm.
+    wlen_delta : float
+        Wavelength desired precision. Measured in nm.
+    surrounding_index=1 : float, list, np.array
+        Surrounding medium's complex refractive index. The default is 
+        1 for vacuum.
+    asEfficiency : bool, optional
+        If false, extinction cross section sigma is returned, measured in nm^2. 
+        If true, extinction effienciency Q is returned, dimensionless and 
+        related to extinction cross section by sigma = pi r^2 Q 
+        for a spherical NP. The default is False.
+
+    Returns
+    -------
+    max_wlen : float
+        The wavelength of maximum absorption cross secion, measured in nm.
+    max_abs : float
+        The maximum extinction cross section calculated using Mie theory and 
+        measured in nm^2. In case `asEfficiency=True`, extinction effiency is 
+        returned instead, dimensionless.
+        
+    Raises
+    ------
+    ValueError : "Must have as many surrounding refractive index values as..."
+        If the length of `wlen` and `surrounding_N` differ.
+
+    """
+    
+    wavelength = np.arange(*wlen_range, wlen_delta)
+    
+    extinction = sigma_ext_meep(r, material, paper, wavelength, 
+                               surrounding_index=surrounding_index, 
+                               asEfficiency=asEfficiency)
+    
+    max_index = np.argmax(extinction)
+    max_wlen = wavelength[max_index]
+    max_ext = extinction[max_index]
+    
+    return max_wlen, max_ext
 
 #%% MEEP MEDIUM THAT TAKES FUNCTION
 
