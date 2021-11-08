@@ -28,7 +28,6 @@ from time import time
 from vmp_materials import import_medium
 import v_save as vs
 import v_utilities as vu
-# from v_units import MeepUnitsManager
 
 #%% COMMAND LINE FORMATTER
 
@@ -85,9 +84,6 @@ def main(series, folder, resolution, from_um_factor, d, h,
     home = vs.get_home()
     
     ### OTHER PARAMETERS
-    
-    # Units
-    # uman = MeepUnitsManager(from_um_factor=from_um_factor)
     
     # Frequency and wavelength
     freq_range = 1/wlen_range # Hz range in Meep units from highest to lowest

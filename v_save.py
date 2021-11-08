@@ -431,48 +431,6 @@ def saveanimation(file,
 
 #%%
 
-def savefile_helper(folder, 
-                    filename_template, 
-                    parent_folder='Measurements', 
-                    parent_folder_in_cwd=True):
-    
-    """Defines a function that creates filenames from a template.
-    
-    Parameters
-    ----------
-    folder :  str
-        Directory of the folder where you'll create files.
-    filename_template : str
-        Function that makes only filenames (file's name with 
-        termination) from a series of arguments.
-    parent_folder='Measurements', optional
-        Directory of a folder that will contain 'folder'.
-    parent_folder_in_cwd=True : bool, optional
-        Indicates whether 'parent_folder' is in the current working 
-        directory or not. If it isn't, then 'parent_folder' should be a 
-        full global directory.
-    
-    Returns
-    -------
-    filename_maker : function
-        Function that returns a filename (including full path and 
-        termination). Its arguments are *args.
-    """
-    
-    
-    if parent_folder_in_cwd:
-        parent_folder = os.path.join(os.getcwd(), parent_folder)
-        
-    save_dir = os.path.join(parent_folder, folder)
-    
-    def filename_maker(*args, **kwargs):
-        
-        return os.path.join(save_dir, filename_template.format(*args, **kwargs))
-
-    return filename_maker
-
-#%%
-
 def save_slice_generator(sim, filename, datanames, get_slices):
 
     """Generates a Meep stepfunction to save slices or outputs to HDF5.

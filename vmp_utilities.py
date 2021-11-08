@@ -18,10 +18,8 @@ It's widely based on Meep Materials Library.
 """
 
 import h5py as h5
-try:
-    from mpi4py import MPI
-except ModuleNotFoundError:
-    print("Importing without module 'mpi4py'")
+try: from mpi4py import MPI
+except ModuleNotFoundError: print("Importing without module 'mpi4py'")
 import meep as mp
 import numpy as np
 import os
@@ -319,7 +317,6 @@ def parallel_manager(process_total_number, parallel):
 
 # %%
 
-
 def parallel_hdf_file(filename, mode, parallel):
 
     if parallel:
@@ -330,92 +327,6 @@ def parallel_hdf_file(filename, mode, parallel):
     return f
 
 # %%
-
-
-def ram_manager():
-
-    used_ram = []
-    swapped_ram = []
-
-    def measure_ram():
-        ram = res.getrusage(res.RUSAGE_THREAD).ru_maxrss  # / (1024**2)
-        swap = res.getrusage(res.RUSAGE_THREAD).ru_nswap
-        used_ram.append(ram)
-        swapped_ram.append(swap)
-
-    return used_ram, swapped_ram, measure_ram
-
-# %%
-
-
-class RAManager:
-
-    def __init__(self):
-
-        self._used_ram = []
-        self._swapped_ram = []
-
-    @property
-    def used_ram(self):
-        return self._used_ram
-
-    @property
-    def swapped_ram(self):
-        return self._swapped_ram
-
-    @used_ram.setter
-    @swapped_ram.setter
-    def negator(self):
-        raise AttributeError("This attribute cannot be changed this way!")
-
-    def measure(self):
-
-        ram = res.getrusage(res.RUSAGE_THREAD).ru_maxrss  # / (1024**2)
-        swap = res.getrusage(res.RUSAGE_THREAD).ru_nswap
-        self._used_ram.append(ram)
-        self._swapped_ram.append(swap)
-
-    def reset(self):
-
-        self._used_ram = []
-        self._swapped_ram = []
-
-# %%
-
-
-class TimeManager:
-
-    def __init__(self):
-
-        self._elapsed_time = []
-        self._instant = None
-
-    @property
-    def elapsed_time(self):
-        return self._elapsed_time
-
-    @elapsed_time.setter
-    def negator(self):
-        raise AttributeError("This attribute cannot be changed this way!")
-
-    def start_measure(self):
-
-        self._instant = time()
-
-    def end_measure(self):
-
-        new_instant = time()
-        try:
-            self._elapsed_time.append(new_instant - self._instant)
-        except TypeError:
-            print("Must start measurement first!")
-        self._instant = None
-
-    def reset(self):
-        self._elapsed_time = []
-
-# %%
-
 
 class ResourcesMonitor:
 
@@ -1172,55 +1083,6 @@ def recognize_direction(direction):
         raise ValueError("Unrecognized format for direction")
 
 # %%
-
-
-class Line(mp.Volume):
-
-    """A Meep Volume subclass that holds a line instead of a whole volume"""
-
-    def __init__(self, center=mp.Vector3(), size=mp.Vector3(),
-                 is_cylindrical=False, vertices=[]):
-
-        super().__init__(center=center, size=size, dims=1,
-                         is_cylindrical=is_cylindrical, vertices=vertices)
-
-        nvertices = len(self.get_vertices())
-        if nvertices > 2:
-            raise TypeError(f"Must have 2 vertices and not {nvertices}")
-
-# %%
-
-
-class Plane(mp.Volume):
-
-    """A Meep Volume subclass that holds a line instead of a whole volume"""
-
-    def __init__(self, center=mp.Vector3(), size=mp.Vector3(),
-                 is_cylindrical=False, vertices=[]):
-
-        super().__init__(center=center, size=size, dims=1,
-                         is_cylindrical=is_cylindrical, vertices=vertices)
-
-        nvertices = len(self.get_vertices())
-        if nvertices < 3 or nvertices > 4:
-            raise TypeError(f"Must have 3 or 4 vertices and not {nvertices}")
-
-# %%
-
-
-class SimpleUnitsConverter:
-
-    def __init__(self, from_um_factor):
-        self.from_um_factor = from_um_factor
-
-    def to_nm(self, mp_length):
-        return mp_length * (1e3 * self.from_um_factor)
-
-    def from_nm(self, nm_length):
-        return nm_length / (1e3 * self.from_um_factor)
-
-# %%
-
 
 class MeepUnitsManager:
     """Depricated class to manage units in Meep"""
