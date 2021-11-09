@@ -32,7 +32,7 @@ import numpy as np
 import os
 import re
 from socket import gethostname
-import v_utilities as vut
+import v_utilities as vu
 
 #%% 
 
@@ -558,7 +558,7 @@ def retrieve_footer(file, comment_marker='#'):
         try:
             last_line = last_line.split(comment_marker + ' ')[-1]
             last_line = last_line.split('\n')[0]
-            footer = vut.string_to_dict(last_line)
+            footer = vu.string_to_dict(last_line)
         except:
             footer = last_line
         return footer
