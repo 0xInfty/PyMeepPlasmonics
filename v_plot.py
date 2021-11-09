@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-The 'v_plot' module contains tools for plotting.
+This module contains tools for plotting with customized style.
 
-The only tool contained right now is...
+The functions contained right now are...
+
+set_style : function 
+    Gives NanoMeepPlasmonics thesis style to a figure.
 add_style : function
-    Gives a specific style to figure.
-
+    Gives style to figures to include in Latex PDF files.
+add_subplot_axes : function
+    Adds a sub-set of axes inside an existing set of axes.
 
 @author: Vall
 """
@@ -19,6 +23,7 @@ import matplotlib.pyplot as plt
 #%% CUSTOMIZATION OPTIONS
 
 def set_style():
+    """Gives NanoMeepPlasmonics thesis style to a figure."""
     
     plt.rcParams.update({'text.usetex': False, 
                          'font.family':'serif',
@@ -45,7 +50,7 @@ def set_style():
                          })
 
 def add_style(figure_id=None, new_figure=False, **kwargs):
-    """Gives a specific style to figure.
+    """Gives style to figures to include in Latex PDF files.
     
     This function...
         ...increases font size;

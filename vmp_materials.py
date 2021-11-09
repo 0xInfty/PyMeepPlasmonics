@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-The `vmp_materials` module contains tools for materials from different sources.
+This module allows to work in MEEP with materials from different sources.
 
 It holds tools to work with...
     

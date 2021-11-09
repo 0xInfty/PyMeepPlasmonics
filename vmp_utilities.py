@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-The `vmp_utilities` module contains tools used to complement Meep.
+This module contains tools used to complement Meep execution routines.
 
 Some of its most useful tools are...
 

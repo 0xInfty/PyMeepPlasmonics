@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-This module contains functions with electromagnetic theory.
+This module contains functions with electromagnetic plasmonics theory.
 
 It holds tools to work with...
 
+    - Complex dielectric constant and refractive index
     - Polarizability
     - Induced dipolar moment
     - Electric field
-    - Scattering and absorption
+    - Scattering, absorption and extinction
     - Power and temperature
     
 These functions compute physical magnitudes by applying different 

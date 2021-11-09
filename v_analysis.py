@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-This module contains tools for data analysis.
+This module contains tools for data analysis such as fits.
 
-Some of its most useful tools are:
+The functions currently held are...
 
 linear_fit : function
     Applies linear fit and returns m, b and Rsq. Can also plot it.

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Sep 11 12:02:05 2021
+This module is meant for analysis of Meep Plasmonics field results.
 
-@author: vall
+@author: Vall
 """
 
 import numpy as np
