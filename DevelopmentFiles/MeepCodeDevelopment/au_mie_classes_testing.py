@@ -9,9 +9,9 @@ Created on Thu Mar 25 22:51:24 2021
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import v_theory as vt
+import vmp_theory as vmt
 import v_save as vs
-import vmp_materials as vmt
+import vmp_materials as vml
 
 syshome = vs.get_sys_home()
 
@@ -45,27 +45,27 @@ from_um_factor = 10e-3
 wlen_range = np.array([400, 800]) / (1e3 * from_um_factor)
 wlen = np.linspace(*wlen_range, npoints)
 
-au_jc = vmt.MediumFromFile(material="Au", 
+au_jc = vml.MediumFromFile(material="Au", 
                            paper="JC", 
                            reference="RIinfo",
                            from_um_factor=from_um_factor)
-au_r = vmt.MediumFromFile(material="Au", 
+au_r = vml.MediumFromFile(material="Au", 
                           paper="R", 
                           reference="RIinfo",
                           from_um_factor=from_um_factor)
 
-epsilon_func_meep_jc = vmt.epsilon_function(material="Au", 
+epsilon_func_meep_jc = vml.epsilon_function(material="Au", 
                                            paper="JC", 
                                            reference="Meep",
                                            from_um_factor=from_um_factor)
-epsilon_func_meep_r = vmt.epsilon_function(material="Au", 
+epsilon_func_meep_r = vml.epsilon_function(material="Au", 
                                           paper="R", 
                                           reference="Meep",
                                           from_um_factor=from_um_factor)
-# epsilon_func_exp_jc = vmt.epsilon_function(material="Au", 
+# epsilon_func_exp_jc = vml.epsilon_function(material="Au", 
 #                                           paper="JC", 
 #                                           reference="RIinfo")
-# epsilon_func_exp_r = vmt.epsilon_function(material="Au", 
+# epsilon_func_exp_r = vml.epsilon_function(material="Au", 
 #                                           paper="R", 
 #                                           reference="RIinfo")
 epsilon_func_exp_jc = lambda wlen : au_jc.epsilon(1/wlen)[0,0]
@@ -113,9 +113,9 @@ for ax in axes: ax.set_ylim([min(min_value)-.1*(max(max_value)-min(min_value)),
 
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
 
-alpha_cm_meep_r = vt.alpha_Clausius_Mosotti(epsilon_meep_r, r,
+alpha_cm_meep_r = vmt.alpha_Clausius_Mosotti(epsilon_meep_r, r,
                                            epsilon_ext=epsilon_ext)
-alpha_cm_exp_jc = vt.alpha_Clausius_Mosotti(epsilon_exp_jc, r,
+alpha_cm_exp_jc = vmt.alpha_Clausius_Mosotti(epsilon_exp_jc, r,
                                             epsilon_ext=epsilon_ext)
 
 alpha_cm = np.array([alpha_cm_meep_r,
@@ -123,9 +123,9 @@ alpha_cm = np.array([alpha_cm_meep_r,
 
 #%% KUWATA: POLARIZABILITY
    
-alpha_k_meep_r = vt.alpha_Kuwata(epsilon_meep_r, wlen, r,
+alpha_k_meep_r = vmt.alpha_Kuwata(epsilon_meep_r, wlen, r,
                                   epsilon_ext=epsilon_ext)
-alpha_k_exp_jc = vt.alpha_Kuwata(epsilon_exp_jc, wlen, r,
+alpha_k_exp_jc = vmt.alpha_Kuwata(epsilon_exp_jc, wlen, r,
                                   epsilon_ext=epsilon_ext)
 
 alpha_k = np.array([alpha_k_meep_r,
@@ -175,26 +175,26 @@ E_cm_exp_jc_chosen = []
 E_k_exp_jc_chosen = []
 for wl in wlen_chosen:
     e_meep_r_chosen = epsilon_func_meep_r(wl)
-    a_cm_meep_r_chosen = vt.alpha_Clausius_Mosotti(e_meep_r_chosen, r, 
+    a_cm_meep_r_chosen = vmt.alpha_Clausius_Mosotti(e_meep_r_chosen, r, 
                                                    epsilon_ext=epsilon_ext)
-    a_k_meep_r_chosen = vt.alpha_Kuwata(e_meep_r_chosen, wl, r,
+    a_k_meep_r_chosen = vmt.alpha_Kuwata(e_meep_r_chosen, wl, r,
                                         epsilon_ext=epsilon_ext)
     e_exp_jc_chosen = epsilon_func_exp_jc(wl)
-    a_cm_exp_jc_chosen = vt.alpha_Clausius_Mosotti(e_exp_jc_chosen, r,
+    a_cm_exp_jc_chosen = vmt.alpha_Clausius_Mosotti(e_exp_jc_chosen, r,
                                                    epsilon_ext=epsilon_ext)
-    a_k_exp_jc_chosen = vt.alpha_Kuwata(e_exp_jc_chosen, wl, r,
+    a_k_exp_jc_chosen = vmt.alpha_Kuwata(e_exp_jc_chosen, wl, r,
                                         epsilon_ext=epsilon_ext)
     E_cm_meep_r_chosen.append(
-        np.array([vt.E(e_meep_r_chosen, a_cm_meep_r_chosen, 
+        np.array([vmt.E(e_meep_r_chosen, a_cm_meep_r_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
     E_k_meep_r_chosen.append(
-        np.array([vt.E(e_meep_r_chosen, a_k_meep_r_chosen, 
+        np.array([vmt.E(e_meep_r_chosen, a_k_meep_r_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
     E_cm_exp_jc_chosen.append(
-        np.array([vt.E(e_exp_jc_chosen, a_cm_exp_jc_chosen, 
+        np.array([vmt.E(e_exp_jc_chosen, a_cm_exp_jc_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
     E_k_exp_jc_chosen.append(
-        np.array([vt.E(e_exp_jc_chosen, a_k_exp_jc_chosen, 
+        np.array([vmt.E(e_exp_jc_chosen, a_k_exp_jc_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
 
 E_chosen = [E_cm_meep_r_chosen, E_k_meep_r_chosen,

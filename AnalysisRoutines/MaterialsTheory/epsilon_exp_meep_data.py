@@ -9,7 +9,7 @@ Created on Tue Jul 27 13:59:19 2021
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import vmp_materials as vmt
+import vmp_materials as vml
 import v_save as vs
 
 home = vs.get_home()
@@ -27,7 +27,7 @@ plot_file = lambda n : os.path.join(home, "DataAnalysis/MaterialsPaper", n)
 
 #%% VARIABLES
 
-medium = vmt.import_medium(material, from_um_factor=from_um_factor, paper=paper)
+medium = vml.import_medium(material, from_um_factor=from_um_factor, paper=paper)
 
 freq_range = medium.valid_freq_range
 
@@ -36,11 +36,11 @@ wlens = 1 / freqs # nm
 
 #%% GET N
 
-wlen_data_exp, n_data_exp = vmt.n_data_from_file(material, paper, "RIinfo")
+wlen_data_exp, n_data_exp = vml.n_data_from_file(material, paper, "RIinfo")
 
-n_function_meep = vmt.n_function_from_meep(material, paper, from_um_factor)
+n_function_meep = vml.n_function_from_meep(material, paper, from_um_factor)
 
-n_function_exp = vmt.n_function_from_file(material, paper, "RIinfo", from_um_factor)
+n_function_exp = vml.n_function_from_file(material, paper, "RIinfo", from_um_factor)
 
 #%% PLOT N
 
@@ -83,13 +83,13 @@ vs.saveplot( plot_file(f"N{material}MeepN.png"), overwrite=True )
 
 #%% GET EPSILON
 
-wlen_data_exp, epsilon_data_exp = vmt.epsilon_data_from_file(material, 
+wlen_data_exp, epsilon_data_exp = vml.epsilon_data_from_file(material, 
                                                              paper, "RIinfo")
 
-epsilon_function_meep = vmt.epsilon_function_from_meep(material, paper, 
+epsilon_function_meep = vml.epsilon_function_from_meep(material, paper, 
                                                        from_um_factor)
 
-epsilon_function_exp = vmt.epsilon_function_from_file(material, paper, 
+epsilon_function_exp = vml.epsilon_function_from_file(material, paper, 
                                                       "RIinfo", from_um_factor)
 
 #%% PLOT N

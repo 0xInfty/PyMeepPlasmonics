@@ -29,7 +29,7 @@ try:
 except:
     print("Meep functions not available. Don't worry! You can still use everything else")
 import v_save as vs
-import v_theory as vt
+import vmp_theory as vmt
 import v_utilities as vu
 
 syshome = vs.get_sys_home()
@@ -1150,9 +1150,9 @@ def sigma_scatt_meep(r, material, paper, wlen,
     # Meep unit chosen to be 1 nm
     
     epsilon = np.array([ medium.epsilon(1 / wl)[0,0] for wl in wlen ])
-    N = vt.N_from_epsilon( epsilon )
+    N = vmt.N_from_epsilon( epsilon )
     
-    scattering = vt.sigma_scatt_Mie(r,  wlen,  inner_N=N, 
+    scattering = vmt.sigma_scatt_Mie(r,  wlen,  inner_N=N, 
                                     surrounding_N=surrounding_index,
                                     asEfficiency=asEfficiency)
     
@@ -1271,9 +1271,9 @@ def sigma_abs_meep(r, material, paper, wlen,
     # Meep unit chosen to be 1 nm
     
     epsilon = np.array([ medium.epsilon(1 / wl)[0,0] for wl in wlen ])
-    N = vt.N_from_epsilon( epsilon )
+    N = vmt.N_from_epsilon( epsilon )
     
-    absorption = vt.sigma_abs_Mie(r,  wlen,  inner_N=N, 
+    absorption = vmt.sigma_abs_Mie(r,  wlen,  inner_N=N, 
                                   surrounding_N=surrounding_index,
                                   asEfficiency=asEfficiency)
     
@@ -1392,9 +1392,9 @@ def sigma_ext_meep(r, material, paper, wlen,
     # Meep unit chosen to be 1 nm
     
     epsilon = np.array([ medium.epsilon(1 / wl)[0,0] for wl in wlen ])
-    N = vt.N_from_epsilon( epsilon )
+    N = vmt.N_from_epsilon( epsilon )
     
-    extinction = vt.sigma_ext_Mie(r,  wlen,  inner_N=N, 
+    extinction = vmt.sigma_ext_Mie(r,  wlen,  inner_N=N, 
                                  surrounding_N=surrounding_index,
                                  asEfficiency=asEfficiency)
     

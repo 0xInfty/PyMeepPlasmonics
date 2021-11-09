@@ -29,11 +29,11 @@ from matplotlib.ticker import AutoMinorLocator
 from matplotlib.colors import colorConverter
 import os
 import v_analysis as va
-import vmp_materials as vmt
+import vmp_materials as vml
 import vmp_utilities as vmu
 import vmp_analysis as vma
 import v_plot as vp
-import v_theory as vt
+import vmp_theory as vmt
 import v_save as vs
 import v_utilities as vu
 

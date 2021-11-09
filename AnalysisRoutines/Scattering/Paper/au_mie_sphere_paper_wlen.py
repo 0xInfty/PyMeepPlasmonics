@@ -12,7 +12,7 @@ import matplotlib.pylab as plab
 import os
 import PyMieScatt as ps
 import v_analysis as va
-import vmp_materials as vmt
+import vmp_materials as vml
 import v_save as vs
 import v_utilities as vu
 
@@ -84,7 +84,7 @@ wlen_range = params[0][0]["wlen_range"]
 r = params[0][0]["r"]
 index = params[0][0]["submerged_index"]
 
-medium = vmt.import_medium("Au", from_um_factor, paper="JC")
+medium = vml.import_medium("Au", from_um_factor, paper="JC")
 
 wlens = data[0][-1][:,0]
 freqs = 1e3*from_um_factor/wlens

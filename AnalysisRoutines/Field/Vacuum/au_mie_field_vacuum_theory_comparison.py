@@ -28,7 +28,7 @@ import PyMieScatt as ps
 from scipy.signal import find_peaks
 import vmp_utilities as vmu
 import v_save as vs
-import v_theory as vt
+import vmp_theory as vmt
 
 #%% PARAMETERS
 
@@ -124,12 +124,12 @@ in_theory_k_line = []
 for j in range(len(wlen)):
     medium = vmu.import_medium("Au", from_um_factor[j])
     epsilon = medium.epsilon(1/wlen[j])[0,0]
-    alpha_cm = vt.alpha_Clausius_Mosotti(epsilon, r[j])
-    alpha_k = vt.alpha_Kuwata(epsilon, wlen[j], r[j])
+    alpha_cm = vmt.alpha_Clausius_Mosotti(epsilon, r[j])
+    alpha_k = vmt.alpha_Kuwata(epsilon, wlen[j], r[j])
     in_theory_cm_line.append(
-        np.array([vt.E(epsilon, alpha_cm, E0, rv, r[j]) for rv in rvec[j]])[:,-1])
+        np.array([vmt.E(epsilon, alpha_cm, E0, rv, r[j]) for rv in rvec[j]])[:,-1])
     in_theory_k_line.append(
-        np.array([vt.E(epsilon, alpha_k, E0, rv, r[j]) for rv in rvec[j]])[:,-1])
+        np.array([vmt.E(epsilon, alpha_k, E0, rv, r[j]) for rv in rvec[j]])[:,-1])
 
 #%% PLOT MAXIMUM INTESIFICATION PROFILE (LINES)
 

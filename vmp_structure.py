@@ -9,7 +9,7 @@ Created on Mon Aug  9 13:17:36 2021
 from copy import deepcopy
 import numpy as np
 import meep as mp
-import vmp_materials as vmt
+import vmp_materials as vml
 import vmp_utilities as vmu
 import v_utilities as vu
 
@@ -100,7 +100,7 @@ class SimpleNanoparticle:
     mp.Ellipsoid
     mp.Cylinder
     mp.Block
-    vmt.import_material
+    vml.import_material
     """
     
     def __init__(self, 
@@ -361,7 +361,7 @@ class SimpleNanoparticle:
             geometry.radius = geometry.radius / (1e3 * from_um_factor) # Meep Units
             geometry.height = geometry.height / (1e3 * from_um_factor) # Meep Units
         
-        medium = vmt.import_medium(self.material,
+        medium = vml.import_medium(self.material,
                                    paper=self.paper,
                                    from_um_factor=from_um_factor) # Meep units
         geometry.material = medium
@@ -458,20 +458,20 @@ class Surroundings:
         self._nanoparticle = nanoparticle
         
         if isinstance(submerged_index, str):
-            submerged_index = vmt.recognize_material(submerged_index)
+            submerged_index = vml.recognize_material(submerged_index)
         if submerged_index != 0:
             self._submerged_index = submerged_index
         else:
             self._submerged_index = 1
-        self._submerged_material = vmt.recognize_material(self._submerged_index)
+        self._submerged_material = vml.recognize_material(self._submerged_index)
 
         if isinstance(surface_index, str):
-            surface_index = vmt.recognize_material(surface_index)
+            surface_index = vml.recognize_material(surface_index)
         if surface_index != 0:
             self._surface_index = surface_index
         else:
             self._surface_index = self._submerged_index
-        self._surface_material = vmt.recognize_material(self._surface_index)
+        self._surface_material = vml.recognize_material(self._surface_index)
         
         if overlap is None and displacement is None:
             raise ValueError("Either overlap or displacement is accepted. Not both!")
@@ -492,11 +492,11 @@ class Surroundings:
     @submerged_index.setter
     def submerged_index(self, value):
         if isinstance(value, str):
-            value = vmt.recognize_material(value)
+            value = vml.recognize_material(value)
         if self._submerged_index == self._surface_index:
             self.surface_index = value
         self._submerged_index = value
-        self._submerged_material = vmt.recognize_material(value)
+        self._submerged_material = vml.recognize_material(value)
         
     @property
     def surface_index(self):
@@ -505,9 +505,9 @@ class Surroundings:
     @surface_index.setter
     def surface_index(self, value):
         if isinstance(value, str):
-            value = vmt.recognize_material(value)
+            value = vml.recognize_material(value)
         self._surface_index = value
-        self._surface_material = vmt.recognize_material(value)
+        self._surface_material = vml.recognize_material(value)
        
     @property
     def submerged_material(self):

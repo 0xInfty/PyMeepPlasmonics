@@ -20,8 +20,8 @@ power on a spherical nanoparticle submerged in an isotropic medium.
 """
 
 import numpy as np
-import v_theory as vt
-import vmp_materials as vmt
+import vmp_theory as vmt
+import vmp_materials as vml
 
 #%% PARAMETERS
 
@@ -51,14 +51,14 @@ mode = "RefT" # Either 'RefT' or 'RefP'
 
 #%% 
 
-inner_epsilon_function = vmt.epsilon_function(material, paper, reference)
+inner_epsilon_function = vml.epsilon_function(material, paper, reference)
 inner_N = np.sqrt(inner_epsilon_function(wlen))
 
-sigma_abs = vt.sigma_abs_Mie(r, wlen, inner_N, surrounding_N)
+sigma_abs = vmt.sigma_abs_Mie(r, wlen, inner_N, surrounding_N)
 
-estimated_delta_T = vt.delta_T(P, sigma_abs, w0, r, surrounding_kappa)
+estimated_delta_T = vmt.delta_T(P, sigma_abs, w0, r, surrounding_kappa)
 
-estimated_P = vt.P(delta_T, sigma_abs, w0, r, surrounding_kappa)
+estimated_P = vmt.P(delta_T, sigma_abs, w0, r, surrounding_kappa)
 
 #%%
 
@@ -66,7 +66,7 @@ ref_laser = lasers[[l["wlen"] for l in lasers].index(wlen)]
 
 for l in lasers:
     inner_N = np.sqrt(inner_epsilon_function(wlen))
-    l["sigma_abs"] = vt.sigma_abs_Mie(r, l["wlen"], inner_N, surrounding_N)
+    l["sigma_abs"] = vmt.sigma_abs_Mie(r, l["wlen"], inner_N, surrounding_N)
 
 ref_laser["P"] = P
 for l in lasers:

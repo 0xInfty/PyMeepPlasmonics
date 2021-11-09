@@ -13,7 +13,7 @@ import matplotlib.pylab as plab
 import os
 import sys
 import v_save as vs
-import vmp_materials as vmt
+import vmp_materials as vml
 
 syshome = vs.get_sys_home()
 home = vs.get_home()
@@ -29,7 +29,7 @@ plot_file = lambda n : os.path.join(home, "DataAnalysis/MaterialsPaper", n)
 
 #%%
 
-epsilon_function_r = vmt.epsilon_function_from_file(material=material,
+epsilon_function_r = vml.epsilon_function_from_file(material=material,
                                                     paper="R",
                                                     reference="RIinfo",
                                                     from_um_factor=from_um_factor)

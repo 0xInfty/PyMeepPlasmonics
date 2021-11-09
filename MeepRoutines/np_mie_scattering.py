@@ -26,7 +26,7 @@ import click as cli
 import meep as mp
 import numpy as np
 import os
-import vmp_materials as vmt
+import vmp_materials as vml
 import vmp_utilities as vmu
 import v_save as vs
 import v_utilities as vu
@@ -213,10 +213,10 @@ def main(from_um_factor, resolution, courant,
     # Nanoparticle specifications: Sphere in Vacuum :)
     r = r / ( from_um_factor * 1e3 ) # Now in Meep units
     if reference=="Meep": 
-        medium = vmt.import_medium(material, from_um_factor=from_um_factor, paper=paper)
+        medium = vml.import_medium(material, from_um_factor=from_um_factor, paper=paper)
         # Importing material constants dependant on frequency from Meep Library
     elif reference=="RIinfo":
-        medium = vmt.MediumFromFile(material, paper=paper, reference=reference, from_um_factor=from_um_factor)
+        medium = vml.MediumFromFile(material, paper=paper, reference=reference, from_um_factor=from_um_factor)
         # Importing material constants dependant on frequency from external file
     else:
         raise ValueError("Reference for medium not recognized. Sorry :/")
@@ -696,7 +696,7 @@ def main(from_um_factor, resolution, courant,
     
     freqs = np.array(freqs)
     wlens = 1e3 * from_um_factor / freqs 
-    scatt_eff_theory = vmt.sigma_scatt_meep(r * from_um_factor * 1e3, # Radius [nm]
+    scatt_eff_theory = vml.sigma_scatt_meep(r * from_um_factor * 1e3, # Radius [nm]
                                             material, paper, 
                                             wlens, # Wavelength [nm]
                                             surrounding_index=submerged_index,
