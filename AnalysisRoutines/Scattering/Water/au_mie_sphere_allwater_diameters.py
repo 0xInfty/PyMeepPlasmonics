@@ -15,7 +15,7 @@ import PyMieScatt as ps
 from vmp_materials import import_medium
 import v_save as vs
 import v_utilities as vu
-import vmp_materials as vmt
+import vmp_materials as vml
 
 english = False
 trs = vu.BilingualManager(english=english)
@@ -102,7 +102,7 @@ for p in params:
 
 #%% GET THEORY
 
-theory = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3,
+theory = [[vml.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3,
                                 material[i][j], paper[i][j], 
                                 data[i][j][:,0], # wavelength in nm
                                 surrounding_index=index[i][j],
@@ -120,7 +120,7 @@ max_wlen_theory = [[ data[i][j][ np.argmax(theory[i][j]) , 0 ] for j in range(le
 #     else:
 #         raise ValueError("Please, expand this function.")
 
-# max_wlen_theory = [[vmt.max_scatt_meep(r[i][j], 
+# max_wlen_theory = [[vml.max_scatt_meep(r[i][j], 
 #                                        material[i][j], 
 #                                        paper[i][j], 
 #                                        wlen_range(material[i][j],

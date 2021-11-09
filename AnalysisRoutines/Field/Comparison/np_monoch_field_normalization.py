@@ -26,8 +26,8 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as plab
 import os
 from scipy.signal import find_peaks
-import vmp_materials as vmt
-import v_theory as vt
+import vmp_materials as vml
+import vmp_theory as vmt
 import v_save as vs
 import v_utilities as vu
 import vmp_analysis as vma
@@ -381,7 +381,7 @@ def wlen_range(material, surrounding_index):
     else:
         raise ValueError("Please, expand this function.")
 
-scatt_max_wlen_theory = [[vmt.max_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
+scatt_max_wlen_theory = [[vml.max_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
                                              material[i][j], 
                                              paper[i][j], 
                                              wlen_range(material[i][j],
@@ -411,16 +411,16 @@ for i in range(len(series)):
     zprofile_cm_theory.append([])
     zprofile_ku_theory.append([])
     for j in range(len(series[i])):
-        medium = vmt.import_medium(material=material[i][j], paper=paper[i][j],
+        medium = vml.import_medium(material=material[i][j], paper=paper[i][j],
                                    from_um_factor=from_um_factor[i][j])
         epsilon = medium.epsilon(1/wlen[i][j])[0,0]
         # E0 = np.array([0, 0, is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], 0])])
-        alpha_cm = vt.alpha_Clausius_Mosotti(epsilon, r[i][j], epsilon_ext=index[i][j]**2)
-        alpha_ku = vt.alpha_Kuwata(epsilon, wlen[i][j], r[i][j], epsilon_ext=index[i][j]**2)
-        theory_cm = np.array([vt.E(epsilon, alpha_cm, E0, 
+        alpha_cm = vmt.alpha_Clausius_Mosotti(epsilon, r[i][j], epsilon_ext=index[i][j]**2)
+        alpha_ku = vmt.alpha_Kuwata(epsilon, wlen[i][j], r[i][j], epsilon_ext=index[i][j]**2)
+        theory_cm = np.array([vmt.E(epsilon, alpha_cm, E0, 
                                    rv, r[i][j], epsilon_ext=index[i][j]**2) 
                               for rv in rvec[i][j]])[:,-1]
-        theory_ku = np.array([vt.E(epsilon, alpha_ku, E0, 
+        theory_ku = np.array([vmt.E(epsilon, alpha_ku, E0, 
                                    rv, r[i][j], epsilon_ext=index[i][j]**2) 
                               for rv in rvec[i][j]])[:,-1]
         zprofile_cm_theory[-1].append(theory_cm)

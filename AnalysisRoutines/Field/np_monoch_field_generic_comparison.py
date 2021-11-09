@@ -29,11 +29,11 @@ import matplotlib.pylab as plab
 from matplotlib.ticker import AutoMinorLocator
 # import matplotlib.gridspec as gridspec
 import os
-import vmp_materials as vmt
+import vmp_materials as vml
 import vmp_utilities as vmu
 import vmp_analysis as vma
 import v_plot as vp
-import v_theory as vt
+import vmp_theory as vmt
 import v_save as vs
 import v_utilities as vu
 
@@ -747,21 +747,21 @@ def wlen_range(material, surrounding_index):
 
 wlen_theory = np.linspace(450, 800, 200)
 
-scatt_theory = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
+scatt_theory = [[vml.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
                                       material[i][j], 
                                       paper[i][j], 
                                       wlen_theory,
                                       surrounding_index=index[i][j])
                           for j in range(len(series[i]))] for i in range(len(series))]
 
-abs_theory = [[vmt.sigma_abs_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
+abs_theory = [[vml.sigma_abs_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
                                   material[i][j], 
                                   paper[i][j], 
                                   wlen_theory,
                                   surrounding_index=index[i][j])
                           for j in range(len(series[i]))] for i in range(len(series))]
 
-scatt_max_wlen_theory = [[vmt.max_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
+scatt_max_wlen_theory = [[vml.max_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
                                              material[i][j], 
                                              paper[i][j], 
                                              wlen_range(material[i][j],
@@ -883,16 +883,16 @@ for i in range(len(series)):
     zprofile_cm_theory.append([])
     zprofile_ku_theory.append([])
     for j in range(len(series[i])):
-        medium = vmt.import_medium(material=material[i][j], paper=paper[i][j],
+        medium = vml.import_medium(material=material[i][j], paper=paper[i][j],
                                    from_um_factor=from_um_factor[i][j])
         epsilon = medium.epsilon(1/wlen[i][j])[0,0]
         # E0 = np.array([0, 0, is_max_in_z_profile[j] * np.real(in_z_profile[j][max_in_z_profile[j], 0])])
-        alpha_cm = vt.alpha_Clausius_Mosotti(epsilon, r[i][j], epsilon_ext=index[i][j]**2)
-        alpha_ku = vt.alpha_Kuwata(epsilon, wlen[i][j], r[i][j], epsilon_ext=index[i][j]**2)
-        theory_cm = np.array([vt.E(epsilon, alpha_cm, E0, 
+        alpha_cm = vmt.alpha_Clausius_Mosotti(epsilon, r[i][j], epsilon_ext=index[i][j]**2)
+        alpha_ku = vmt.alpha_Kuwata(epsilon, wlen[i][j], r[i][j], epsilon_ext=index[i][j]**2)
+        theory_cm = np.array([vmt.E(epsilon, alpha_cm, E0, 
                                    rv, r[i][j], epsilon_ext=index[i][j]**2) 
                               for rv in rvec[i][j]])[:,-1]
-        theory_ku = np.array([vt.E(epsilon, alpha_ku, E0, 
+        theory_ku = np.array([vmt.E(epsilon, alpha_ku, E0, 
                                    rv, r[i][j], epsilon_ext=index[i][j]**2) 
                               for rv in rvec[i][j]])[:,-1]
         zprofile_cm_theory[i].append(theory_cm)

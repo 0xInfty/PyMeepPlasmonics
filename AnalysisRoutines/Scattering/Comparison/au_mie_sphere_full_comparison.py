@@ -13,7 +13,7 @@ import matplotlib.pylab as plab
 from matplotlib import use as use_backend
 import os
 import PyMieScatt as ps
-import vmp_materials as vmt
+import vmp_materials as vml
 import v_save as vs
 import v_utilities as vu
 import v_plot as vp
@@ -128,7 +128,7 @@ pms_r_mie_data = []
 for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
     wlens = wd[:,0]
     freqs = 1e3*fuf/wlens
-    medium = vmt.import_medium("Au", from_um_factor=fuf)
+    medium = vml.import_medium("Au", from_um_factor=fuf)
     scatt_eff_theory = [ps.MieQ(np.sqrt(medium.epsilon(f)[0,0]*medium.mu(f)[0,0]), 
                                 1e3*fuf/f,
                                 d,
@@ -143,8 +143,8 @@ for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
 pms_jc_meep_mie_data = []
 for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
     wlens = np.linspace(400, 800, len(wd[:,0]))
-    epsilon_function = vmt.epsilon_function_from_meep(paper="JC")
-    medium = vmt.import_medium("Au", from_um_factor=fuf, paper="JC")
+    epsilon_function = vml.epsilon_function_from_meep(paper="JC")
+    medium = vml.import_medium("Au", from_um_factor=fuf, paper="JC")
     scatt_eff_theory = [ps.MieQ(np.sqrt(epsilon_function(wl)), 
                                 wl,
                                 d,
@@ -156,7 +156,7 @@ for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):
     
 #%% LOAD PYMIESCATT JOHNSON AND CHRISTY'S RINFO DATA IN WATER
 
-epsilon_function = vmt.epsilon_function_from_file(paper="JC")
+epsilon_function = vml.epsilon_function_from_file(paper="JC")
 
 pms_jc_rinfo_mie_data = []
 for wd, d, fuf in zip(marian_mie_data, diameters, from_um_factor):

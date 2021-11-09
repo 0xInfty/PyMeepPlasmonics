@@ -14,7 +14,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib import use as use_backend
 import os
 import v_analysis as va
-import vmp_materials as vmt
+import vmp_materials as vml
 import v_plot as vp
 import v_save as vs
 import v_utilities as vu
@@ -212,7 +212,7 @@ plot_file = lambda n : os.path.join(home, plot_folder, n)
 
 #%% CALCULATE MIE DATA <<
 
-theory = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, # Radius [nm]
+theory = [[vml.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, # Radius [nm]
                                 material[i][j], 
                                 paper[i][j], 
                                 data[i][j][:,0], # Wavelength [nm]
@@ -222,7 +222,7 @@ theory = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, # Radius [
         
 
 wlen_plot = np.linspace(450, 650, 200)
-theory_plot = [[vmt.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
+theory_plot = [[vml.sigma_scatt_meep(r[i][j] * from_um_factor[i][j] * 1e3, 
                                      material[i][j], 
                                      paper[i][j], 
                                      wlen_plot,

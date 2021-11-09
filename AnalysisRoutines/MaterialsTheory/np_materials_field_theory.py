@@ -12,10 +12,10 @@ from matplotlib import use as use_backend
 # from matplotlib.ticker import FormatStrFormatter
 import matplotlib.pylab as plab
 import os
-import v_theory as vt
+import vmp_theory as vmt
 import v_plot as vp
 import v_save as vs
-import vmp_materials as vmt
+import vmp_materials as vml
 import v_utilities as vu
 
 english = False
@@ -55,32 +55,32 @@ epsilon_ext = (submerged_index)**2
 
 #%% SAVING CONFIGURATION
 
-series = f"All{vmt.recognize_material(submerged_index)}{material}Sphere{2*r:1.0f}"
+series = f"All{vml.recognize_material(submerged_index)}{material}Sphere{2*r:1.0f}"
 home = vs.get_home()
 if not os.path.isdir(os.path.join(home, folder)): 
     vs.new_dir(os.path.join(home, folder))
 plot_file = lambda n : os.path.join(
-    home, folder, f"All{vmt.recognize_material(submerged_index)}Field{2*r:1.0f}" + n)
+    home, folder, f"All{vml.recognize_material(submerged_index)}Field{2*r:1.0f}" + n)
 short_plot_file = lambda n : os.path.join(
-        home, folder, f"All{vmt.recognize_material(submerged_index)}" + n)
+        home, folder, f"All{vml.recognize_material(submerged_index)}" + n)
 
-plot_title = trs.choose(f"{material} NP of {2*r:1.0f} nm diameter in {vmt.recognize_material(submerged_index).lower()}",
-                        f"NP de {material} de {2*r:1.0f} nm de diámetro en {vmt.recognize_material(submerged_index, english).lower()}")
+plot_title = trs.choose(f"{material} NP of {2*r:1.0f} nm diameter in {vml.recognize_material(submerged_index).lower()}",
+                        f"NP de {material} de {2*r:1.0f} nm de diámetro en {vml.recognize_material(submerged_index, english).lower()}")
 
 #%% INNER MEDIUM EPSILON
 
 wlen = np.linspace(*wlen_range, npoints)
 
-epsilon_func_meep_jc = vmt.epsilon_function(material=material, 
+epsilon_func_meep_jc = vml.epsilon_function(material=material, 
                                             paper="JC", 
                                             reference="Meep")
-epsilon_func_meep_r = vmt.epsilon_function(material=material, 
+epsilon_func_meep_r = vml.epsilon_function(material=material, 
                                            paper="R", 
                                            reference="Meep")
-epsilon_func_exp_jc = vmt.epsilon_function(material=material, 
+epsilon_func_exp_jc = vml.epsilon_function(material=material, 
                                            paper="JC", 
                                            reference="RIinfo")
-epsilon_func_exp_r = vmt.epsilon_function(material=material, 
+epsilon_func_exp_r = vml.epsilon_function(material=material, 
                                           paper="R", 
                                           reference="RIinfo")
 
@@ -89,10 +89,10 @@ epsilon_meep_r = np.array([epsilon_func_meep_r(wl) for wl in wlen])
 epsilon_exp_jc = np.array([epsilon_func_exp_jc(wl) for wl in wlen])
 epsilon_exp_r = np.array([epsilon_func_exp_r(wl) for wl in wlen])
 
-wlen_exp_jc_data, epsilon_exp_jc_data = vmt.epsilon_data_from_file(material=material, 
+wlen_exp_jc_data, epsilon_exp_jc_data = vml.epsilon_data_from_file(material=material, 
                                                                    paper="JC", 
                                                                    reference="RIinfo")
-wlen_exp_r_data, epsilon_exp_r_data = vmt.epsilon_data_from_file(material=material, 
+wlen_exp_r_data, epsilon_exp_r_data = vml.epsilon_data_from_file(material=material, 
                                                                  paper="R", 
                                                                  reference="RIinfo")
 
@@ -108,16 +108,16 @@ wlen_exp_r_data = wlen_exp_r_data[wlen_exp_r_data <= max(wlen_range)]
 
 #%% INNER MEDIUM REFRACTIVE INDEX
 
-n_func_meep_jc = vmt.n_function(material=material, 
+n_func_meep_jc = vml.n_function(material=material, 
                                       paper="JC", 
                                       reference="Meep")
-n_func_meep_r = vmt.n_function(material=material, 
+n_func_meep_r = vml.n_function(material=material, 
                                paper="R", 
                                reference="Meep")
-n_func_exp_jc = vmt.n_function(material=material, 
+n_func_exp_jc = vml.n_function(material=material, 
                                paper="JC", 
                                reference="RIinfo")
-n_func_exp_r = vmt.n_function(material=material, 
+n_func_exp_r = vml.n_function(material=material, 
                               paper="R", 
                               reference="RIinfo")
 
@@ -126,10 +126,10 @@ n_meep_r = np.array([n_func_meep_r(wl) for wl in wlen])
 n_exp_jc = np.array([n_func_exp_jc(wl) for wl in wlen])
 n_exp_r = np.array([n_func_exp_r(wl) for wl in wlen])
 
-wlen_exp_jc_data, n_exp_jc_data = vmt.n_data_from_file(material=material, 
+wlen_exp_jc_data, n_exp_jc_data = vml.n_data_from_file(material=material, 
                                                        paper="JC", 
                                                        reference="RIinfo")
-wlen_exp_r_data, n_exp_r_data = vmt.n_data_from_file(material=material, 
+wlen_exp_r_data, n_exp_r_data = vml.n_data_from_file(material=material, 
                                                      paper="R", 
                                                      reference="RIinfo")
 
@@ -304,18 +304,18 @@ if plot_for_display: use_backend("Qt5Agg")
 
 #%% CLAUSIUS-MOSETTI: POLARIZABILITY
 
-alpha_cm_meep_r = vt.alpha_Clausius_Mosotti(epsilon_meep_r, r,
+alpha_cm_meep_r = vmt.alpha_Clausius_Mosotti(epsilon_meep_r, r,
                                             epsilon_ext=epsilon_ext)
-alpha_cm_exp_jc = vt.alpha_Clausius_Mosotti(epsilon_exp_jc, r,
+alpha_cm_exp_jc = vmt.alpha_Clausius_Mosotti(epsilon_exp_jc, r,
                                             epsilon_ext=epsilon_ext)
 
 alpha_cm = np.array([alpha_cm_exp_jc, alpha_cm_meep_r])
 
 #%% KUWATA: POLARIZABILITY
    
-alpha_k_meep_r = vt.alpha_Kuwata(epsilon_meep_r, wlen, r,
+alpha_k_meep_r = vmt.alpha_Kuwata(epsilon_meep_r, wlen, r,
                                   epsilon_ext=epsilon_ext)
-alpha_k_exp_jc = vt.alpha_Kuwata(epsilon_exp_jc, wlen, r,
+alpha_k_exp_jc = vmt.alpha_Kuwata(epsilon_exp_jc, wlen, r,
                                   epsilon_ext=epsilon_ext)
 
 alpha_k = np.array([alpha_k_exp_jc, alpha_k_meep_r])
@@ -391,26 +391,26 @@ E_cm_exp_jc_chosen = []
 E_k_exp_jc_chosen = []
 for wl in wlen_chosen:
     e_meep_r_chosen = epsilon_func_meep_r(wl)
-    a_cm_meep_r_chosen = vt.alpha_Clausius_Mosotti(e_meep_r_chosen, r, 
+    a_cm_meep_r_chosen = vmt.alpha_Clausius_Mosotti(e_meep_r_chosen, r, 
                                                    epsilon_ext=epsilon_ext)
-    a_k_meep_r_chosen = vt.alpha_Kuwata(e_meep_r_chosen, wl, r,
+    a_k_meep_r_chosen = vmt.alpha_Kuwata(e_meep_r_chosen, wl, r,
                                         epsilon_ext=epsilon_ext)
     e_exp_jc_chosen = epsilon_func_exp_jc(wl)
-    a_cm_exp_jc_chosen = vt.alpha_Clausius_Mosotti(e_exp_jc_chosen, r,
+    a_cm_exp_jc_chosen = vmt.alpha_Clausius_Mosotti(e_exp_jc_chosen, r,
                                                    epsilon_ext=epsilon_ext)
-    a_k_exp_jc_chosen = vt.alpha_Kuwata(e_exp_jc_chosen, wl, r,
+    a_k_exp_jc_chosen = vmt.alpha_Kuwata(e_exp_jc_chosen, wl, r,
                                         epsilon_ext=epsilon_ext)
     E_cm_meep_r_chosen.append(
-        np.array([vt.E(e_meep_r_chosen, a_cm_meep_r_chosen, 
+        np.array([vmt.E(e_meep_r_chosen, a_cm_meep_r_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
     E_k_meep_r_chosen.append(
-        np.array([vt.E(e_meep_r_chosen, a_k_meep_r_chosen, 
+        np.array([vmt.E(e_meep_r_chosen, a_k_meep_r_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
     E_cm_exp_jc_chosen.append(
-        np.array([vt.E(e_exp_jc_chosen, a_cm_exp_jc_chosen, 
+        np.array([vmt.E(e_exp_jc_chosen, a_cm_exp_jc_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
     E_k_exp_jc_chosen.append(
-        np.array([vt.E(e_exp_jc_chosen, a_k_exp_jc_chosen, 
+        np.array([vmt.E(e_exp_jc_chosen, a_k_exp_jc_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext) for rv in rvec]))
 
 E_chosen = [E_cm_exp_jc_chosen, E_cm_meep_r_chosen,
@@ -560,29 +560,29 @@ E_cm_exp_jc_chosen = []
 E_k_exp_jc_chosen = []
 for wl in wlen_chosen:
     e_meep_r_chosen = epsilon_func_meep_r(wl)
-    a_cm_meep_r_chosen = vt.alpha_Clausius_Mosotti(e_meep_r_chosen, r, 
+    a_cm_meep_r_chosen = vmt.alpha_Clausius_Mosotti(e_meep_r_chosen, r, 
                                                    epsilon_ext=epsilon_ext)
-    a_k_meep_r_chosen = vt.alpha_Kuwata(e_meep_r_chosen, wl, r,
+    a_k_meep_r_chosen = vmt.alpha_Kuwata(e_meep_r_chosen, wl, r,
                                         epsilon_ext=epsilon_ext)
     e_exp_jc_chosen = epsilon_func_exp_jc(wl)
-    a_cm_exp_jc_chosen = vt.alpha_Clausius_Mosotti(e_exp_jc_chosen, r,
+    a_cm_exp_jc_chosen = vmt.alpha_Clausius_Mosotti(e_exp_jc_chosen, r,
                                                    epsilon_ext=epsilon_ext)
-    a_k_exp_jc_chosen = vt.alpha_Kuwata(e_exp_jc_chosen, wl, r,
+    a_k_exp_jc_chosen = vmt.alpha_Kuwata(e_exp_jc_chosen, wl, r,
                                         epsilon_ext=epsilon_ext)
     E_cm_meep_r_chosen.append(
-        np.array([vt.E(e_meep_r_chosen, a_cm_meep_r_chosen, 
+        np.array([vmt.E(e_meep_r_chosen, a_cm_meep_r_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext)[-1] 
                   for rv in rvec]).reshape(len(y), len(z)))
     E_k_meep_r_chosen.append(
-        np.array([vt.E(e_meep_r_chosen, a_k_meep_r_chosen, 
+        np.array([vmt.E(e_meep_r_chosen, a_k_meep_r_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext)[-1]
                   for rv in rvec]).reshape(len(y), len(z)))
     E_cm_exp_jc_chosen.append(
-        np.array([vt.E(e_exp_jc_chosen, a_cm_exp_jc_chosen, 
+        np.array([vmt.E(e_exp_jc_chosen, a_cm_exp_jc_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext)[-1]
                   for rv in rvec]).reshape(len(y), len(z)))
     E_k_exp_jc_chosen.append(
-        np.array([vt.E(e_exp_jc_chosen, a_k_exp_jc_chosen, 
+        np.array([vmt.E(e_exp_jc_chosen, a_k_exp_jc_chosen, 
                        E0, rv, r, epsilon_ext=epsilon_ext)[-1]
                   for rv in rvec]).reshape(len(y), len(z)))
 # First index: wavelength
@@ -657,17 +657,17 @@ if plot_for_display: use_backend("Qt5Agg")
 
 #%% SCATTERING CROSS SECTION
 
-scatt_meep_jc = vmt.sigma_scatt_meep(r, material, "JC", 
+scatt_meep_jc = vml.sigma_scatt_meep(r, material, "JC", 
                                       wlen, surrounding_index=submerged_index)
-scatt_meep_r = vmt.sigma_scatt_meep(r, material, "R", 
+scatt_meep_r = vml.sigma_scatt_meep(r, material, "R", 
                                     wlen, surrounding_index=submerged_index)
-scatt_exp_jc = vt.sigma_scatt_Mie(r, wlen, inner_N=n_exp_jc,
+scatt_exp_jc = vmt.sigma_scatt_Mie(r, wlen, inner_N=n_exp_jc,
                                   surrounding_N=submerged_index)
 
-scatt_k_exp_jc = vt.sigma_scatt_dipolar(r, wlen, alpha_k_exp_jc, surrounding_N=submerged_index)
-scatt_cm_exp_jc = vt.sigma_scatt_dipolar(r, wlen, alpha_cm_exp_jc, surrounding_N=submerged_index)
-scatt_k_meep_r = vt.sigma_scatt_dipolar(r, wlen, alpha_k_meep_r, surrounding_N=submerged_index)
-scatt_cm_meep_r = vt.sigma_scatt_dipolar(r, wlen, alpha_cm_meep_r, surrounding_N=submerged_index)
+scatt_k_exp_jc = vmt.sigma_scatt_dipolar(r, wlen, alpha_k_exp_jc, surrounding_N=submerged_index)
+scatt_cm_exp_jc = vmt.sigma_scatt_dipolar(r, wlen, alpha_cm_exp_jc, surrounding_N=submerged_index)
+scatt_k_meep_r = vmt.sigma_scatt_dipolar(r, wlen, alpha_k_meep_r, surrounding_N=submerged_index)
+scatt_cm_meep_r = vmt.sigma_scatt_dipolar(r, wlen, alpha_cm_meep_r, surrounding_N=submerged_index)
 
 #%% PLOT SCATTERING THEORY: FULL COMPARISON
 

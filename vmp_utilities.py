@@ -26,7 +26,7 @@ import os
 import resource as res
 from shutil import copy
 from time import sleep, time
-import vmp_materials as vmt
+import vmp_materials as vml
 import v_save as vs
 import v_utilities as vu
 import vmp_analysis as vma
@@ -177,7 +177,7 @@ def verify_stability_dim_index(medium, freq, ndims=3, courant=0.5, print_log=Tru
 
 def check_stability(params):
 
-    medium = vmt.import_medium(params["material"],
+    medium = vml.import_medium(params["material"],
                                from_um_factor=params["from_um_factor"],
                                paper=params["paper"])
     # Importing material constants dependant on frequency from Meep Library

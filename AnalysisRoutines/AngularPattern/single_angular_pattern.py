@@ -15,7 +15,7 @@ import PyMieScatt as ps
 from vmp_materials import import_medium
 import v_save as vs
 import v_utilities as vu
-import vmp_materials as vmt
+import vmp_materials as vml
 import h5py as h5
 
 english = False
