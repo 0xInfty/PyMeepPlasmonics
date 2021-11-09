@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from math import sqrt
 import numpy as np
 from scipy.optimize import curve_fit
-import v_utilities as vut
+import v_utilities as vu
 
 #%%
 
@@ -541,7 +541,7 @@ def error_value_latex(X, dX, error_digits=2, symbol='$\pm$', units='',
 
     if len(string_format)==2:
         if string_format[0]!='':
-            order = vut.find_numbers(string_format[0])[0]
+            order = vu.find_numbers(string_format[0])[0]
         else:
             order = 0
         unit = ' ' + string_format[1]
@@ -552,7 +552,7 @@ def error_value_latex(X, dX, error_digits=2, symbol='$\pm$', units='',
         order = 0
         unit = ' ' + string_format[0]
     else:
-        order = vut.find_numbers(string_format[0])[0]
+        order = vu.find_numbers(string_format[0])[0]
         unit = ''
     
     latex_string = r'({}{}{})'.format(measure, symbol, error)
