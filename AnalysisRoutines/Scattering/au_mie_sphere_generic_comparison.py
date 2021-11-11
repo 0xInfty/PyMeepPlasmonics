@@ -10,9 +10,9 @@ Created on Wed Nov 11 12:24:04 2020
 
 from socket import gethostname
 if "Nano" in gethostname():
-    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+    syshome = "/home/nanofisica/Documents/Vale/NanoMeepPlasmonics"
 elif "vall" in gethostname():
-    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+    syshome = "/home/vall/Documents/Thesis/NanoMeepPlasmonics"
 else:
     raise ValueError("Your PC must be registered at the top of this code")
 

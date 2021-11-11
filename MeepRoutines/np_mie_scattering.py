@@ -11,11 +11,11 @@ script = "au_mie_scattering"
 
 from socket import gethostname
 if "Nano" in gethostname():
-    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+    syshome = "/home/nanofisica/Documents/Vale/NanoMeepPlasmonics"
 elif "vall" in gethostname():
-    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+    syshome = "/home/vall/Documents/Thesis/NanoMeepPlasmonics"
 else:
-    syshome = "/nfs/home/vpais/ThesisPython"
+    syshome = "/nfs/home/vpais/NanoMeepPlasmonics"
     # raise ValueError("Your PC must be registered at the top of this code")
 
 import sys

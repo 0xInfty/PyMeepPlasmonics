@@ -6,10 +6,10 @@
 
 from socket import gethostname
 if "Nano" in gethostname():
-    syshome = "/home/nanofisica/Documents/Vale/ThesisPython"
+    syshome = "/home/nanofisica/Documents/Vale/NanoMeepPlasmonics"
     pc = "Super Compu"
 elif "vall" in gethostname():
-    syshome = "/home/vall/Documents/Thesis/ThesisPython"
+    syshome = "/home/vall/Documents/Thesis/NanoMeepPlasmonics"
     pc = "Mi Compu"
 else:
     raise ValueError("Your PC must be registered at the top of this code")

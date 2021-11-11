@@ -24,7 +24,7 @@ conda init bash
 source ~/.bash_profile
 source ~/.bashrc
 conda activate pmp
-cd /nfs/home/vpais/ThesisPython
+cd /nfs/home/vpais/NanoMeepPlasmonics
 
 # Test 1 node splitting evenly.
 srun -n $SLURM_NTASKS --mpi=pmi2 python -m mpi4py ./AuMieSphere/u_au_mie_scattering.py -nc $SLURM_NTASKS -res 4 -f "AuMieSphere/AuMie/15)TUPAC/1NodeTest" -s "1NodeRes4" --load-flux False

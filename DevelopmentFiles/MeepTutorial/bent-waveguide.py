@@ -13,7 +13,7 @@ import imageio as mim
 
 #%% SIMULATION SETUP
 
-path = "/home/vall/Documents/Thesis/ThesisPython/MeepTutorial/BentWaveguideResults"
+path = "/home/vall/Documents/Thesis/NanoMeepPlasmonics/MeepTutorial/BentWaveguideResults"
 prefix = "BentWaveguide"
 
 cell = mp.Vector3(16,16,0)

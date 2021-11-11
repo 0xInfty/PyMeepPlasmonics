@@ -42,7 +42,7 @@ xy_plane_size = [cell_width, cell_width, 0]
 
 series = "TryingEy"
 folder = "CurrentResults"
-home = r"/home/vall/Documents/Thesis/ThesisPython"
+home = r"/home/vall/Documents/Thesis/NanoMeepPlasmonics"
 
 parameters = dict(
     wlen=wlen,

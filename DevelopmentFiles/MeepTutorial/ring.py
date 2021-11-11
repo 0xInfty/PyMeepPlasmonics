@@ -17,7 +17,7 @@ from imageio import imread, mimsave
 # Because of cylindrical symmetry, we could simulate it much more 
 # efficiently using cylindrical coordinates, but we're using 2D cartesians.
 
-path = "/home/vall/Documents/Thesis/ThesisPython/MeepTutorial/RingResults"
+path = "/home/vall/Documents/Thesis/NanoMeepPlasmonics/MeepTutorial/RingResults"
 prefix = "Ring"
 
 n = 3.4                 # index of waveguide

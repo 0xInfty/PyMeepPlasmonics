@@ -60,7 +60,7 @@ plt.axis('off') # piola
 plt.show()
 # There is a borderline with ε neither 1 nor 12 
 # I guess it's the interpolation for the waveguide
-# plt.savefig("/nfs/home/vpais/ThesisResults")
+# plt.savefig("/nfs/home/vpais/NanoMeepResults")
 
 ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
 plt.figure()
@@ -72,4 +72,4 @@ plt.plot((cell.x/2-7)*resolution,
 plt.axis('off')
 plt.show()
 if mp.am_master():
-    plt.savefig(f"/nfs/home/vpais/ThesisResults/Test/MeepTutTUPAC/NP{mp.count_processors():.0f}.png")
+    plt.savefig(f"/nfs/home/vpais/NanoMeepResults/Test/MeepTutTUPAC/NP{mp.count_processors():.0f}.png")
