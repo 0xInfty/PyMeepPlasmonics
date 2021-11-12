@@ -2,7 +2,7 @@ import h5py as h5
 
 print("Got to load module")
 
-f = h5.File("/nfs/home/vpais/NanoMeepResults/TestSerial.h5", "w")
+f = h5.File("/nfs/home/vpais/PyMeepResults/TestSerial.h5", "w")
 
 print("Got to open file")
 

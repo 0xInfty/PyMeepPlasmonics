@@ -25,7 +25,7 @@ conda init bash
 source ~/.bash_profile
 source ~/.bashrc
 conda activate pmp
-cd /nfs/home/vpais/NanoMeepPlasmonics
+cd /nfs/home/vpais/PyMeepPlasmonics
 
 # ## Run!
 srun -n $SLURM_NTASKS --mpi=pmi2 python -m mpi4py Installation/Test/simple.py

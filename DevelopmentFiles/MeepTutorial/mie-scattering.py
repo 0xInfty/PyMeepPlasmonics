@@ -5,7 +5,7 @@
 # Scattering efficiency of an homogeneous sphere given an incident planewave.
 
 import sys
-sys.path.append("/home/vall/Documents/Thesis/NanoMeepPlasmonics")
+sys.path.append("/home/vall/Documents/Thesis/PyMeepPlasmonics")
 
 import meep as mp
 import numpy as np
@@ -40,7 +40,7 @@ dair = 0.5*wvl_max
 # Saving directories
 series = "pmpyParallel7"
 folder = "MeepTutorial/TestPS"
-home = "/home/vall/Documents/Thesis/NanoMeepResults"
+home = "/home/vall/Documents/Thesis/PyMeepResults"
 
 #%% FIRST RUN: GEOMETRY SETUP
 

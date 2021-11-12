@@ -56,11 +56,11 @@ def get_home():
     
     string = gethostname()
     if "Nano" in string:
-        return "/home/nanofisica/Documents/Vale/NanoMeepResults"
+        return "/home/nanofisica/Documents/Vale/PyMeepResults"
     elif "vall" in string:
-        return "/home/vall/Documents/Thesis/NanoMeepResults"
+        return "/home/vall/Documents/Thesis/PyMeepResults"
     else:
-        return "/nfs/home/vpais/NanoMeepResults"
+        return "/nfs/home/vpais/PyMeepResults"
         # raise ValueError("Your PC must appear inside get_home definition")
 
 #%%
@@ -71,11 +71,11 @@ def get_sys_home():
     
     string = gethostname()
     if "Nano" in string:
-        return "/home/nanofisica/Documents/Vale/NanoMeepPlasmonics"
+        return "/home/nanofisica/Documents/Vale/PyMeepPlasmonics"
     elif "vall" in string:
-        return "/home/vall/Documents/Thesis/NanoMeepPlasmonics"
+        return "/home/vall/Documents/Thesis/PyMeepPlasmonics"
     else:
-        return "/nfs/home/vpais/NanoMeepPlasmonics"
+        return "/nfs/home/vpais/PyMeepPlasmonics"
         # raise ValueError("Your PC must appear inside get_sys_home definition")
         
 #%%

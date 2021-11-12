@@ -43,7 +43,7 @@ line_size = [cell_width, 0, 0]
 
 series = "RunTime{}TWidth{}".format(run_time, source_width)
 folder = "PlanewaveResults"
-home = r"/home/vall/Documents/Thesis/NanoMeepPlasmonics"
+home = r"/home/vall/Documents/Thesis/PyMeepPlasmonics"
 
 parameters = dict(
     wlen=wlen,

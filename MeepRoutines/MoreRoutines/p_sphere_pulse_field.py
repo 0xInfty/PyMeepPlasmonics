@@ -7,7 +7,7 @@ Created on Wed Oct  7 14:34:09 2020
 """
 
 import sys
-sys.path.append("/home/vall/Documents/Thesis/NanoMeepPlasmonics")
+sys.path.append("/home/vall/Documents/Thesis/PyMeepPlasmonics")
 
 import click as cli
 import h5py as h5
@@ -73,7 +73,7 @@ def main(series, resolution, r, paper, wlen_range, meep_flux, H_field):
     if series is None:
         series = f"TestParallelRes{resolution}"
     folder = "AuMieSphere/AuMieField"
-    home = "/home/vall/Documents/Thesis/NanoMeepResults/"
+    home = "/home/vall/Documents/Thesis/PyMeepResults/"
     
     ### OTHER PARAMETERS
     

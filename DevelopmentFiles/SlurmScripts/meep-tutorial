@@ -24,7 +24,7 @@ conda init bash
 source ~/.bash_profile
 source ~/.bashrc
 conda activate pmp
-cd /nfs/home/vpais/NanoMeepPlasmonics
+cd /nfs/home/vpais/PyMeepPlasmonics
 
 # ## Parallel way 1 >> Job 380822
 
