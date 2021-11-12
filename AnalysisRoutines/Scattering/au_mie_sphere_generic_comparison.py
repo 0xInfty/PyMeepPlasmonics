@@ -157,7 +157,8 @@ except:
     except: print("Empty width needs manual assignment"); needs_fixing = True
 wlen_range = [[params[i][j]["wlen_range"] for j in range(len(series[i]))] for i in range(len(series))]
 pml_width = [[params[i][j]["pml_width"] for j in range(len(series[i]))] for i in range(len(series))]
-flux_box_size = [[params[i][j]["flux_box_size"] for j in range(len(series[i]))] for i in range(len(series))]
+try: flux_box_size = [[params[i][j]["flux_box_size"] for j in range(len(series[i]))] for i in range(len(series))]
+except: print("Flux box size needs manual assignment"); needs_fixing = True
 source_center = [[params[i][j]["source_center"] for j in range(len(series[i]))] for i in range(len(series))]
 until_after_sources = [[params[i][j]["until_after_sources"] for j in range(len(series[i]))] for i in range(len(series))]
 time_factor_cell = [[params[i][j]["time_factor_cell"] for j in range(len(series[i]))] for i in range(len(series))]
@@ -178,6 +179,7 @@ if needs_fixing:
     if test_param_string=="r":
         index = [[1]*len(series[0]), [1.33]*len(series[1])]
         sysname = [["SC"]*len(series[0]), ["SC"]*len(series[1])]
+        flux_box_size = [[2*r[i][j] for j in range(len(series[i]))] for i in range(len(series))]
     else:
         empty_width = []
         for i in range(len(series)):
@@ -2733,9 +2735,9 @@ right_axes_list = [right_axes_list]*2
 for i in range(len(series)):
     for j in range(len(series[i])):
         if test_param_units != "":
-            axes_list[i][j].set_title(f"{test_param_name} {test_param[i][j]} {test_param_units}")
+            axes_list[i][j].set_title(f"{test_param_name} = {test_param[i][j]} {test_param_units}")
         else:
-            axes_list[i][j].set_title(f"{test_param_name} {test_param[i][j]}")
+            axes_list[i][j].set_title(f"{test_param_name} = {test_param[i][j]}")
         if i == 0:
             ax = axes_list[i][j]
         else:

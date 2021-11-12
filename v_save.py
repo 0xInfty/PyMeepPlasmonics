@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The `v_save` module saves and retrieves data, dealing with overwriting.
+"""This module saves and retrieves data, dealing with overwriting.
 
 It could be divided into 2 main sections:
     
