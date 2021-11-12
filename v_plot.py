@@ -6,7 +6,7 @@ This module contains tools for plotting with customized style.
 The functions contained right now are...
 
 set_style : function 
-    Gives NanoMeepPlasmonics thesis style to a figure.
+    Gives PyMeepPlasmonics thesis style to a figure.
 add_style : function
     Gives style to figures to include in Latex PDF files.
 add_subplot_axes : function
@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 #%% CUSTOMIZATION OPTIONS
 
 def set_style():
-    """Gives NanoMeepPlasmonics thesis style to a figure."""
+    """Gives PyMeepPlasmonics thesis style to a figure."""
     
     plt.rcParams.update({'text.usetex': False, 
                          'font.family':'serif',

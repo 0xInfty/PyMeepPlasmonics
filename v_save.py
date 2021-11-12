@@ -37,12 +37,12 @@ import v_utilities as vu
 #%%
 
 sysname_definition = {"Nano": "SC", "vall": "MC", "else": "TC"}
-home_definition = {"Nano": "/home/nanofisica/Documents/Vale/NanoMeepResults",
-                   "SC": "/home/vall/Documents/Thesis/NanoMeepResults", 
-                   "vall": "/nfs/home/vpais/NanoMeepResults"}
-syshome_definition = {"Nano": "/home/nanofisica/Documents/Vale/NanoMeepPlasmonics",
-                      "SC": "/home/vall/Documents/Thesis/NanoMeepPlasmonics", 
-                      "vall": "/nfs/home/vpais/NanoMeepPlasmonics"}
+home_definition = {"Nano": "/home/nanofisica/Documents/Vale/PyMeepResults",
+                   "SC": "/home/vall/Documents/Thesis/PyMeepResults", 
+                   "vall": "/nfs/home/vpais/PyMeepResults"}
+syshome_definition = {"Nano": "/home/nanofisica/Documents/Vale/PyMeepPlasmonics",
+                      "SC": "/home/vall/Documents/Thesis/PyMeepPlasmonics", 
+                      "vall": "/nfs/home/vpais/PyMeepPlasmonics"}
 
 #%% 
 
