@@ -7,7 +7,7 @@ Scattering efficiency in visible spectrum of 120nm-diameter Au sphere.
 Adapted from Meep Tutorial: Mie Scattering of a Lossless Dielectric Sphere
 """
 
-script = "au_mie_scattering"
+script = "np_mie_scattering"
 
 from socket import gethostname
 if "Nano" in gethostname():
