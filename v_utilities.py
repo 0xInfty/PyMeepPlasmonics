@@ -30,11 +30,6 @@ fix_params_dict : function
 @author: Vall
 """
 
-try:
-    import click as cli
-except:
-    print("Click console line module arguments classes not available. " + 
-          "Don't worry! You can still use all other features of this module.")
 import numpy as np
 from re import findall
 import warnings
@@ -406,33 +401,6 @@ class DottableWrapper:
         instances = dict(instances)
         self.__dict__.update(instances)
         self.all.update(instances)
-
-#%%
-
-class NumpyArrayParamType(cli.ParamType):
-    
-    """A np.ndarray parameter class for Click console-line commands' arguments."""
-    
-    name = "nparray"
-
-    def convert(self, value, param, ctx):
-        try:
-            a = eval(value)
-            if type(a) is np.ndarray:
-                return a
-            elif type(a) is list:
-                return np.array(a)
-        except TypeError:
-            self.fail(
-                "expected string for np.array() conversion, got "
-                f"{value!r} of type {type(value).__name__}",
-                param,
-                ctx,
-            )
-        except ValueError:
-            self.fail(f"{value!r} is not a valid np.array", param, ctx)
-            
-NUMPY_ARRAY = NumpyArrayParamType()
 
 #%%
 

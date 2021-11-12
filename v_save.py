@@ -34,19 +34,26 @@ import re
 from socket import gethostname
 import v_utilities as vu
 
+#%%
+
+sysname_definition = {"Nano": "SC", "vall": "MC", "else": "TC"}
+home_definition = {"Nano": "/home/nanofisica/Documents/Vale/NanoMeepResults",
+                   "SC": "/home/vall/Documents/Thesis/NanoMeepResults", 
+                   "vall": "/nfs/home/vpais/NanoMeepResults"}
+syshome_definition = {"Nano": "/home/nanofisica/Documents/Vale/NanoMeepPlasmonics",
+                      "SC": "/home/vall/Documents/Thesis/NanoMeepPlasmonics", 
+                      "vall": "/nfs/home/vpais/NanoMeepPlasmonics"}
+
 #%% 
 
 def get_sys_name():
     """Returns system name according to which CPU is running"""
     
     string = gethostname()
-    if "Nano" in string:
-        return "SC"
-    elif "vall" in string:
-        return "MC"
-    else:
-        return "TC"
-        # raise ValueError("Your PC must appear inside get_sys_home definition")
+    try: return sysname_definition[string]
+    except: 
+        try: return sysname_definition["else"]
+        except: raise ValueError("Your PC must appear inside sysname definition")
 
 #%%
 
@@ -55,13 +62,10 @@ def get_home():
     """Returns home path for results according to which CPU is running"""
     
     string = gethostname()
-    if "Nano" in string:
-        return "/home/nanofisica/Documents/Vale/NanoMeepResults"
-    elif "vall" in string:
-        return "/home/vall/Documents/Thesis/NanoMeepResults"
-    else:
-        return "/nfs/home/vpais/NanoMeepResults"
-        # raise ValueError("Your PC must appear inside get_home definition")
+    try: return home_definition[string]
+    except: 
+        try: return home_definition["else"]
+        except: raise ValueError("Your PC must appear inside home definition")
 
 #%%
 
@@ -70,13 +74,10 @@ def get_sys_home():
     """Returns home path for repository according to which CPU is running"""
     
     string = gethostname()
-    if "Nano" in string:
-        return "/home/nanofisica/Documents/Vale/NanoMeepPlasmonics"
-    elif "vall" in string:
-        return "/home/vall/Documents/Thesis/NanoMeepPlasmonics"
-    else:
-        return "/nfs/home/vpais/NanoMeepPlasmonics"
-        # raise ValueError("Your PC must appear inside get_sys_home definition")
+    try: return syshome_definition[string]
+    except: 
+        try: return syshome_definition["else"]
+        except: raise ValueError("Your PC must appear inside syshome definition")
         
 #%%
 
