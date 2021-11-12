@@ -1,4 +1,4 @@
-# NanoPlasmonicsMEEP
+# PyMeepPlasmonics
 
 ***FDTD Applications To The Nanoscale: Photonics & Plasmonics Through MEEP***
 
