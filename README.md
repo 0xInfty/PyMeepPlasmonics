@@ -6,5 +6,5 @@
 
 Development by Valeria R. Pais, [DF, FCEyN, UBA](https://sitio.df.uba.ar/es/)
 
-Direction by Prof. Dr. Fernando D. Stefani, [Applied Nanophysics Group, CIBION, CONICET](https://stefani-lab.ar/news/)
+Direction by Prof. Dr. Fernando D. Stefani, [Applied Nanophysics Group, CIBION, CONICET](https://stefani-lab.ar/)
 
