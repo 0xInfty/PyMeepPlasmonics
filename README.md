@@ -28,17 +28,35 @@ In order to build these routines, several code modules are used, each and every 
 
 ### Ubuntu
 
-A series of simple instructions can be followed to install the required packages in Ubuntu 20.04 LTS (Focal Fossa) or a newer Ubuntu OS.
+A series of simple instructions can be followed to install the required packages in Ubuntu 20.04 LTS or any newer Ubuntu OS. 
 
-*Section under construction*
+The steps are slightly different whether you intend to run MEEP simulations using serial execution or parallel execution. If you have not decided yet, by following the instructions below you can actually have two Anaconda environments installed at the same time, one intended for serial execution and the other one for parallel execution.
+
+#### Serial execution
+
+- First, install the [Miniconda](https://docs.anaconda.com/anaconda/install/linux/) distribution.
+- You might need to activate Anaconda from an Ubuntu terminal by using the command `conda init`.
+- You can then create a Conda environment for MEEP using the command `conda create -n mp -c conda-forge pymeep`.
+- To start using the environment you will need to activate it by using `conda activate mp`.
+- Additional packages you might want to install using `conda install` or `pip install` include `h5py` for HDF files management, `resource` for monitoring resources such as RAM consumption and `imageio` for making gifs.
+- It might also come in handy installing Spyder for interactive serial execution and it is highly recommended to install `click` for console serial execution.
+
+#### Parallel execution
+
+- First, install the [Miniconda](https://docs.anaconda.com/anaconda/install/linux/) distribution.
+- You might need to activate Anaconda from an Ubuntu terminal by using the command `conda init`.
+- You can then create a Conda environment for MEEP using the command `conda create -n pmp -c conda-forge pymeep=*=mpi_mpich_*`.
+- To start using the environment you will need to activate it by using `conda activate pmp`.
+- Additional packages you might want to install using `conda install` or `pip install` include `h5py` for HDF files management, `resource` for monitoring resources such as RAM consumption and `imageio` for making gifs.
+- It is highly recommended to install `click` for parallel serial execution.
 
 ### Windows
 
-As required by MEEP, an Ubuntu OS will be necessary, so if you wish to work in Windows you will need a virtual machine or similar. This master thesis simulations were executed in Ubuntu, so saddly you'll need to find out how to install it yourself.
+As required by MEEP, an Ubuntu OS will be necessary, so if you wish to work in Windows you will need a virtual machine or similar. Up to date, only Ubuntu has been used to execute `PyMeepPlasmonic` simulations, so saddly you will need to find out how to install it yourself.
 
 ## Licence
 
-*Free open-source code developed as part of a Master Thesis Project in Physics*
+Free open-source code developed as part of a Master Thesis Project in Physics.
 
 ***FDTD Applications To The Nanoscale: Photonics & Plasmonics Through MEEP***
 
