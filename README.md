@@ -58,8 +58,8 @@ As required by MEEP, an Ubuntu OS will be necessary, so if you wish to work in W
 
 First, you need to configure your system's setup. The suggested way to do this is to use the automatic setup provided by `PyMeepPlasmonics`. To do this, you will need to follow these steps:
 
-- Open an Anaconda Prompt console and go to your repository's directory by running `cd my\route\to\PyMeepPlasmonics`.
-- You might need to the activate the environment by using a line such as `conda activate mp` (serial) or `conda activate pmp` (parallel).
+- Open a terminal and go to your repository's directory by running `cd my\route\to\PyMeepPlasmonics`.
+- Activate the Anaconda environment by using a line such as `conda activate mp` (serial) or `conda activate pmp` (parallel).
 - Call the module `v_save` as an executable file by using the command `python v_save.py`.
 - Follow the instructions in the screen:
     - First, indicate a nickname for your current PC and system.
@@ -67,7 +67,7 @@ First, you need to configure your system's setup. The suggested way to do this i
     - Finally, choose a path to a folder where the results will be saved.
 - A configuration file named "SystemDirectories.txt" will have been created at your repository's folder and you will be ready to go.
 
-Once you have finished, you will be able to open, inspect and execute those scripts that are already created to perform single-pixel simulations. Hopefully they will provide you with the results you are looking for. If not, they will surely provide you with enough examples to build your own simulation :)
+Once you have finished, you will be able to open, inspect and execute those scripts that are already created to perform FDTD-MEEP Plasmonics simulations. Hopefully they will provide you with the results you are looking for. If not, they will surely provide you with enough examples to build your own simulation :)
 
 ## Licence
 
