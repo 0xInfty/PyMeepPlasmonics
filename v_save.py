@@ -36,13 +36,86 @@ import v_utilities as vu
 
 #%%
 
-sysname_definition = {"Nano": "SC", "vall": "MC", "else": "TC"}
-home_definition = {"Nano": "/home/nanofisica/Documents/Vale/PyMeepResults",
-                   "SC": "/home/vall/Documents/Thesis/PyMeepResults", 
-                   "vall": "/nfs/home/vpais/PyMeepResults"}
-syshome_definition = {"Nano": "/home/nanofisica/Documents/Vale/PyMeepPlasmonics",
-                      "SC": "/home/vall/Documents/Thesis/PyMeepPlasmonics", 
-                      "vall": "/nfs/home/vpais/PyMeepPlasmonics"}
+def init_system(interactive=False):
+    
+    if interactive:
+        sysname = input("Choose a nickname for your current PC; i.e. MC\n\n")
+        answer = input(f"Is this repository's directory correct?\n{os.getcwd()}\nAnswer yes or no (Y/N)\n\n")
+        if "y" in answer.lower():
+            syshome = os.getcwd()
+        else:
+            syshome = input("Copy and paste your code repository's full directory;\n"+
+                            "i.e. C:\\Users\\Me\\SimplePixelSimulations\n\n")
+        home = input("Copy and paste your results folder full directory;\n"+
+                     "i.e. C:\\Users\\Me\\SimplePixelSimulationsResults\n\n")
+                        
+        if not os.path.isdir(home):
+            os.makedirs(home)
+            print("Results folder was not found so it has been created")
+            
+        sysname_definition = {gethostname(): sysname}
+        syshome_definition = {gethostname(): syshome}
+        home_definition = {gethostname(): home}
+    
+    else:
+        sysname_definition = {"Nano": "SC", "vall": "MC", "else": "TC"}
+        home_definition = {"Nano": "/home/nanofisica/Documents/Vale/PyMeepResults",
+                           "SC": "/home/vall/Documents/Thesis/PyMeepResults", 
+                           "vall": "/nfs/home/vpais/PyMeepResults"}
+        syshome_definition = {"Nano": "/home/nanofisica/Documents/Vale/PyMeepPlasmonics",
+                              "SC": "/home/vall/Documents/Thesis/PyMeepPlasmonics", 
+                              "vall": "/nfs/home/vpais/PyMeepPlasmonics"}
+        
+    default_system = dict(sysname_definition=sysname_definition,
+                          home_definition=home_definition,
+                          syshome_definition=syshome_definition)
+    try:
+        savetxt(os.path.join(syshome, "SystemDirectories.txt"), 
+                np.array([]), footer=default_system, overwrite=True)
+    except UnboundLocalError:
+        savetxt(os.path.join(os.getcwd(), "SystemDirectories.txt"), 
+                np.array([]), footer=default_system, overwrite=True)        
+    
+    return
+
+#%%
+
+def add_or_edit_system(sysname, syshome, home=None):
+    
+    default_path = os.getcwd()
+    
+    current_system = retrieve_footer(os.path.join(default_path, 
+                                                  "SystemDirectories.txt"))
+    
+    hostname = gethostname()
+    
+    if hostname in current_system["sysname"].keys():
+        print("Current host's system will be updated")
+    else:
+        print("New system entry will be created for current host")
+        
+    if home is None:
+        home = current_system["home"][hostname]
+    
+    current_system["sysname"][hostname] = sysname
+    current_system["syshome"][hostname] = syshome
+    current_system["home"][hostname] = home
+
+#%%
+
+def setup_system():
+    
+    default_path = os.getcwd()
+    
+    current_system = retrieve_footer(os.path.join(default_path, 
+                                                  "SystemDirectories.txt"))
+    
+    sysname_definition = current_system["sysname_definition"]
+    home_definition = current_system["home_definition"]
+    syshome_definition = current_system["syshome_definition"]
+    
+    return sysname_definition, home_definition, syshome_definition
+
 
 #%% 
 
@@ -623,3 +696,14 @@ def retrieve_header(file, comment_marker='#'):
         
     else:
         raise ValueError("No header found. Sorry!")
+
+#%%
+
+while True:
+    try:
+        current_system = setup_system()
+        break
+    except:
+        init_system()
+
+sysname_definition, home_definition, syshome_definition = current_system
