@@ -116,7 +116,6 @@ def setup_system():
     
     return sysname_definition, home_definition, syshome_definition
 
-
 #%% 
 
 def get_sys_name():
@@ -699,11 +698,15 @@ def retrieve_header(file, comment_marker='#'):
 
 #%%
 
-while True:
-    try:
-        current_system = setup_system()
-        break
-    except:
-        init_system()
+if __name__ == '__main__':
+    init_system(interactive=True)
 
-sysname_definition, home_definition, syshome_definition = current_system
+else:
+    while True:
+        try:
+            current_system = setup_system()
+            break
+        except:
+            init_system()
+    
+    sysname_definition, home_definition, syshome_definition = current_system
