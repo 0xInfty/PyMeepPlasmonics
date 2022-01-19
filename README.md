@@ -54,6 +54,20 @@ The steps are slightly different whether you intend to run MEEP simulations usin
 
 As required by MEEP, an Ubuntu OS will be necessary, so if you wish to work in Windows you will need a virtual machine or similar. Up to date, only Ubuntu has been used to execute `PyMeepPlasmonic` simulations, so saddly you will need to find out how to install it yourself.
 
+## Usage
+
+First, you need to configure your system's setup. The suggested way to do this is to use the automatic setup provided by `PyMeepPlasmonics`. To do this, you will need to follow these steps:
+
+- Open an Anaconda Prompt console and go to your repository's directory by running `cd my\route\to\SinglePixelImaging`.
+- Call the module `v_save` as an executable file by using the command `python v_save.py`.
+- Follow the instructions in the screen:
+    - First, indicate a nickname for your current PC and system.
+    - Then, make sure the detected route to the repository is correct.
+    - Finally, choose a path to a folder where the results will be saved.
+- A configuration file named "SystemDirectories.txt" will have been created at your repository's folder and you will be ready to go.
+
+Once you have finished, you will be able to open, inspect and execute those scripts that are already created to perform single-pixel simulations. Hopefully they will provide you with the results you are looking for. If not, they will surely provide you with enough examples to build your own simulation :)
+
 ## Licence
 
 Free open-source code developed as part of a Master Thesis Project in Physics.
