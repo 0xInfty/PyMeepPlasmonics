@@ -59,6 +59,7 @@ As required by MEEP, an Ubuntu OS will be necessary, so if you wish to work in W
 First, you need to configure your system's setup. The suggested way to do this is to use the automatic setup provided by `PyMeepPlasmonics`. To do this, you will need to follow these steps:
 
 - Open an Anaconda Prompt console and go to your repository's directory by running `cd my\route\to\PyMeepPlasmonics`.
+- You might need to the activate the environment by using a line such as `conda activate mp` (serial) or `conda activate pmp` (parallel).
 - Call the module `v_save` as an executable file by using the command `python v_save.py`.
 - Follow the instructions in the screen:
     - First, indicate a nickname for your current PC and system.
